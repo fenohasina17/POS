@@ -1,0 +1,154 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+class UserController extends Controller
+{
+    // Liste des utilisateurs
+    public function index()
+    {
+        try {
+            $users = User::with('pointOfSale:id,name')->get()->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'point_of_sale_id' => $user->point_of_sale_id,
+                    'point_of_sale_name' => $user->pointOfSale ? $user->pointOfSale->name : null,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at,
+                ];
+            });
+            return response()->json($users);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la récupération des utilisateurs',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // Créer un utilisateur
+    public function store(Request $request)
+    {
+        // Validation des données
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8',
+            'point_of_sale_id' => 'nullable|exists:point_of_sales,id',
+        ]);
+
+        // Si la validation échoue
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            // Création de l'utilisateur
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'point_of_sale_id' => $request->point_of_sale_id,
+            ]);
+            return response()->json($user, 201); // Code HTTP 201 pour la création
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la création de l\'utilisateur',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // Afficher un utilisateur spécifique
+    public function show($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            return response()->json($user);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la récupération de l\'utilisateur',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // Mettre à jour un utilisateur
+    public function update(Request $request, $id)
+    {
+        try {
+            $user = User::findOrFail($id);
+
+            // Validation des données
+            $validator = Validator::make($request->all(), [
+                'name' => 'string|max:255',
+                'email' => 'email|unique:users,email,' . $id,
+                'password' => 'string|min:8|nullable',
+                'point_of_sale_id' => 'nullable|exists:point_of_sales,id',
+
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            // Mise à jour de l'utilisateur
+            $user->update([
+                'name' => $request->name ?? $user->name,
+                'email' => $request->email ?? $user->email,
+                'password' => $request->password ? Hash::make($request->password) : $user->password,
+                'point_of_sale_id' => $request->point_of_sale_id,
+
+            ]);
+
+            return response()->json($user);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la mise à jour de l\'utilisateur',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // Supprimer un utilisateur
+    public function destroy($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+            $user->delete();
+
+            return response()->json([
+                'message' => 'Utilisateur supprimé'
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'Utilisateur non trouvé'
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de la suppression de l\'utilisateur',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+}

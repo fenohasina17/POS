@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS-B API - Swagger UI</title>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui.css" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin:0;
+            padding:0;
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            const spec = {
+                "openapi": "3.0.3",
+                "info": {
+                    "title": "POS-B API",
+                    "version": "1.0.0",
+                    "description": "OpenAPI 3 spec pour l'API POS-B (endpoints définis dans routes/api.php)"
+                },
+                "servers": [
+                    {"url": "http://localhost", "description": "Serveur local"}
+                ],
+                "components": {
+                    "securitySchemes": {
+                        "bearerAuth": {
+                            "type": "http",
+                            "scheme": "bearer",
+                            "bearerFormat": "JWT"
+                        }
+                    },
+                    "schemas": {
+                        "Error": {
+                            "type": "object",
+                            "properties": {
+                                "message": {"type": "string"}
+                            }
+                        },
+                        "LoginRequest": {
+                            "type": "object",
+                            "required": ["email", "password"],
+                            "properties": {
+                                "email": {"type": "string"},
+                                "password": {"type": "string"}
+                            }
+                        },
+                        "AuthResponse": {
+                            "type": "object",
+                            "properties": {
+                                "message": {"type": "string"},
+                                "token": {"type": "string"},
+                                "user": {"$ref": "#/components/schemas/User"}
+                            }
+                        },
+                        "User": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "name": {"type": "string"},
+                                "email": {"type": "string"},
+                                "point_of_sale_id": {"type": "integer"}
+                            }
+                        },
+                        "Sale": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "user_id": {"type": "integer"},
+                                "point_of_sale_id": {"type": "integer"},
+                                "status": {"type": "string"},
+                                "ticket_number": {"type": "integer"},
+                                "total_amount": {"type": "number"},
+                                "final_amount": {"type": "number"}
+                            }
+                        }
+                    }
+                },
+                "security": [{"bearerAuth": []}],
+                "paths": {
+                    "/api/login": {
+                        "post": {
+                            "tags": ["Auth"],
+                            "summary": "Login",
+                            "description": "Authentifie un utilisateur et retourne un bearer token",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": "#/components/schemas/LoginRequest"},
+                                        "examples": {
+                                            "example1": {
+                                                "value": {
+                                                    "email": "admin@example.com",
+                                                    "password": "secret"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "200": {
+                                    "description": "Authenticated",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {"$ref": "#/components/schemas/AuthResponse"},
+                                            "examples": {
+                                                "example1": {
+                                                    "value": {
+                                                        "message": "Connexion réussie",
+                                                        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                                        "user": {
+                                                            "id": 1,
+                                                            "name": "Admin",
+                                                            "email": "admin@example.com",
+                                                            "point_of_sale_id": 1
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "401": {
+                                    "description": "Unauthorized",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": {"$ref": "#/components/schemas/Error"}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "/api/register": {
+                        "post": {
+                            "tags": ["Auth"],
+                            "summary": "Register",
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "required": ["name", "email", "password"],
+                                            "properties": {
+                                                "name": {"type": "string"},
+                                                "email": {"type": "string"},
+                                                "password": {"type": "string"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {
+                                "201": {"description": "Created"}
+                            }
+                        }
+                    },
+                    "/api/logout": {
+                        "post": {
+                            "tags": ["Auth"],
+                            "summary": "Logout (requires auth)",
+                            "security": [{"bearerAuth": []}],
+                            "responses": {
+                                "200": {"description": "Logged out"}
+                            }
+                        }
+                    },
+                    "/api/me": {
+                        "get": {
+                            "tags": ["Auth"],
+                            "summary": "Get current user",
+                            "security": [{"bearerAuth": []}],
+                            "responses": {
+                                "200": {"description": "User"}
+                            }
+                        }
+                    },
+                    "/api/users": {
+                        "get": {
+                            "tags": ["Users"],
+                            "security": [{"bearerAuth": []}],
+                            "summary": "List users",
+                            "responses": {"200": {"description": "OK"}}
+                        },
+                        "post": {
+                            "tags": ["Users"],
+                            "security": [{"bearerAuth": []}],
+                            "summary": "Create user",
+                            "requestBody": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "name": {"type": "string"},
+                                                "email": {"type": "string"},
+                                                "password": {"type": "string"},
+                                                "point_of_sale_id": {"type": "integer"}
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {"201": {"description": "Created"}}
+                        }
+                    },
+                    "/api/sales/pending-order": {
+                        "post": {
+                            "tags": ["Sales"],
+                            "summary": "Create pending order (table)",
+                            "security": [{"bearerAuth": []}],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "required": ["table_id", "user_id", "point_of_sale_id", "cash_register_session_id", "order_lines"],
+                                            "properties": {
+                                                "table_id": {"type": "integer"},
+                                                "user_id": {"type": "integer"},
+                                                "point_of_sale_id": {"type": "integer"},
+                                                "cash_register_session_id": {"type": "integer"},
+                                                "order_lines": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "product_id": {"type": "integer"},
+                                                            "quantity": {"type": "integer"},
+                                                            "price": {"type": "number"}
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "examples": {
+                                            "example1": {
+                                                "value": {
+                                                    "table_id": 1,
+                                                    "user_id": 1,
+                                                    "point_of_sale_id": 1,
+                                                    "cash_register_session_id": 1,
+                                                    "order_lines": [
+                                                        {"product_id": 1, "quantity": 2, "price": 500}
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {"201": {"description": "Created"}}
+                        }
+                    },
+                    "/api/sales/{saleId}/validate": {
+                        "post": {
+                            "tags": ["Sales"],
+                            "summary": "Validate/finalize pending order",
+                            "security": [{"bearerAuth": []}],
+                            "parameters": [
+                                {"name": "saleId", "in": "path", "required": true, "schema": {"type": "integer"}}
+                            ],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "required": ["payment_id"],
+                                            "properties": {
+                                                "payment_id": {"type": "integer"},
+                                                "discount_percentage": {"type": "number"},
+                                                "amount_received": {"type": "number"}
+                                            }
+                                        },
+                                        "examples": {
+                                            "example1": {
+                                                "value": {
+                                                    "payment_id": 1,
+                                                    "amount_received": 1000
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {"200": {"description": "Order validated"}}
+                        }
+                    },
+                    "/api/cash-register-sessions": {
+                        "post": {
+                            "tags": ["CashRegisterSessions"],
+                            "summary": "Open cash register session",
+                            "security": [{"bearerAuth": []}],
+                            "requestBody": {
+                                "required": true,
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "required": ["cash_register_id", "user_id", "starting_amount"],
+                                            "properties": {
+                                                "cash_register_id": {"type": "integer"},
+                                                "user_id": {"type": "integer"},
+                                                "starting_amount": {"type": "number"},
+                                                "start_ticket_number": {"type": "integer"}
+                                            }
+                                        },
+                                        "examples": {
+                                            "example1": {
+                                                "value": {
+                                                    "cash_register_id": 1,
+                                                    "user_id": 1,
+                                                    "starting_amount": 10000
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {"201": {"description": "Session opened"}}
+                        }
+                    },
+                    "/api/cash-register-sessions/{id}": {
+                        "patch": {
+                            "tags": ["CashRegisterSessions"],
+                            "summary": "Update/close cash register session",
+                            "security": [{"bearerAuth": []}],
+                            "parameters": [
+                                {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}
+                            ],
+                            "requestBody": {
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "is_closed": {"type": "boolean"},
+                                                "actual_cash_amount": {"type": "number"},
+                                                "closed_at": {"type": "string", "format": "date-time"}
+                                            }
+                                        },
+                                        "examples": {
+                                            "close": {
+                                                "value": {
+                                                    "is_closed": true,
+                                                    "actual_cash_amount": 15000,
+                                                    "closed_at": "2025-02-04T17:00:00Z"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            "responses": {"200": {"description": "Updated"}}
+                        }
+                    }
+                }
+            };
+            const ui = SwaggerUIBundle({
+                spec: spec,
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout"
+            })
+            window.ui = ui
+        }
+    </script>
+</body>
+</html>

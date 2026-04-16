@@ -1,0 +1,666 @@
+openapi: 3.0.3
+info:
+  title: POS-B API
+  version: 1.0.0
+  description: OpenAPI 3 spec pour l'API POS-B (endpoints définis dans routes/api.php)
+servers:
+  - url: http://localhost
+    description: Serveur local
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        point_of_sale_id:
+          type: integer
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        ref:
+          type: string
+        category_id:
+          type: integer
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        printer_type_id:
+          type: integer
+    Pricing:
+      type: object
+      properties:
+        id:
+          type: integer
+        point_of_sale_id:
+          type: integer
+        product_id:
+          type: integer
+        price:
+          type: number
+    OrderLine:
+      type: object
+      properties:
+        id:
+          type: integer
+        sale_id:
+          type: integer
+        product_id:
+          type: integer
+        quantity:
+          type: integer
+        price:
+          type: number
+        total:
+          type: number
+    Sale:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        point_of_sale_id:
+          type: integer
+        table_id:
+          type: integer
+        cash_register_session_id:
+          type: integer
+        status:
+          type: string
+        ticket_number:
+          type: integer
+        total_amount:
+          type: number
+        final_amount:
+          type: number
+        orderLines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+    Payment:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    CashRegister:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        point_of_sale_id:
+          type: integer
+    CashRegisterSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        cash_register_id:
+          type: integer
+        user_id:
+          type: integer
+        starting_amount:
+          type: number
+        expected_cash_amount:
+          type: number
+        actual_cash_amount:
+          type: number
+        is_closed:
+          type: boolean
+    Printer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cash_register_id:
+          type: integer
+        connection_type:
+          type: string
+        ip_address:
+          type: string
+        printer_type_id:
+          type: integer
+    Table:
+      type: object
+      properties:
+        id:
+          type: integer
+        table_number:
+          type: string
+        status:
+          type: string
+    Role:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    Permission:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+security:
+  - bearerAuth: []
+paths:
+  /api/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      description: Authentifie un utilisateur et retourne un bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              example1:
+                value:
+                  email: admin@example.com
+                  password: secret
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+              examples:
+                example1:
+                  value:
+                    message: Connexion réussie
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    user:
+                      id: 1
+                      name: Admin
+                      email: admin@example.com
+                      point_of_sale_id: 1
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                example1:
+                  value:
+                    message: Identifiants invalides
+  /api/register:
+    post:
+      tags: [Auth]
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name,email,password]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+  /api/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (requires auth)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out
+  /api/me:
+    get:
+      tags: [Auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+  /api/users:
+    get:
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      summary: List users
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                point_of_sale_id:
+                  type: integer
+      responses:
+        '201':
+          description: Created
+  /api/users/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User
+    put:
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Updated
+    delete:
+      tags: [Users]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Deleted
+  /api/pointofsales:
+    get:
+      tags: [PointOfSale]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List
+    post:
+      tags: [PointOfSale]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Created
+  /api/pointofsales/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [PointOfSale]
+      security:
+        - bearerAuth: []
+    put:
+      tags: [PointOfSale]
+      security:
+        - bearerAuth: []
+    delete:
+      tags: [PointOfSale]
+      security:
+        - bearerAuth: []
+  /api/products:
+    get:
+      tags: [Products]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Products]
+      security:
+        - bearerAuth: []
+  /api/products/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Products]
+      security:
+        - bearerAuth: []
+    put:
+      tags: [Products]
+      security:
+        - bearerAuth: []
+    delete:
+      tags: [Products]
+      security:
+        - bearerAuth: []
+  /api/categories:
+    get:
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Categories]
+      security:
+        - bearerAuth: []
+  /api/pricings:
+    get:
+      tags: [Pricings]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Pricings]
+      security:
+        - bearerAuth: []
+  /api/sales:
+    get:
+      tags: [Sales]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Sales]
+      security:
+        - bearerAuth: []
+  /api/sales/pending-order:
+    post:
+      tags: [Sales]
+      summary: Create pending order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [table_id,user_id,point_of_sale_id,cash_register_session_id,order_lines]
+              properties:
+                table_id:
+                  type: integer
+                user_id:
+                  type: integer
+                point_of_sale_id:
+                  type: integer
+                cash_register_session_id:
+                  type: integer
+                order_lines:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/OrderLine'
+      responses:
+        '201':
+          description: Created
+  /api/sales/{saleId}/add-products:
+    post:
+      tags: [Sales]
+      security:
+        - bearerAuth: []
+  /api/sales/{saleId}/remove-products:
+    post:
+      tags: [Sales]
+      security:
+        - bearerAuth: []
+  /api/sales/{saleId}/validate:
+    post:
+      tags: [Sales]
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_id]
+              properties:
+                payment_id:
+                  type: integer
+  /api/orderlines:
+    get:
+      tags: [OrderLines]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [OrderLines]
+      security:
+        - bearerAuth: []
+  /api/payments:
+    get:
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+  /api/cash-registers:
+    get:
+      tags: [CashRegisters]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [CashRegisters]
+      security:
+        - bearerAuth: []
+  /api/cash-registers/client-ip:
+    get:
+      tags: [CashRegisters]
+      security:
+        - bearerAuth: []
+  /api/cash-registers/{cashRegister}/current-session:
+    get:
+      tags: [CashRegisters]
+      security:
+        - bearerAuth: []
+  /api/cash-register-sessions:
+    get:
+      tags: [CashRegisterSessions]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [CashRegisterSessions]
+      security:
+        - bearerAuth: []
+  /api/cash-register-sessions/{id}:
+    patch:
+      tags: [CashRegisterSessions]
+      security:
+        - bearerAuth: []
+  /api/cash-register-sessions/{id}/summary:
+    get:
+      tags: [CashRegisterSessions]
+      security:
+        - bearerAuth: []
+  /api/cash-register-sessions/{id}/reopen:
+    post:
+      tags: [CashRegisterSessions]
+      security:
+        - bearerAuth: []
+  /api/cash-transactions:
+    get:
+      tags: [CashTransactions]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [CashTransactions]
+      security:
+        - bearerAuth: []
+  /api/printers:
+    get:
+      tags: [Printers]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Printers]
+      security:
+        - bearerAuth: []
+  /api/printer-scan:
+    get:
+      tags: [Printers]
+      security:
+        - bearerAuth: []
+  /api/printers/invoice/{orderId}:
+    post:
+      tags: [Printers]
+      security:
+        - bearerAuth: []
+  /api/printers/session-recap/{sessionId}:
+    post:
+      tags: [Printers]
+      security:
+        - bearerAuth: []
+  /api/printer-types:
+    get:
+      tags: [PrinterTypes]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [PrinterTypes]
+      security:
+        - bearerAuth: []
+  /api/tables:
+    get:
+      tags: [Tables]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Tables]
+      security:
+        - bearerAuth: []
+  /api/tables/available:
+    get:
+      tags: [Tables]
+      security:
+        - bearerAuth: []
+  /api/tables/occupied:
+    get:
+      tags: [Tables]
+      security:
+        - bearerAuth: []
+  /api/tables/{id}/status:
+    patch:
+      tags: [Tables]
+      security:
+        - bearerAuth: []
+  /api/tables/statistics:
+    get:
+      tags: [Tables]
+      security:
+        - bearerAuth: []
+  /api/roles:
+    get:
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+  /api/permissions:
+    get:
+      tags: [Permissions]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [Permissions]
+      security:
+        - bearerAuth: []
+  /api/roles/{role}/permissions:
+    post:
+      tags: [Roles]
+      security:
+        - bearerAuth: []
+  /api/users/{user}/roles:
+    get:
+      tags: [UserRoles]
+      security:
+        - bearerAuth: []
+    post:
+      tags: [UserRoles]
+      security:
+        - bearerAuth: []
+  /api/users/{user}/permissions:
+    get:
+      tags: [UserPermissions]
+      security:
+        - bearerAuth: []
+
