@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('tables', function (Blueprint $table) {
             try {
-                $table->dropUnique('tables_table_number_unique');
+                // $table->dropUnique('tables_table_number_unique');
             } catch (Throwable $e) {
                 // Ignore if the legacy unique index does not exist.
             }

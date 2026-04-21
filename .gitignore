@@ -1,0 +1,21 @@
+# Laravel
+/backend/vendor/
+/backend/.env
+/backend/storage/*.key
+/backend/public/storage
+/backend/public/hot
+/backend/public/specification.yaml
+/backend/bootstrap/cache/*
+/backend/.phpunit.result.cache
+
+# Vue.js / Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.env
+/frontend/.env.local
+
+# Docker & OS
+.env
+docker-compose.override.yml
+.DS_Store
+Thumbs.db

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('categories', function (Blueprint $table) {
             $table->bigInteger('printer_type_id')->nullable();
             $table->foreign('printer_type_id')->references('id')->on('printer_types')->onDelete('set null');
-            $table->dropColumn('printer_type');
+            // $table->dropColumn('printer_type');
         });
     }
 
