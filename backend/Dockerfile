@@ -1,40 +1,48 @@
-# ── Stage 1 : dépendances PHP ──────────────────────────────────────────────
-FROM php:8.2-fpm AS php-base
+# backend/Dockerfile (contexte = ./backend)
 
+# Stage builder: installer dépendances composer sans exécuter les scripts
+FROM php:8.4-fpm AS builder
 WORKDIR /var/www
 
-# Extensions système
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        git curl zip unzip libpng-dev libonig-dev \
-        libxml2-dev libpq-dev libzip-dev \
-    && docker-php-ext-install \
-        pdo pdo_pgsql pgsql \
-        mbstring exif pcntl bcmath gd zip \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y \
+    git unzip libpq-dev libzip-dev libicu-dev zip \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install pdo_pgsql zip intl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
-# ── Stage 2 : dépendances Composer ────────────────────────────────────────
-FROM php-base AS composer-deps
+# Copier composer files pour tirer parti du cache
 COPY composer.json composer.lock ./
-RUN composer install --no-scripts --no-autoloader --prefer-dist --no-dev
 
-# ── Stage 3 : image finale ────────────────────────────────────────────────
-FROM php-base AS final
+# Installer dépendances sans exécuter les scripts (artisan pas encore copié)
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
-# Copier les vendors
-COPY --from=composer-deps /var/www/vendor ./vendor
+# Copier le reste de l'application (artisan, app, config, etc.)
+COPY . /var/www
 
-# Copier le code source
-COPY . .
+# Exécuter les scripts qui nécessitent artisan et générer la clé si possible
+RUN composer run-script post-autoload-dump || true \
+    && php artisan key:generate --ansi || true \
+    && composer dump-autoload --optimize
 
-RUN composer dump-autoload --optimize --no-dev \
-    && php artisan storage:link --force 2>/dev/null || true \
-    && chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
-    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+# Fix permissions
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache || true \
+    && chmod -R 775 /var/www/storage /var/www/bootstrap/cache || true
+
+# Stage runtime
+FROM php:8.4-fpm
+WORKDIR /var/www
+
+RUN apt-get update && apt-get install -y libpq-dev libicu-dev \
+    && docker-php-ext-configure intl \
+    && docker-php-ext-install pdo_pgsql intl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /var/www /var/www
+
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache || true
 
 EXPOSE 9000
 CMD ["php-fpm"]
