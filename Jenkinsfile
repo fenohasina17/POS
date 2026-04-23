@@ -22,10 +22,10 @@ pipeline {
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo 'Lancement des tests sur PostgreSQL (Injection des variables via le pipeline)...'
+                echo 'Lancement des tests (Injection des variables et exécution directe)...'
                 
                 /* On utilise les guillemets simples (''' ''') pour que Jenkins 
-                   envoie la commande au terminal sans essayer de modifier le code.
+                   n'interprète pas le signe '$' de la commande openssl.
                 */
                 sh '''
                 docker run --rm \
@@ -38,7 +38,7 @@ pipeline {
                     -e DB_USERNAME=postgres \
                     -e DB_PASSWORD=postgres \
                     global-purchase-back \
-                    ./vendor/bin/phpunit --configuration phpunit.xml
+                    php vendor/bin/phpunit tests
                 '''
             }
         }
