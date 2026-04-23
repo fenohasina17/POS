@@ -22,10 +22,9 @@ pipeline {
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo 'Lancement des tests Laravel...'
-                // CORRECTION : On crée le fichier sqlite vide AVANT de lancer les tests
-                // On utilise "touch" à l'intérieur du conteneur
-                sh "docker run --rm global-purchase-back sh -c 'touch database/database.sqlite && ./vendor/bin/phpunit'"
+                echo 'Lancement des tests Laravel sur PostgreSQL...'
+                // Utilisation du nom exact du réseau détecté : deployement-application-web_pos_network
+                sh "docker run --rm --network deployement-application-web_pos_network global-purchase-back ./vendor/bin/phpunit"
             }
         }
 
