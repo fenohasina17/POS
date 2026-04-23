@@ -28,23 +28,11 @@ class CashTransactionTest extends TestCase
 
         $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
-<<<<<<< HEAD
         // Créer les permissions exactement comme la policy les attend
         Permission::firstOrCreate(['name' => 'create.transactions', 'guard_name' => 'api']);
         Permission::firstOrCreate(['name' => 'delete.transactions', 'guard_name' => 'api']);
         Permission::firstOrCreate(['name' => 'update.transactions', 'guard_name' => 'api']);
         Permission::firstOrCreate(['name' => 'view.transactions', 'guard_name' => 'api']);
-=======
-    // Ensuite tes créations
-    $permissionCreate = Permission::create(['name' => 'create.cash_transactions']);
-    $permissionDelete = Permission::create(['name' => 'delete.transactions']); // N'oublie pas celle-là !
-    
-    $adminRole = Role::create(['name' => 'admin']);
-    $adminRole->givePermissionTo([$permissionCreate, $permissionDelete]);
-
-    $this->user = User::factory()->create(); 
-    $this->user->assignRole('admin');
->>>>>>> 85008940c5a48f81fac431603537bfe947e1baad
         
         // Créer le rôle admin avec toutes les permissions
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'api']);
@@ -197,34 +185,35 @@ class CashTransactionTest extends TestCase
 
         $this->assertEquals(1100, $session->refresh()->expected_cash_amount);
     }
-#[Test]
 
-public function it_cannot_delete_transaction()
-{
-    [$user, $token] = $this->authenticate('delete.transactions');
-    
-    $session = CashRegisterSession::create([
-        'cash_register_id' => $this->registerId,
-        'user_id' => $user->id,
-        'expected_cash_amount' => 1000,
-        'starting_amount' => 1000,
-        'is_closed' => false,
-        'opened_at' => now(),
-        'start_ticket_number' => 1,
-        'total_sales' => 0
-    ]);
-    
-    $transaction = CashTransaction::create([
-        'session_id' => $session->id,
-        'type' => 'sale', 
-        'amount' => 200,
-        'created_by' => $user->id
-    ]);
+    #[Test]
+    public function it_cannot_delete_transaction()
+    {
+        [$user, $token] = $this->authenticate('delete.transactions');
+        
+        $session = CashRegisterSession::create([
+            'cash_register_id' => $this->registerId,
+            'user_id' => $user->id,
+            'expected_cash_amount' => 1000,
+            'starting_amount' => 1000,
+            'is_closed' => false,
+            'opened_at' => now(),
+            'start_ticket_number' => 1,
+            'total_sales' => 0
+        ]);
+        
+        $transaction = CashTransaction::create([
+            'session_id' => $session->id,
+            'type' => 'sale', 
+            'amount' => 200,
+            'created_by' => $user->id
+        ]);
 
-    $this->withHeader('Authorization', 'Bearer ' . $token)
-         ->deleteJson("/api/cash-transactions/{$transaction->id}")
-         ->assertStatus(403);
-}
+        $this->withHeader('Authorization', 'Bearer ' . $token)
+             ->deleteJson("/api/cash-transactions/{$transaction->id}")
+             ->assertStatus(403);
+    }
+
     #[Test]
     public function it_prevents_creating_transaction_on_closed_session()
     {
@@ -302,13 +291,11 @@ public function it_cannot_delete_transaction()
     #[Test]
     public function it_prevents_user_without_permission_from_creating_transaction()
     {
-        // Créer un utilisateur sans permission create.transactions
         $user = User::factory()->create([
             'password' => bcrypt('password123'),
             'point_of_sale_id' => $this->pos->id 
         ]);
         
-        // Donner seulement view.transactions
         $viewPermission = Permission::firstOrCreate(['name' => 'view.transactions', 'guard_name' => 'api']);
         $user->givePermissionTo($viewPermission);
         
@@ -337,7 +324,6 @@ public function it_cannot_delete_transaction()
     #[Test]
     public function it_prevents_user_without_permission_from_deleting_transaction()
     {
-        // Créer un utilisateur avec create.transactions mais pas delete.transactions
         $user = User::factory()->create([
             'password' => bcrypt('password123'),
             'point_of_sale_id' => $this->pos->id 
@@ -361,7 +347,6 @@ public function it_cannot_delete_transaction()
             'is_closed' => false
         ]);
 
-        // Créer une transaction avec un autre utilisateur (admin)
         $transaction = CashTransaction::create([
             'session_id' => $session->id, 
             'type' => 'sale', 
