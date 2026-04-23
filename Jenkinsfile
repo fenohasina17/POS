@@ -1,5 +1,9 @@
 pipeline {
     agent any
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+    }
     
     stages {
         stage('📥 Récupération du Code') {
@@ -10,6 +14,7 @@ pipeline {
 
         stage('📦 Build des Images') {
             steps {
+                echo 'Construction des images...'
                 sh 'docker build -t global-purchase-back ./backend'
                 sh 'docker build -t global-purchase-front ./frontend'
             }
@@ -17,17 +22,13 @@ pipeline {
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo 'Lancement des tests avec password123...'
+                echo 'Exécution des tests sur SQLite (évite les erreurs de mot de passe Postgres)...'
+                
                 sh '''
                 docker run --rm \
-                    --network deployement-application-web_pos_network \
                     -e APP_KEY=base64:$(openssl rand -base64 32) \
-                    -e DB_CONNECTION=pgsql \
-                    -e DB_HOST=db \
-                    -e DB_PORT=5432 \
-                    -e DB_DATABASE=global_purchase \
-                    -e DB_USERNAME=postgres \
-                    -e DB_PASSWORD=password123 \
+                    -e DB_CONNECTION=sqlite \
+                    -e DB_DATABASE=:memory: \
                     global-purchase-back \
                     php vendor/bin/phpunit tests
                 '''
@@ -36,6 +37,7 @@ pipeline {
 
         stage('🚀 Mise en Production Locale') {
             steps {
+                echo 'Déploiement final...'
                 sh 'docker-compose up -d --build'
             }
         }
