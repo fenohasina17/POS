@@ -23,7 +23,9 @@ pipeline {
         stage('🧪 Tests Automatisés') {
             steps {
                 echo 'Lancement des tests Laravel...'
-                sh "docker run --rm global-purchase-back ./vendor/bin/phpunit"
+                // CORRECTION : On crée le fichier sqlite vide AVANT de lancer les tests
+                // On utilise "touch" à l'intérieur du conteneur
+                sh "docker run --rm global-purchase-back sh -c 'touch database/database.sqlite && ./vendor/bin/phpunit'"
             }
         }
 
