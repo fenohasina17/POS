@@ -14,7 +14,7 @@ pipeline {
 
         stage('📦 Build des Images') {
             steps {
-                echo 'Construction des images...'
+                echo 'Construction des images Docker...'
                 sh 'docker build -t global-purchase-back ./backend'
                 sh 'docker build -t global-purchase-front ./frontend'
             }
@@ -22,7 +22,7 @@ pipeline {
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo 'Exécution des tests (Correction Table Cache)...'
+                echo 'Lancement des tests unitaires et fonctionnels...'
                 sh '''
                 docker run --rm \
                     -e APP_ENV=testing \
@@ -33,14 +33,14 @@ pipeline {
                     -e SESSION_DRIVER=array \
                     -e QUEUE_CONNECTION=sync \
                     global-purchase-back \
-                    bash -c "php artisan migrate:install && php artisan cache:table && php artisan migrate --force && php vendor/bin/phpunit tests"
+                    bash -c "php artisan migrate --force && php vendor/bin/phpunit tests"
                 '''
             }
         }
 
         stage('🚀 Mise en Production Locale') {
             steps {
-                echo 'Déploiement final...'
+                echo 'Déploiement de l’application avec Docker Compose...'
                 sh 'docker-compose up -d --build'
             }
         }
@@ -48,10 +48,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline terminé avec succès !'
+            echo '✅ Félicitations ! Le pipeline est passé et l’application est déployée.'
         }
         failure {
-            echo '❌ Le pipeline a échoué. Vérifie les logs des tests.'
+            echo '❌ Échec du pipeline. Vérifie les logs de l’étape en erreur.'
         }
     }
 }
