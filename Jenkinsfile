@@ -22,36 +22,62 @@ pipeline {
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo 'Lancement des tests unitaires et fonctionnels...'
+                echo 'Lancement des tests sur PostgreSQL (Sidecar)...'
                 sh '''
+                # 1. Créer un réseau temporaire pour que les conteneurs se voient
+                docker network create test-net || true
+
+                # 2. Lancer un PostgreSQL temporaire
+                docker run -d --name pg-test \
+                    --network test-net \
+                    -e POSTGRES_DB=testing \
+                    -e POSTGRES_PASSWORD=password \
+                    postgres:15-alpine
+
+                # Attendre que Postgres soit prêt
+                sleep 10
+
+                # 3. Lancer les tests en pointant sur ce PostgreSQL
                 docker run --rm \
+                    --network test-net \
                     -e APP_ENV=testing \
                     -e APP_KEY=base64:$(openssl rand -base64 32) \
-                    -e DB_CONNECTION=sqlite \
-                    -e DB_DATABASE=:memory: \
+                    -e DB_CONNECTION=pgsql \
+                    -e DB_HOST=pg-test \
+                    -e DB_PORT=5432 \
+                    -e DB_DATABASE=testing \
+                    -e DB_USERNAME=postgres \
+                    -e DB_PASSWORD=password \
                     -e CACHE_DRIVER=array \
-                    -e SESSION_DRIVER=array \
-                    -e QUEUE_CONNECTION=sync \
                     global-purchase-back \
                     bash -c "php artisan migrate --force && php vendor/bin/phpunit tests"
+
+                # 4. Nettoyage : Supprimer le Postgres de test
+                docker rm -f pg-test
+                docker network rm test-net
                 '''
             }
         }
 
         stage('🚀 Mise en Production Locale') {
             steps {
-                echo 'Déploiement de l’application avec Docker Compose...'
+                echo 'Déploiement final...'
                 sh 'docker-compose up -d --build'
             }
         }
     }
 
     post {
+        always {
+            // Sécurité pour ne pas laisser de conteneurs traîner en cas d'échec
+            sh 'docker rm -f pg-test || true'
+            sh 'docker network rm test-net || true'
+        }
         success {
-            echo '✅ Félicitations ! Le pipeline est passé et l’application est déployée.'
+            echo '✅ Pipeline réussi avec PostgreSQL !'
         }
         failure {
-            echo '❌ Échec du pipeline. Vérifie les logs de l’étape en erreur.'
+            echo '❌ Le pipeline a échoué.'
         }
     }
 }
