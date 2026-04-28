@@ -3,81 +3,91 @@ pipeline {
 
     options {
         timeout(time: 30, unit: 'MINUTES')
+        ansiColor('xterm')
     }
     
     stages {
         stage('📥 Récupération du Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/giov2002/Deployement-Application-web.git'
+                // On s'assure d'être sur la bonne branche
+                checkout scm
             }
         }
 
         stage('📦 Build des Images') {
             steps {
-                echo 'Construction des images Docker...'
-                sh 'docker build -t global-purchase-back ./backend'
-                sh 'docker build -t global-purchase-front ./frontend'
+                echo '🏗️ Construction des images via Docker Compose...'
+                sh 'docker-compose build --no-cache'
             }
         }
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo 'Lancement des tests sur PostgreSQL (Sidecar)...'
+                echo '🧪 Lancement des tests unitaires et fonctionnels...'
                 sh '''
-                # 1. Créer un réseau temporaire pour que les conteneurs se voient
                 docker network create test-net || true
-
-                # 2. Lancer un PostgreSQL temporaire
                 docker run -d --name pg-test \
                     --network test-net \
                     -e POSTGRES_DB=testing \
                     -e POSTGRES_PASSWORD=password \
                     postgres:15-alpine
 
-                # Attendre que Postgres soit prêt
                 sleep 10
 
-                # 3. Lancer les tests en pointant sur ce PostgreSQL
+                # On utilise l'image buildée par docker-compose (généralement nommée par le dossier)
+                # On récupère le nom de l'image backend générée
+                BACKEND_IMAGE=$(docker images --format "{{.Repository}}" | grep backend | head -n 1)
+
                 docker run --rm \
                     --network test-net \
                     -e APP_ENV=testing \
-                    -e APP_KEY=base64:$(openssl rand -base64 32) \
+                    -e APP_KEY=base64:KFOlFFNXabFku6rDUj51Y1cq47i+ivysqwsh1Pz6KOw= \
                     -e DB_CONNECTION=pgsql \
                     -e DB_HOST=pg-test \
                     -e DB_PORT=5432 \
                     -e DB_DATABASE=testing \
                     -e DB_USERNAME=postgres \
                     -e DB_PASSWORD=password \
-                    -e CACHE_DRIVER=array \
-                    global-purchase-back \
-                    bash -c "php artisan migrate --force && php vendor/bin/phpunit tests"
+                    $BACKEND_IMAGE \
+                    bash -c "php artisan migrate --force && php vendor/bin/phpunit"
 
-                # 4. Nettoyage : Supprimer le Postgres de test
                 docker rm -f pg-test
                 docker network rm test-net
                 '''
             }
         }
 
-        stage('🚀 Mise en Production Locale') {
+        stage('🚀 Déploiement & Initialisation') {
             steps {
-                echo 'Déploiement final...'
-                sh 'docker-compose up -d --build'
+                echo '🚀 Lancement de l\'application...'
+                sh 'docker-compose up -d'
+                
+                echo '⏳ Attente du démarrage de la base de données...'
+                sh 'sleep 15'
+
+                echo '🔧 Exécution des migrations et du seeding...'
+                sh 'docker-compose exec -T backend php artisan migrate:fresh --seed --force'
+                
+                echo '🔑 Optimisation de Laravel...'
+                sh 'docker-compose exec -T backend php artisan config:cache'
+                sh 'docker-compose exec -T backend php artisan route:cache'
             }
         }
     }
 
     post {
         always {
-            // Sécurité pour ne pas laisser de conteneurs traîner en cas d'échec
+            echo '🧹 Nettoyage des ressources de test...'
             sh 'docker rm -f pg-test || true'
             sh 'docker network rm test-net || true'
         }
         success {
-            echo '✅ Pipeline réussi avec PostgreSQL !'
+            echo '✅ Pipeline terminé avec succès ! L\'application est disponible sur http://localhost:8000'
+            // Nettoyage des images orphelines pour économiser de l'espace
+            sh 'docker image prune -f'
         }
         failure {
-            echo '❌ Le pipeline a échoué.'
+            echo '❌ Échec du pipeline. Vérifiez les logs ci-dessus.'
         }
     }
 }
