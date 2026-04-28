@@ -101,7 +101,8 @@ pipeline {
         stage('🚀 Déploiement & Initialisation') {
             steps {
                 echo '🚀 Lancement de l\'application...'
-                sh '${DOCKER_COMPOSE} up -d'
+                // On ne lance que les services applicatifs pour éviter le conflit avec le conteneur Jenkins lui-même
+                sh '${DOCKER_COMPOSE} up -d db backend nginx frontend'
                 
                 echo '⏳ Attente du démarrage des services...'
                 sh 'sleep 10'
