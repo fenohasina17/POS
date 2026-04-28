@@ -1,12 +1,33 @@
 pipeline {
     agent any
 
+    environment {
+        // On définit un chemin pour notre binaire docker-compose local
+        DOCKER_COMPOSE = "${WORKSPACE}/bin/docker-compose"
+    }
+
     options {
         timeout(time: 30, unit: 'MINUTES')
         ansiColor('xterm')
     }
     
     stages {
+        stage('🛠️ Préparation des outils') {
+            steps {
+                script {
+                    sh '''
+                    mkdir -p ${WORKSPACE}/bin
+                    if [ ! -f "${DOCKER_COMPOSE}" ]; then
+                        echo "📥 Téléchargement de docker-compose..."
+                        curl -L "https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-$(uname -s)-$(uname -m)" -o ${DOCKER_COMPOSE}
+                        chmod +x ${DOCKER_COMPOSE}
+                    fi
+                    ${DOCKER_COMPOSE} version
+                    '''
+                }
+            }
+        }
+
         stage('📥 Récupération du Code') {
             steps {
                 checkout scm
@@ -15,8 +36,8 @@ pipeline {
 
         stage('📦 Build des Images') {
             steps {
-                echo '🏗️ Construction des images via Docker Compose...'
-                sh 'docker compose build --no-cache'
+                echo '🏗️ Construction des images...'
+                sh '${DOCKER_COMPOSE} build --no-cache'
             }
         }
 
@@ -46,7 +67,7 @@ pipeline {
                     -e DB_USERNAME=postgres \
                     -e DB_PASSWORD=password \
                     $BACKEND_IMAGE \
-                    bash -c "php artisan migrate --force && php vendor/bin/phpunit" || echo "⚠️ Tests en échec mais on continue le pipeline"
+                    bash -c "php artisan migrate --force && php vendor/bin/phpunit" || echo "⚠️ Tests en échec mais on continue"
 
                 docker rm -f pg-test || true
                 docker network rm test-net || true
@@ -57,17 +78,17 @@ pipeline {
         stage('🚀 Déploiement & Initialisation') {
             steps {
                 echo '🚀 Lancement de l\'application...'
-                sh 'docker compose up -d'
+                sh '${DOCKER_COMPOSE} up -d'
                 
                 echo '⏳ Attente du démarrage des services...'
                 sh 'sleep 10'
 
-                echo '🔧 Initialisation de la base de données (Clean & Seed)...'
-                sh 'docker compose exec -T backend php artisan migrate:fresh --seed --force'
+                echo '🔧 Initialisation de la base de données...'
+                sh '${DOCKER_COMPOSE} exec -T backend php artisan migrate:fresh --seed --force'
                 
-                echo '🔑 Optimisation des caches Laravel...'
-                sh 'docker compose exec -T backend php artisan config:cache'
-                sh 'docker compose exec -T backend php artisan route:cache'
+                echo '🔑 Optimisation des caches...'
+                sh '${DOCKER_COMPOSE} exec -T backend php artisan config:cache'
+                sh '${DOCKER_COMPOSE} exec -T backend php artisan route:cache'
             }
         }
     }
@@ -79,12 +100,11 @@ pipeline {
             sh 'docker network rm test-net || true'
         }
         success {
-            echo '✅ Pipeline terminé avec succès ! L\'application est disponible sur http://localhost:8000'
-            // Nettoyage des images orphelines pour économiser de l'espace
+            echo '✅ Pipeline terminé avec succès !'
             sh 'docker image prune -f'
         }
         failure {
-            echo '❌ Échec du pipeline. Vérifiez les logs ci-dessus.'
+            echo '❌ Échec du pipeline.'
         }
     }
 }
