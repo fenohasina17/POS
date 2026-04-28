@@ -60,7 +60,7 @@ pipeline {
         stage('📦 Build des Images') {
             steps {
                 echo '🏗️ Construction des images...'
-                sh '${DOCKER_COMPOSE} build --no-cache'
+                sh '${DOCKER_COMPOSE} build'
             }
         }
 
