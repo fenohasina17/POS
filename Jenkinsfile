@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // On définit un chemin pour notre binaire docker-compose local
-        DOCKER_COMPOSE = "${WORKSPACE}/bin/docker-compose"
+        DOCKER_COMPOSE = "${WORKSPACE}/bin/docker-compose -p pos_app"
     }
 
     options {
@@ -17,10 +17,10 @@ pipeline {
                 script {
                     sh '''
                     mkdir -p ${WORKSPACE}/bin
-                    if [ ! -f "${DOCKER_COMPOSE}" ]; then
+                    if [ ! -f "${WORKSPACE}/bin/docker-compose" ]; then
                         echo "📥 Téléchargement de docker-compose..."
-                        curl -L "https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-$(uname -s)-$(uname -m)" -o ${DOCKER_COMPOSE}
-                        chmod +x ${DOCKER_COMPOSE}
+                        curl -L "https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-$(uname -s)-$(uname -m)" -o ${WORKSPACE}/bin/docker-compose
+                        chmod +x ${WORKSPACE}/bin/docker-compose
                     fi
                     ${DOCKER_COMPOSE} version
                     '''
@@ -100,19 +100,21 @@ pipeline {
 
         stage('🚀 Déploiement & Initialisation') {
             steps {
-                echo '🚀 Lancement de l\'application...'
-                // On ne lance que les services applicatifs pour éviter le conflit avec le conteneur Jenkins lui-même
-                sh '${DOCKER_COMPOSE} up -d db backend nginx frontend'
-                
-                echo '⏳ Attente du démarrage des services...'
-                sh 'sleep 10'
+                script {
+                    echo '🚀 Lancement de l\'application...'
+                    // On ne lance que les services applicatifs pour éviter le conflit avec le conteneur Jenkins lui-même
+                    sh '${DOCKER_COMPOSE} up -d db backend nginx frontend'
+                    
+                    echo '⏳ Attente du démarrage des services...'
+                    sh 'sleep 10'
 
-                echo '🔧 Initialisation de la base de données...'
-                sh '${DOCKER_COMPOSE} exec -T backend php artisan migrate:fresh --seed --force'
-                
-                echo '🔑 Optimisation des caches...'
-                sh '${DOCKER_COMPOSE} exec -T backend php artisan config:cache'
-                sh '${DOCKER_COMPOSE} exec -T backend php artisan route:cache'
+                    echo '🔧 Initialisation de la base de données...'
+                    sh '${DOCKER_COMPOSE} exec -T backend php artisan migrate:fresh --seed --force'
+                    
+                    echo '🔑 Optimisation des caches...'
+                    sh '${DOCKER_COMPOSE} exec -T backend php artisan config:cache'
+                    sh '${DOCKER_COMPOSE} exec -T backend php artisan route:cache'
+                }
             }
         }
     }

@@ -2,7 +2,6 @@ services:
   # --- Base de Données (Postgres) ---
   db:
     image: postgres:15
-    container_name: pos_db_container
     restart: always
     env_file: .env
     environment:
@@ -19,7 +18,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: pos_backend
     restart: always
     depends_on:
       - db
@@ -33,7 +31,6 @@ services:
   # --- Serveur Web (Nginx pour faire le pont avec le PHP) ---
   nginx:
     image: nginx:alpine
-    container_name: pos_nginx
     restart: always
     ports:
       - "8000:80"
@@ -50,7 +47,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: pos_frontend
     restart: always
     ports:
       - "5173:5173"
@@ -67,7 +63,6 @@ services:
   # --- Jenkins (CI/CD Automation) ---
   jenkins:
     image: jenkins/jenkins:lts
-    container_name: pos_jenkins
     restart: always
     privileged: true
     user: root
