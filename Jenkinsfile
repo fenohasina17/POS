@@ -31,6 +31,29 @@ pipeline {
         stage('📥 Récupération du Code') {
             steps {
                 checkout scm
+                script {
+                    echo "🔧 Création des fichiers d'environnement..."
+                    
+                    // 1. Création du .env à la racine (pour docker-compose)
+                    sh '''
+                    cp backend/.env.example .env
+                    sed -i 's/DB_DATABASE=app/DB_DATABASE=pos_system/' .env
+                    sed -i 's/DB_USERNAME=app/DB_USERNAME=giovanni/' .env
+                    sed -i 's/DB_PASSWORD=secret/DB_PASSWORD=ton_password_ultra_secret/' .env
+                    sed -i 's|APP_URL=http://localhost:8080|APP_URL=http://localhost:8000|' .env
+                    '''
+                    
+                    // 2. Création du .env dans le dossier backend (pour Laravel)
+                    sh 'cp .env backend/.env'
+                    
+                    // 3. Création du .env dans le dossier frontend (pour Vite)
+                    sh '''
+                    echo "VITE_API_URL=http://localhost:8000" > frontend/.env
+                    echo "VITE_APP_NAME='Point of Sale Giovanni'" >> frontend/.env
+                    '''
+                    
+                    echo "✅ Fichiers .env préparés."
+                }
             }
         }
 
