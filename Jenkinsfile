@@ -2,8 +2,6 @@ pipeline {
     agent any
 
     environment {
-        // On utilise le nom de projet correspondant au dossier pour que Docker Compose
-        // comprenne qu'il doit METTRE À JOUR les conteneurs existants.
         DOCKER_COMPOSE = "${WORKSPACE}/bin/docker-compose -p deployement-application-web"
     }
 
@@ -41,23 +39,29 @@ pipeline {
                 script {
                     echo "🔧 Création des fichiers d'environnement..."
                     
-                    // 1. Création du .env à la racine
-                    sh '''
-                    cp backend/.env.example .env
-                    sed -i 's/DB_DATABASE=app/DB_DATABASE=pos_system/' .env
-                    sed -i 's/DB_USERNAME=app/DB_USERNAME=giovanni/' .env
-                    sed -i 's/DB_PASSWORD=secret/DB_PASSWORD=ton_password_ultra_secret/' .env
-                    sed -i 's|APP_URL=http://localhost:8080|APP_URL=http://localhost:8000|' .env
-                    '''
-                    
-                    // 2. Création du .env dans le dossier backend
-                    sh 'cp .env backend/.env'
-                    
-                    // 3. Création du .env dans le dossier frontend
-                    sh '''
-                    echo "VITE_API_URL=http://localhost:8000" > frontend/.env
-                    echo "VITE_APP_NAME='Point of Sale Giovanni'" >> frontend/.env
-                    '''
+                    withCredentials([
+                        string(credentialsId: 'db-password', variable: 'DB_PASS'),
+                        string(credentialsId: 'app-key', variable: 'APP_KEY')
+                    ]) {
+                        // 1. Création du .env à la racine
+                        sh '''
+                        cp backend/.env.example .env
+                        sed -i 's/DB_DATABASE=app/DB_DATABASE=pos_system/' .env
+                        sed -i 's/DB_USERNAME=app/DB_USERNAME=giovanni/' .env
+                        sed -i "s/DB_PASSWORD=secret/DB_PASSWORD=${DB_PASS}/" .env
+                        sed -i "s|APP_URL=http://localhost:8080|APP_URL=http://localhost:8000|" .env
+                        sed -i "s|APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
+                        '''
+                        
+                        // 2. Création du .env dans le dossier backend
+                        sh 'cp .env backend/.env'
+                        
+                        // 3. Création du .env dans le dossier frontend
+                        sh '''
+                        echo "VITE_API_URL=http://localhost:8000" > frontend/.env
+                        echo "VITE_APP_NAME='Point of Sale Giovanni'" >> frontend/.env
+                        '''
+                    }
                     
                     echo "✅ Fichiers .env préparés."
                 }
@@ -82,7 +86,10 @@ pipeline {
                     -e POSTGRES_PASSWORD=password \
                     postgres:15-alpine
 
-                sleep 10
+                until docker exec pg-test pg_isready -U postgres; do
+                    echo "⏳ Attente de PostgreSQL..."
+                    sleep 2
+                done
 
                 BACKEND_IMAGE=$(docker images --format "{{.Repository}}" | grep backend | head -n 1)
 
@@ -97,7 +104,7 @@ pipeline {
                     -e DB_USERNAME=postgres \
                     -e DB_PASSWORD=password \
                     $BACKEND_IMAGE \
-                    bash -c "php artisan migrate --force && php vendor/bin/phpunit" || echo "⚠️ Tests en échec mais on continue"
+                    bash -c "php artisan migrate --force && php vendor/bin/phpunit --configuration phpunit.xml" || echo "⚠️ Tests en échec mais on continue"
 
                 docker rm -f pg-test || true
                 docker network rm test-net || true
