@@ -104,7 +104,7 @@ pipeline {
                     -e DB_USERNAME=postgres \
                     -e DB_PASSWORD=password \
                     $BACKEND_IMAGE \
-                    /var/www/run-tests.sh || echo "⚠️ Tests en échec mais on continue"
+                    /var/www/run-tests.sh
 
                 docker rm -f pg-test || true
                 docker network rm test-net || true
