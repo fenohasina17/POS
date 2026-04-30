@@ -1,153 +1,144 @@
 <template>
-  <div class="category-layout grid gap-3 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
-    <aside class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-      <div class="flex items-center justify-between">
-        <h2 class="text-base font-semibold text-slate-800">Catégories</h2>
-        <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600">
-          {{ filteredCategories.length }}
-        </span>
-      </div>
+  <div class="category-wrapper">
+    <div class="category-layout grid gap-3 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
+      <aside class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold text-slate-800">Catégories</h2>
+          <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600">
+            {{ filteredCategories.length }}
+          </span>
+        </div>
 
-      <div class="mt-4 flex-1 space-y-3 overflow-y-auto pb-1">
-        <div>
+        <div class="mt-4 flex-1 space-y-3 overflow-y-auto pb-1">
+          <div>
+            <button
+              type="button"
+              class="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+              @click="openCreateModal"
+            >
+              <FontAwesomeIcon icon="fa-solid fa-plus" />
+              Nouvelle catégorie
+            </button>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Recherche</label>
+            <div class="relative mt-1">
+              <FontAwesomeIcon
+                icon="fa-solid fa-magnifying-glass"
+                class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                v-model.trim="searchQuery"
+                type="text"
+                placeholder="Rechercher une catégorie..."
+                class="w-full rounded-full border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h1 class="text-base font-semibold text-slate-800">Gestion des catégories</h1>
+          <span class="text-xs font-semibold text-slate-400">{{ filteredCategories.length }} résultat(s)</span>
+        </div>
+
+        <div class="mt-2.5 flex-1 overflow-hidden">
+          <div
+            v-if="loading"
+            class="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-10 text-center text-sm text-slate-500"
+          >
+            <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
+            <p class="mt-4 font-medium">Chargement des catégories...</p>
+          </div>
+
+          <div
+            v-else-if="filteredCategories.length === 0"
+            class="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 text-sm text-slate-500"
+          >
+            Aucune catégorie trouvée
+          </div>
+
+          <div v-else class="flex h-full flex-col overflow-hidden">
+            <div class="flex-1 overflow-y-auto">
+              <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <li
+                  v-for="category in filteredCategories"
+                  :key="category.id"
+                  class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+                >
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1">
+                      <p class="text-sm font-semibold text-slate-800">{{ category.name }}</p>
+                      <p v-if="category.description" class="mt-1 text-xs text-slate-500">{{ category.description }}</p>
+                      <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        {{ category.products_count || 0 }} produit(s)
+                      </p>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                      <button
+                        type="button"
+                        class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                        @click.stop="openEditModal(category)"
+                      >
+                        <FontAwesomeIcon icon="fa-solid fa-pen" />
+                      </button>
+                      <button
+                        type="button"
+                        class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-rose-500 transition hover:border-rose-200 hover:text-rose-600"
+                        @click.stop="confirmDelete(category)"
+                      >
+                        <FontAwesomeIcon icon="fa-solid fa-trash" />
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <CategoryCreateModal :isOpen="isCreateModalOpen" @close="closeCreateModal" @added="handleAdded" />
+    <CategoryEditModal
+      :isOpen="isEditModalOpen"
+      :categoryData="selectedCategory"
+      @close="closeEditModal"
+      @updated="handleUpdated"
+    />
+
+    <div v-if="isDeleteConfirmOpen" class="fixed inset-0 z-50 flex items-center justify-center">
+      <div class="absolute inset-0 bg-slate-900/60" @click="closeDeleteConfirm"></div>
+      <div class="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 class="text-lg font-semibold text-slate-900">Confirmer la suppression</h2>
+        <p class="mt-3 text-sm text-slate-500">
+          Êtes-vous sûr de vouloir supprimer la catégorie
+          <strong class="text-slate-700">{{ categoryToDelete?.name }}</strong> ?
+        </p>
+        <p class="mt-2 text-xs text-rose-500">
+          Cette action est irréversible et supprimera également tous les produits associés.
+        </p>
+        <div class="mt-6 flex justify-end gap-3">
           <button
             type="button"
-            class="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
-            @click="openCreateModal"
+            class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            @click="closeDeleteConfirm"
+            :disabled="isDeleting"
           >
-            <FontAwesomeIcon icon="fa-solid fa-plus" />
-            Nouvelle catégorie
+            Annuler
+          </button>
+          <button
+            type="button"
+            class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+            @click="deleteCategory"
+            :disabled="isDeleting"
+          >
+            Supprimer
           </button>
         </div>
-
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wide text-slate-400">Recherche</label>
-          <div class="relative mt-1">
-            <FontAwesomeIcon
-              icon="fa-solid fa-magnifying-glass"
-              class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              v-model.trim="searchQuery"
-              type="text"
-              placeholder="Rechercher une catégorie..."
-              class="w-full rounded-full border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
-            />
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-slate-100 bg-slate-50/60 p-3 text-sm text-slate-600">
-          <p class="flex items-center justify-between">
-            <span class="font-semibold text-slate-800">Types d'imprimante</span>
-            <span class="text-xs text-slate-400">{{ printerTypes.length }}</span>
-          </p>
-          <ul class="mt-2 space-y-1 text-xs text-slate-500">
-            <li v-for="type in printerTypes" :key="type.id" class="truncate">• {{ type.name }}</li>
-            <li v-if="!printerTypes.length" class="text-slate-400">Aucun type configuré</li>
-          </ul>
-        </div>
-      </div>
-    </aside>
-
-    <section class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-        <h1 class="text-base font-semibold text-slate-800">Gestion des catégories</h1>
-        <span class="text-xs font-semibold text-slate-400">{{ filteredCategories.length }} résultat(s)</span>
-      </div>
-
-      <div class="mt-2.5 flex-1 overflow-hidden">
-        <div
-          v-if="loading"
-          class="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-10 text-center text-sm text-slate-500"
-        >
-          <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
-          <p class="mt-4 font-medium">Chargement des catégories...</p>
-        </div>
-
-        <div
-          v-else-if="filteredCategories.length === 0"
-          class="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 text-sm text-slate-500"
-        >
-          Aucune catégorie trouvée
-        </div>
-
-        <div v-else class="flex h-full flex-col overflow-hidden">
-          <div class="flex-1 overflow-y-auto">
-            <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <li
-                v-for="category in filteredCategories"
-                :key="category.id"
-                class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex-1">
-                    <p class="text-sm font-semibold text-slate-800">{{ category.name }}</p>
-                    <p v-if="category.description" class="mt-1 text-xs text-slate-500">{{ category.description }}</p>
-                    <p class="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      {{ category.products_count || 0 }} produit(s)
-                    </p>
-                  </div>
-                  <div class="flex flex-col items-end gap-2">
-                    <button
-                      type="button"
-                      class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
-                      @click.stop="openEditModal(category)"
-                    >
-                      <FontAwesomeIcon icon="fa-solid fa-pen" />
-                    </button>
-                    <button
-                      type="button"
-                      class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-rose-500 transition hover:border-rose-200 hover:text-rose-600"
-                      @click.stop="confirmDelete(category)"
-                    >
-                      <FontAwesomeIcon icon="fa-solid fa-trash" />
-                    </button>
-                  </div>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  </div>
-
-  <CategoryCreateModal :isOpen="isCreateModalOpen" @close="closeCreateModal" @added="handleAdded" />
-  <CategoryEditModal
-    :isOpen="isEditModalOpen"
-    :categoryData="selectedCategory"
-    @close="closeEditModal"
-    @updated="handleUpdated"
-  />
-
-  <div v-if="isDeleteConfirmOpen" class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="absolute inset-0 bg-slate-900/60" @click="closeDeleteConfirm"></div>
-    <div class="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-      <h2 class="text-lg font-semibold text-slate-900">Confirmer la suppression</h2>
-      <p class="mt-3 text-sm text-slate-500">
-        Êtes-vous sûr de vouloir supprimer la catégorie
-        <strong class="text-slate-700">{{ categoryToDelete?.name }}</strong> ?
-      </p>
-      <p class="mt-2 text-xs text-rose-500">
-        Cette action est irréversible et supprimera également tous les produits associés.
-      </p>
-      <div class="mt-6 flex justify-end gap-3">
-        <button
-          type="button"
-          class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-          @click="closeDeleteConfirm"
-          :disabled="isDeleting"
-        >
-          Annuler
-        </button>
-        <button
-          type="button"
-          class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
-          @click="deleteCategory"
-          :disabled="isDeleting"
-        >
-          Supprimer
-        </button>
       </div>
     </div>
   </div>
@@ -159,7 +150,6 @@ import axios from 'axios'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import CategoryCreateModal from './CategoryCreateModal.vue'
 import CategoryEditModal from './CategoryEditModal.vue'
-import { usePrinterTypes } from '../composables/usePrinterTypes.js'
 import { API_BASE_URL } from '@/utils/api'
 
 // =============================================
@@ -179,8 +169,6 @@ const selectedCategory = ref(null)
 const isDeleteConfirmOpen = ref(false)
 const categoryToDelete = ref(null)
 const isDeleting = ref(false)
-
-const { printerTypes, fetchPrinterTypes } = usePrinterTypes()
 
 // =============================================
 // MÉTHODES DE CHARGEMENT DES DONNÉES
@@ -205,7 +193,6 @@ const fetchCategories = async () => {
         Authorization: `Bearer ${token}`
       }
     })
-    console.log(categories)
     const data = Array.isArray(response.data) ? response.data : response.data.data || []
     categories.value = data.map(cat => ({
       ...cat,
@@ -221,7 +208,6 @@ const fetchCategories = async () => {
 // Chargement initial
 onMounted(() => {
   fetchCategories()
-  fetchPrinterTypes()
 })
 
 // =============================================
@@ -239,8 +225,6 @@ const filteredCategories = computed(() => {
     (category.description && category.description.toLowerCase().includes(query))
   )
 })
-
-
 
 // =============================================
 // GESTION DES MODALS
@@ -301,15 +285,13 @@ const closeEditModal = () => {
  */
 const handleUpdated = async (updatedCategory) => {
   try {
-    console.log(updatedCategory)
     const token = localStorage.getItem('token')
-    const response = await axios.put(`${API_BASE_URL}/categories/${updatedCategory.id}`, updatedCategory, {
+    await axios.put(`${API_BASE_URL}/categories/${updatedCategory.id}`, updatedCategory, {
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     })
-    // Rafraîchir la liste des catégories après mise à jour
     await fetchCategories()
     closeEditModal()
   } catch (e) {
@@ -358,8 +340,6 @@ const deleteCategory = async () => {
     isDeleting.value = false
   }
 }
-
-
 </script>
 
 <style scoped>

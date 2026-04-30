@@ -1,96 +1,64 @@
 <template>
-  <transition name="fade">
-    <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center">
-      <div class="absolute inset-0 bg-slate-900/60" @click="$emit('close')"></div>
-      <div class="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <header class="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
-            <h2 class="text-lg font-semibold text-slate-900">{{ title }}</h2>
-            <p class="text-xs text-slate-400">Définissez le nom affiché pour ce point de vente.</p>
-          </div>
-          <button
-            type="button"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:text-rose-500"
-            @click="$emit('close')"
-          >
-            ×
-          </button>
-        </header>
-
-        <form class="mt-4 space-y-4" @submit.prevent="onSubmit">
-          <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700" for="pos-name">Nom du point de vente</label>
-            <input
-              id="pos-name"
-              v-model.trim="localName"
-              type="text"
-              placeholder="Ex : Comptoir principal"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
-              required
-            />
-          </div>
-
-          <div class="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-              @click="$emit('close')"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
-              :disabled="!localName"
-            >
-              {{ submitLabel }}
-            </button>
-          </div>
-        </form>
+  <div v-show="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-xl">
+      <div class="border-b border-slate-100 px-5 py-4">
+        <h3 class="text-lg font-semibold text-slate-800">{{ title }}</h3>
+      </div>
+      <div class="p-5">
+        <label class="block text-sm font-medium text-slate-700">Nom du point de vente</label>
+        <input
+          v-model="localName"
+          type="text"
+          class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-300 focus:outline-none focus:ring focus:ring-indigo-200"
+          placeholder="Ex: Restaurant Centre"
+          @keyup.enter="submit"
+        />
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-100 px-5 py-4">
+        <button
+          type="button"
+          class="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+          @click="close"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          @click="submit"
+        >
+          {{ submitLabel }}
+        </button>
       </div>
     </div>
-  </transition>
+  </div>
 </template>
 
 <script setup>
-import { computed, ref, watch, defineProps, defineEmits } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
-  isOpen: { type: Boolean, default: false },
-  title: { type: String, default: 'Point de vente' },
-  submitLabel: { type: String, default: 'Valider' },
-  initialName: { type: String, default: '' },
+  isOpen: Boolean,
+  title: String,
+  submitLabel: String,
+  initialName: String,
 })
 
-const emit = defineEmits(['close', 'submit'])
+const emit = defineEmits(['submit', 'close'])
 
-const localName = ref('')
+const localName = ref(props.initialName || '')
 
-watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
-      localName.value = props.initialName || ''
-    }
-  },
-  { immediate: true }
-)
+watch(() => props.initialName, (newVal) => {
+  localName.value = newVal || ''
+})
 
-const onSubmit = () => {
-  if (!localName.value.trim()) return
-  emit('submit', localName.value.trim())
+const submit = () => {
+  if (localName.value.trim()) {
+    emit('submit', localName.value.trim())
+  }
+}
+
+const close = () => {
+  emit('close')
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-6px);
-}
-</style>

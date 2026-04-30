@@ -28,8 +28,8 @@ class TableFactory extends Factory
         return [
             'table_number' => $this->faker->unique()->numberBetween(1, 100),
             'name' => $this->faker->optional()->word(), // Parfois un nom, parfois null
-            'capacity' => $this->faker->randomElement([2, 4, 6, 8, 10]),
-            'status' => $this->faker->randomElement(['available', 'occupied', 'reserved', 'out_of_order']),
+            'capacity' => $this->faker->randomElement([4]),
+            'status' => $this->faker->randomElement(['available']),
             'description' => $this->faker->sentence(),
             'point_of_sale_id' => PointOfSale::factory(), // Crée automatiquement un POS lié
             'location' => [

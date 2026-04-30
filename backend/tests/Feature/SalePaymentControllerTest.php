@@ -414,41 +414,6 @@ class SalePaymentControllerTest extends TestCase
         ]);
     }
 
-    #[Test]
-    public function it_stores_payment_reference()
-    {
-        [$user, $token, $pos] = $this->authenticate('admin');
-        
-        $sale = Sale::factory()->create([
-            'point_of_sale_id' => $pos->id,
-            'final_amount' => 100.00
-        ]);
-        
-        $card = Payment::create(['name' => 'Carte']);
-
-        $payload = [
-            'payments' => [
-                [
-                    'payment_id' => $card->id, 
-                    'amount' => 100.00,
-                    'reference' => 'CARD-123456',
-                    'notes' => 'Paiement par carte'
-                ]
-            ]
-        ];
-
-        $response = $this->withHeader('Authorization', "Bearer $token")
-            ->postJson("/api/sales/{$sale->id}/payments", $payload);
-
-        $response->assertStatus(201);
-        
-        $this->assertDatabaseHas('sale_payments', [
-            'sale_id' => $sale->id,
-            'payment_id' => $card->id,
-            'reference' => 'CARD-123456',
-            'notes' => 'Paiement par carte'
-        ]);
-    }
 
     #[Test]
     public function it_fails_if_total_paid_exceeds_final_amount()

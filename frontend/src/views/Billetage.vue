@@ -1,83 +1,83 @@
 <template>
-  <div class="min-h-screen bg-[linear-gradient(160deg,#eef2ff_0%,#f8fafc_100%)] px-4 py-6 md:px-6">
+  <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 px-4 py-6 md:px-6">
     <Profile />
 
     <section class="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
-      <header class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">Remise a zero</p>
-            <h1 class="mt-2 text-3xl font-semibold text-slate-900">Cloture et recapitulatif de session</h1>
+            <p class="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">Sécurité caisse</p>
+            <h1 class="mt-2 text-3xl font-bold text-slate-900">Clôture de session</h1>
             <p class="mt-2 max-w-3xl text-sm text-slate-500">
-              Consultez toutes les ventes de la session en cours, puis lancez le billetage des especes recues
-              pour comparer la caisse reelle avec les ventes enregistrees.
+              Comptez les espèces présentes dans la caisse. L’écart sera calculé automatiquement.
             </p>
           </div>
-
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
               @click="resetForm"
               :disabled="isSubmitting || isLoading"
             >
-              <i class="fas fa-rotate-left text-xs"></i>
-              Reinitialiser
+              <i class="fas fa-rotate-left text-xs"></i> Réinitialiser
             </button>
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
-              @click="goToSummary"
-              :disabled="isSubmitting || isLoading || !sessionId || !hasRecordedBilletage"
-            >
-              <i class="fas fa-receipt text-xs"></i>
-              Voir le recapitulatif final
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700"
+              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
               @click="showCashCount = true"
+              :disabled="!hasAnySale"
+              :title="!hasAnySale ? 'Aucune vente dans cette session, billetage inutile' : 'Commencer le comptage'"
             >
-              <i class="fas fa-money-bill-wave text-xs"></i>
-              Faire le billetage
+              <i class="fas fa-coins text-xs"></i> Billetage
             </button>
           </div>
         </div>
       </header>
 
+      <!-- Sélecteur de session (admin/manager) -->
+      <div v-if="canSelectSession" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <label class="block text-sm font-semibold text-slate-700">Session à traiter</label>
+        <select v-model="selectedSessionId" @change="onSessionChange" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
+          <option v-for="sess in openSessions" :key="sess.id" :value="sess.id">
+            {{ sess.cash_register?.name }} - ouverte le {{ formatDate(sess.opened_at) }} ({{ sess.user?.name }})
+          </option>
+        </select>
+        <p v-if="openSessions.length === 0" class="mt-2 text-sm text-amber-600">Aucune session ouverte pour ce point de vente.</p>
+      </div>
+
       <div class="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_420px]">
-        <section class="min-w-0 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div class="mb-3 border-b border-slate-100 px-2 pb-3">
-            <h2 class="text-lg font-semibold text-slate-900">Recapitulatif des ventes de la session</h2>
-            <p class="text-sm text-slate-500">
-              Cette liste reprend les ventes visibles dans <strong>Mes ventes</strong> pour la session active.
-            </p>
+        <!-- Récapitulatif des ventes -->
+        <section class="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-md">
+          <div class="mb-3 border-b border-slate-100 pb-3">
+            <h2 class="text-lg font-semibold text-slate-900">Produits vendus</h2>
+            <p class="text-sm text-slate-500">Liste des articles écoulés pendant la session (hors montants).</p>
           </div>
 
-          <div class="mb-4 grid gap-3 px-2 md:grid-cols-2 xl:grid-cols-3">
-            <article
-              v-for="item in categoryGroups"
-              :key="item.label"
-              class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{{ item.label }}</p>
-              <p class="mt-2 text-lg font-semibold text-slate-900">{{ item.productTypes }} produit(s)</p>
-              <p class="mt-1 text-xs text-slate-500">{{ item.products }} article(s) vendu(s)</p>
-            </article>
-
-            <article class="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-500">Session</p>
-              <p class="mt-2 text-lg font-semibold text-slate-900">{{ totalProductTypes }} produit(s)</p>
-              <p class="mt-1 text-xs text-slate-500">{{ sessionProductsCount }} article(s) vendu(s)</p>
-            </article>
+          <!-- Indicateur de chargement des détails -->
+          <div v-if="loadingDetails" class="mb-3 rounded-xl bg-slate-100 p-2 text-center text-xs text-slate-600">
+            Chargement des détails des produits… {{ loadingProgress }}%
+            <div class="mt-1 h-1 w-full rounded-full bg-slate-200 overflow-hidden">
+              <div class="h-full bg-indigo-500 transition-all duration-300" :style="{ width: loadingProgress + '%' }"></div>
+            </div>
           </div>
 
-          <div v-if="categoryGroups.length" class="space-y-3 px-2">
-            <article
-              v-for="category in categoryGroups"
-              :key="category.label"
-              class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4"
-            >
+          <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p class="text-xs font-semibold uppercase text-slate-400">Total tickets</p>
+              <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionSales.length }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p class="text-xs font-semibold uppercase text-slate-400">Articles vendus</p>
+              <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionProductsCount }}</p>
+            </div>
+            <div class="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+              <p class="text-xs font-semibold uppercase text-indigo-500">Produits distincts</p>
+              <p class="mt-2 text-2xl font-bold text-slate-800">{{ totalProductTypes }}</p>
+            </div>
+          </div>
+
+          <div v-if="categoryGroups.length" class="space-y-3">
+            <article v-for="category in categoryGroups" :key="category.label" class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
                 <div>
                   <h3 class="text-base font-semibold text-slate-900">{{ category.label }}</h3>
@@ -86,69 +86,43 @@
                   </p>
                 </div>
               </div>
-
               <div class="mt-4">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Produits vendus</p>
-                <ul v-if="category.items.length" class="space-y-2">
-                  <li
-                    v-for="item in category.items"
-                    :key="item.name"
-                    class="flex items-center justify-between rounded-2xl border border-white bg-white px-3 py-2 text-sm text-slate-700"
-                  >
+                <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Détail des ventes</p>
+                <ul class="space-y-2">
+                  <li v-for="item in category.items" :key="item.name" class="flex items-center justify-between rounded-xl border border-white bg-white px-3 py-2 text-sm text-slate-700">
                     <span class="font-medium text-slate-900">{{ item.name }}</span>
                     <span class="text-xs font-semibold text-slate-500">x{{ item.quantity }}</span>
                   </li>
                 </ul>
-                <p v-else class="text-sm text-slate-400">Aucun produit detaille dans cette categorie.</p>
               </div>
             </article>
           </div>
-
-          <div
-            v-else
-            class="mx-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500"
-          >
-            Aucun ticket trouve pour la session active.
+          <div v-else class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
+            <i class="fas fa-receipt mb-2 text-2xl text-slate-300"></i>
+            <p>Aucune vente enregistrée pour cette session.</p>
           </div>
         </section>
 
-        <form ref="formRef" class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" @submit.prevent="submit">
-          <section class="space-y-4">
+        <!-- Billetage -->
+        <form ref="formRef" class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
+          <div class="space-y-4">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 class="text-lg font-semibold text-slate-900">Billetage des especes</h2>
-                <p class="text-sm text-slate-500">
-                  Comptez uniquement les billets et pieces effectivement recus en caisse.
-                </p>
+                <h2 class="text-lg font-semibold text-slate-900">Comptage des espèces</h2>
+                <p class="text-sm text-slate-500">Saisissez le nombre de billets et pièces réellement présents dans la caisse.</p>
               </div>
-              <span
-                v-if="sessionClosed"
-                class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600"
-              >
-                Session cloturee
-              </span>
-              <span
-                v-else-if="hasRecordedBilletage"
-                class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600"
-              >
-                Billetage enregistre
-              </span>
+              <span v-if="sessionClosed" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">Session clôturée</span>
+              <span v-else-if="hasRecordedBilletage" class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">Billetage validé</span>
             </div>
 
             <div v-if="!sessionId" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              Aucune session active n'est detectee pour enregistrer le billetage. Le recapitulatif reste visible, mais
-              l'enregistrement du comptage necessite une session ouverte.
+              <i class="fas fa-info-circle mr-2"></i> Aucune session active. Veuillez ouvrir une session depuis la page d’accueil.
             </div>
 
-            <div v-if="showCashCount" class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div
-                v-for="denomination in denominations"
-                :key="denomination.value"
-                class="grid items-center gap-3 sm:grid-cols-[120px_minmax(0,1fr)_130px]"
-              >
-                <label :for="`denom-${denomination.value}`" class="text-sm font-semibold text-slate-700">
-                  {{ denomination.label }}
-                </label>
+            <!-- Comptage avec gestion des permissions + condition hasAnySale -->
+            <div v-if="showCashCount && sessionId && !sessionClosed && hasAnySale" class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div v-for="denomination in denominations" :key="denomination.value" class="grid items-center gap-3 sm:grid-cols-[120px_minmax(0,1fr)_110px]">
+                <label :for="`denom-${denomination.value}`" class="text-sm font-semibold text-slate-700">{{ denomination.label }} Ar</label>
                 <input
                   :id="`denom-${denomination.value}`"
                   v-model="counts[denomination.value]"
@@ -156,112 +130,71 @@
                   inputmode="numeric"
                   min="0"
                   step="1"
-                  :disabled="isSubmitting || isLoading || sessionClosed"
-                  @focus="showKeyboard({ type: 'denomination', value: denomination.value })"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
+                  :disabled="isSubmitting || isLoading || sessionClosed || hasRecordedBilletage || !canEditBilletage"
+                  @focus="showKeyboard({ type: 'denomination', value: denomination.value }, $event)"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 disabled:opacity-60"
                 />
-                <span class="text-right text-sm font-semibold text-slate-600">
-                  {{ formatCurrency(denominationTotal(denomination.value)) }}
-                </span>
+                <span class="text-right text-sm font-semibold text-slate-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</span>
               </div>
             </div>
-
-            <div v-else class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-              Cliquez sur <strong>Faire le billetage</strong> pour saisir le comptage des billets et pieces recues.
+            <div v-else-if="showCashCount && !hasAnySale" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <i class="fas fa-info-circle mr-2"></i> Aucune vente dans cette session. Le billetage n’est pas nécessaire.
+            </div>
+            <div v-else-if="!showCashCount" class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+              <i class="fas fa-calculator mb-2 text-2xl text-slate-300"></i>
+              <p>Cliquez sur <strong>« Billetage »</strong> pour commencer le comptage.</p>
             </div>
 
-            <p class="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-              Montant compte :
-              <strong class="font-semibold text-slate-900">{{ formatCurrency(actualTotal) }}</strong>
-            </p>
-
-            <div
-              v-if="hasRecordedBilletage"
-              class="space-y-3 rounded-2xl border px-4 py-4"
-              :class="varianceCardClass"
-            >
+            <!-- Résultat du contrôle -->
+            <div v-if="hasRecordedBilletage" class="space-y-3 rounded-2xl border px-4 py-4" :class="canViewSensitiveInfo ? varianceCardClass : 'border-emerald-200 bg-emerald-50'">
               <div class="flex items-center justify-between gap-3">
-                <h3 class="text-sm font-semibold">Controle d'ecart</h3>
-                <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="varianceBadgeClass">
-                  {{ varianceStatusLabel }}
-                </span>
+                <h3 class="text-sm font-semibold">Résultat du contrôle</h3>
+                <span v-if="canViewSensitiveInfo" class="rounded-full px-3 py-1 text-xs font-semibold" :class="varianceBadgeClass">{{ varianceStatusLabel }}</span>
+                <span v-else class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Billetage enregistré</span>
               </div>
-
-              <div class="grid gap-3 text-sm sm:grid-cols-2">
-                <p class="flex items-center justify-between gap-3">
-                  <span>Fond de caisse</span>
-                  <strong>{{ formatCurrency(startingAmount) }}</strong>
-                </p>
-                <p class="flex items-center justify-between gap-3">
-                  <span>Ventes especes</span>
-                  <strong>{{ formatCurrency(cashSalesAmount) }}</strong>
-                </p>
-                <p class="flex items-center justify-between gap-3">
-                  <span>Billetage valide</span>
-                  <strong>{{ formatCurrency(actualTotal) }}</strong>
-                </p>
-                <p class="flex items-center justify-between gap-3">
-                  <span>Ecart calcule</span>
-                  <strong>{{ formatCurrency(varianceAmount) }}</strong>
-                </p>
+              <div class="grid gap-2 text-sm">
+                <p class="flex items-center justify-between"><span>Montant compté</span><strong>{{ formatCurrency(actualTotal) }}</strong></p>
+                <p class="flex items-center justify-between"><span>Fond de caisse</span><strong>{{ formatCurrency(startingAmount) }}</strong></p>
+                <template v-if="canViewSensitiveInfo">
+                  <p class="flex items-center justify-between"><span>Ventes espèces</span><strong>{{ formatCurrency(cashSalesAmount) }}</strong></p>
+                  <p class="flex items-center justify-between"><span>Montant attendu</span><strong>{{ formatCurrency(expectedCashAmount) }}</strong></p>
+                  <p class="flex items-center justify-between"><span>Écart</span><strong :class="varianceAmount === 0 ? 'text-emerald-600' : (varianceAmount > 0 ? 'text-amber-600' : 'text-rose-600')">{{ formatCurrency(varianceAmount) }}</strong></p>
+                </template>
+                <p v-else class="flex items-center justify-between text-slate-500 text-xs"><span>Contrôle effectué</span><span>✅</span></p>
               </div>
-
-              <p class="text-xs">
-                Formule : billetage - fond de caisse - ventes especes
+              <p class="text-xs text-slate-500 italic">
+                <span v-if="canViewSensitiveInfo">Détail complet réservé à l’administration.</span>
+                <span v-else>Le responsable vérifiera la conformité en interne.</span>
               </p>
             </div>
-          </section>
 
-          <div class="flex flex-wrap justify-end gap-3">
+            <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">{{ errorMessage }}</p>
+            <p v-if="successMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-600">{{ successMessage }}</p>
+          </div>
+
+          <div class="flex flex-wrap justify-end gap-3 pt-2">
             <button
               type="submit"
-              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || hasRecordedBilletage || !showCashCount"
+              class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
+              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || hasRecordedBilletage || !showCashCount || !canEditBilletage || !hasAnySale"
             >
-              <i v-if="isSubmitting" class="fas fa-circle-notch animate-spin text-xs"></i>
-              <span v-if="isSubmitting">Enregistrement…</span>
-              <span v-else>Enregistrer le billetage</span>
+              <i v-if="isSubmitting" class="fas fa-circle-notch animate-spin"></i>
+              {{ isSubmitting ? 'Enregistrement...' : 'Valider le billetage' }}
             </button>
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-2xl bg-rose-50 px-5 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+              class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-200 disabled:opacity-60"
               @click="closeSession"
-              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !hasRecordedBilletage"
+              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !hasRecordedBilletage || !canEditBilletage"
             >
-              Cloturer la session
+              Clôturer la session
             </button>
-          </div>
-
-          <div class="space-y-2">
-            <p
-              v-if="hasRecordedBilletage"
-              class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-600"
-            >
-              Le billetage est enregistre pour cette session.
-            </p>
-            <p
-              v-if="errorMessage"
-              class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600"
-            >
-              {{ errorMessage }}
-            </p>
-            <p
-              v-if="successMessage"
-              class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-600"
-            >
-              {{ successMessage }}
-            </p>
           </div>
         </form>
       </div>
     </section>
 
-    <Keyboard
-      v-if="keyboardVisible"
-      :initial-position="keyboardPosition"
-      @key-pressed="handleKeyPress"
-      @close="hideKeyboard"
-    />
+    <Keyboard v-if="keyboardVisible" :initial-position="keyboardPosition" @key-pressed="handleKeyPress" @close="hideKeyboard" />
   </div>
 </template>
 
@@ -272,6 +205,7 @@ import axios from 'axios'
 import Keyboard from '../components/tools/Keyboard.vue'
 import { API_BASE_URL } from '@/utils/api'
 import Profile from './Profile.vue'
+import { useAuth } from '@/composables/useAuth'
 
 const denominations = [
   { value: 20000, label: '20 000' },
@@ -285,7 +219,22 @@ const denominations = [
 ]
 
 const router = useRouter()
+const { isAdmin, currentUser, hasRole, loadUserData } = useAuth()
 
+// Permissions
+const canSelectSession = computed(() => {
+  return isAdmin.value || hasRole('gerant')
+})
+const canViewSensitiveInfo = computed(() => {
+  return isAdmin.value || hasRole('gerant')
+})
+// 🔧 MODIFICATION : autoriser également le caissier à faire le billetage
+const canEditBilletage = computed(() => {
+  // Autorise uniquement admin et caissier
+  return isAdmin.value || hasRole('caissier')
+})
+
+// États
 const counts = reactive(Object.fromEntries(denominations.map(d => [d.value, 0])))
 const keyboardVisible = ref(false)
 const activeField = ref(null)
@@ -302,407 +251,343 @@ const successMessage = ref('')
 const showCashCount = ref(false)
 const sessionSales = ref([])
 const sessionData = ref(null)
+const cashTransactions = ref([])
+const openSessions = ref([])
+const selectedSessionId = ref(null)
+const loadingDetails = ref(false)
+const loadingProgress = ref(0)
 
+// ========== UTILITAIRES ==========
 const authHeaders = () => {
   const token = localStorage.getItem('token')
-  if (!token) throw new Error("Token d'authentification manquant")
+  if (!token) throw new Error('Token manquant')
   return { Authorization: `Bearer ${token}` }
 }
 
-const closeModal = () => {
-  router.push({ name: 'cashier-dashboard' })
-}
-
-const hasUserInput = computed(() => {
-  return denominations.some(denomination => Number(counts[denomination.value]) > 0)
-})
-
-const actualTotal = computed(() => {
-  const billsTotal = denominations.reduce((sum, d) => sum + d.value * (Number(counts[d.value]) || 0), 0)
-  return Number(billsTotal.toFixed(2))
-})
-
-const startingAmount = computed(() => Number(sessionData.value?.starting_amount ?? 0))
-
-const normalizeText = (value) => {
-  return String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-}
-
-const isCashSale = (sale) => {
-  const paymentName = normalizeText(
-    sale?.payment_method ??
-    sale?.payment_name ??
-    sale?.payment?.name ??
-    sale?.paymentType?.name
-  )
-
-  const paymentId = Number(sale?.payment_id ?? sale?.payment?.id ?? 0)
-  return paymentId === 4 || ['espece', 'cash', 'liquide'].some((keyword) => paymentName.includes(keyword))
-}
-
-const cashSalesAmount = computed(() => {
-  return Number(sessionSales.value.reduce((sum, sale) => {
-    if (!isCashSale(sale)) return sum
-    const amount = Number(sale?.total_amount ?? sale?.final_amount ?? sale?.total ?? 0)
-    return sum + (Number.isFinite(amount) ? amount : 0)
-  }, 0).toFixed(2))
-})
-
-const varianceAmount = computed(() => {
-  return Number((actualTotal.value - startingAmount.value - cashSalesAmount.value).toFixed(2))
-})
-
-const varianceStatus = computed(() => {
-  if (Math.abs(varianceAmount.value) < 0.01) return 'conforme'
-  return varianceAmount.value > 0 ? 'positif' : 'negatif'
-})
-
-const varianceStatusLabel = computed(() => {
-  if (varianceStatus.value === 'conforme') return 'Billetage conforme'
-  if (varianceStatus.value === 'positif') return 'Ecart positif'
-  return 'Ecart negatif'
-})
-
-const varianceCardClass = computed(() => {
-  if (varianceStatus.value === 'conforme') return 'border-emerald-200 bg-emerald-50 text-emerald-700'
-  if (varianceStatus.value === 'positif') return 'border-amber-200 bg-amber-50 text-amber-700'
-  return 'border-rose-200 bg-rose-50 text-rose-700'
-})
-
-const varianceBadgeClass = computed(() => {
-  if (varianceStatus.value === 'conforme') return 'bg-emerald-100 text-emerald-700'
-  if (varianceStatus.value === 'positif') return 'bg-amber-100 text-amber-700'
-  return 'bg-rose-100 text-rose-700'
-})
-
-const resolveCategoryLabel = (line) => {
-  return (
-    line?.product?.category?.name ??
-    line?.category?.name ??
-    line?.category_name ??
-    'Sans categorie'
-  )
-}
-
-const categoryGroups = computed(() => {
-  const groups = new Map()
-
-  sessionSales.value.forEach((sale) => {
-    getSaleLines(sale).forEach((line) => {
-      const label = line.categoryLabel
-      if (!groups.has(label)) {
-        groups.set(label, { label, products: 0, productTypes: 0, itemsMap: new Map() })
-      }
-
-      const current = groups.get(label)
-      current.products += line.quantity
-      if (!current.itemsMap.has(line.name)) {
-        current.itemsMap.set(line.name, { name: line.name, quantity: 0 })
-        current.productTypes += 1
-      }
-      current.itemsMap.get(line.name).quantity += line.quantity
-    })
-  })
-
-  return Array.from(groups.values())
-    .map((group) => ({
-      label: group.label,
-      products: group.products,
-      productTypes: group.productTypes,
-      items: Array.from(group.itemsMap.values()).sort((a, b) => b.quantity - a.quantity)
-    }))
-    .sort((a, b) => b.products - a.products)
-})
-
-const sessionProductsCount = computed(() => {
-  return sessionSales.value.reduce((sum, sale) => {
-    return sum + getSaleLines(sale).reduce((lineSum, line) => lineSum + line.quantity, 0)
-  }, 0)
-})
-
-const totalProductTypes = computed(() => {
-  return categoryGroups.value.reduce((sum, category) => sum + category.productTypes, 0)
-})
-
-const getSaleLines = (sale) => {
-  const rawLines = Array.isArray(sale?.order_lines)
-    ? sale.order_lines
-    : Array.isArray(sale?.items)
-      ? sale.items
-      : Array.isArray(sale?.lines)
-        ? sale.lines
-        : []
-
-  return rawLines.map((line, index) => ({
-    key: line?.id ?? `${sale?.id ?? 'sale'}-${index}`,
-    name: line?.product?.name ?? line?.name ?? 'Produit supprime',
-    quantity: Number(line?.quantity ?? 0) || 0,
-    categoryLabel: resolveCategoryLabel(line)
-  }))
-}
-
-const denominationTotal = (value) => {
-  return Number((value * (Number(counts[value]) || 0)).toFixed(2))
-}
-
 const formatCurrency = (amount) => {
-  const number = Number(amount)
-  if (!Number.isFinite(number)) return '0 Ar'
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MGA' }).format(number).replace('MGA', 'Ar').trim()
+  const num = Number(amount)
+  if (!Number.isFinite(num)) return '0 Ar'
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(num) + ' Ar'
 }
-
+const denominationTotal = (value) => value * (Number(counts[value]) || 0)
+const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString('fr-FR') : ''
 const resetForm = () => {
   denominations.forEach(d => { counts[d.value] = 0 })
   errorMessage.value = ''
   successMessage.value = ''
-  activeField.value = null
-  keyboardVisible.value = false
 }
 
-const goToSummary = () => {
-  if (!sessionId.value) {
-    errorMessage.value = 'Aucune session active pour afficher le récapitulatif.'
-    return
-  }
-  if (!hasRecordedBilletage.value) {
-    errorMessage.value = 'Enregistrez le billetage avant de consulter le récapitulatif.'
-    return
-  }
-  router.push({ name: 'billetage-summary', params: { sessionId: sessionId.value } })
-}
-
-const fetchActiveSession = async () => {
-  isLoading.value = true
-  errorMessage.value = ''
+// ========== CHARGEMENT OPTIMISÉ DES VENTES ==========
+const fetchAllSalesFast = async (sessionId) => {
+  let allSales = []
+  let currentPage = 1
+  let lastPage = 1
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-session/my-active-session`, {
-      headers: authHeaders()
-    })
-    const session = data?.data || data || null
-    if (!session) {
-      errorMessage.value = 'Aucune session de caisse active.'
-      sessionId.value = null
-      sessionClosed.value = false
-      hasRecordedBilletage.value = false
-      sessionData.value = null
-      return
-    }
-    sessionData.value = session
-    sessionId.value = session.id
-    sessionClosed.value = Boolean(session.is_closed)
-    hasRecordedBilletage.value = session.actual_cash_amount !== null && session.actual_cash_amount !== undefined
-    if (hasRecordedBilletage.value) {
-      resetCountsFromActualAmount(Number(session.actual_cash_amount ?? 0))
-    }
-    await fetchSessionSales(session.id)
-  } catch (error) {
-    console.error('Erreur récupération session:', error.response?.data || error.message)
-    errorMessage.value = error.response?.data?.message || 'Impossible de récupérer la session de caisse active.'
-    sessionId.value = null
-    sessionClosed.value = false
-    hasRecordedBilletage.value = false
+    do {
+      const { data } = await axios.get(`${API_BASE_URL}/sales`, {
+        params: {
+          cash_register_session_id: sessionId,
+          page: currentPage,
+          per_page: 250
+        },
+        headers: authHeaders()
+      })
+      let items = []
+      if (Array.isArray(data)) items = data
+      else if (data?.data && Array.isArray(data.data)) {
+        items = data.data
+        lastPage = data.last_page || data.meta?.last_page || currentPage
+      } else if (data?.items) items = data.items
+      else items = []
+      allSales.push(...items)
+      currentPage++
+    } while (currentPage <= lastPage)
+    return allSales
+  } catch (err) {
+    console.error('Erreur chargement ventes:', err)
+    return []
+  }
+}
+
+const loadMissingLines = async (sales, concurrency = 5) => {
+  const missing = sales.filter(s => !s.order_lines || s.order_lines.length === 0)
+  if (missing.length === 0) return sales
+
+  loadingDetails.value = true
+  loadingProgress.value = 0
+  const results = [...sales]
+  let processed = 0
+
+  for (let i = 0; i < missing.length; i += concurrency) {
+    const batch = missing.slice(i, i + concurrency)
+    await Promise.all(batch.map(async (sale) => {
+      try {
+        const { data } = await axios.get(`${API_BASE_URL}/sales/${sale.id}`, { headers: authHeaders() })
+        const details = data?.data || data
+        const index = results.findIndex(s => s.id === sale.id)
+        if (index !== -1) results[index] = { ...sale, order_lines: details.order_lines || [] }
+      } catch (err) {
+        console.warn(`Erreur lignes vente ${sale.id}:`, err)
+        const index = results.findIndex(s => s.id === sale.id)
+        if (index !== -1) results[index] = { ...sale, order_lines: [] }
+      }
+      processed++
+      loadingProgress.value = Math.round((processed / missing.length) * 100)
+    }))
+  }
+  loadingDetails.value = false
+  return results
+}
+
+const loadSessionSales = async (sessionId) => {
+  isLoading.value = true
+  sessionSales.value = []
+  try {
+    const rawSales = await fetchAllSalesFast(sessionId)
+    const filtered = rawSales.filter(s => String(s.cash_register_session_id) === String(sessionId))
+    const enriched = await loadMissingLines(filtered)
+    sessionSales.value = enriched
+  } catch (err) {
+    console.error('Erreur loadSessionSales:', err)
     sessionSales.value = []
-    sessionData.value = null
   } finally {
     isLoading.value = false
   }
 }
 
-const resetCountsFromActualAmount = (amount) => {
-  let remaining = Math.max(0, Math.round(Number(amount) || 0))
-  denominations.forEach((denomination) => {
-    const qty = Math.floor(remaining / denomination.value)
-    counts[denomination.value] = qty
-    remaining -= qty * denomination.value
-  })
-}
-
-const extractSalesArray = (payload) => {
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload?.data)) return payload.data
-  if (Array.isArray(payload?.items)) return payload.items
-  if (Array.isArray(payload?.results)) return payload.results
-  return []
-}
-
-const getSaleSessionId = (sale) => {
-  if (!sale || typeof sale !== 'object') return null
-  return sale.cash_register_session_id ?? sale.cashRegisterSessionId ?? sale.session_id ?? sale.sessionId ?? null
-}
-
-const fetchSessionSales = async (activeSessionId) => {
+const fetchCashTransactions = async (sessionId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/sales`, {
-      params: { cash_register_session_id: activeSessionId },
-      headers: authHeaders()
-    })
-
-    const fetchedSales = extractSalesArray(data).filter((sale) => sale && typeof sale === 'object')
-    sessionSales.value = fetchedSales.filter((sale) => String(getSaleSessionId(sale) ?? '') === String(activeSessionId))
-  } catch (error) {
-    console.error('Erreur chargement des ventes de session:', error.response?.data || error.message)
-    sessionSales.value = []
+    const { data } = await axios.get(`${API_BASE_URL}/cash-transactions/session/${sessionId}`, { headers: authHeaders() })
+    if (Array.isArray(data)) cashTransactions.value = data
+    else if (data?.in && data?.out) cashTransactions.value = [...data.in, ...data.out]
+    else cashTransactions.value = []
+  } catch (err) {
+    console.error('Erreur transactions:', err)
+    cashTransactions.value = []
   }
 }
+
+const fetchSessionData = async (id) => {
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${id}`, { headers: authHeaders() })
+    const session = data?.data || data
+    if (!session?.id) throw new Error('Session introuvable')
+
+    sessionData.value = session
+    sessionId.value = session.id
+    sessionClosed.value = Boolean(session.is_closed)
+    hasRecordedBilletage.value = session.actual_cash_amount !== null
+
+    await Promise.all([
+      loadSessionSales(session.id),
+      fetchCashTransactions(session.id)
+    ])
+
+    if (hasRecordedBilletage.value) {
+      let remaining = Math.round(Number(session.actual_cash_amount) || 0)
+      for (const d of denominations) {
+        const qty = Math.floor(remaining / d.value)
+        counts[d.value] = qty
+        remaining -= qty * d.value
+      }
+    } else {
+      resetForm()
+    }
+  } catch (err) {
+    errorMessage.value = err.response?.data?.message || err.message || 'Erreur chargement session.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const fetchOpenSessions = async () => {
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/open`, { headers: authHeaders() })
+    openSessions.value = Array.isArray(data) ? data : data?.data || []
+    if (openSessions.value.length) {
+      selectedSessionId.value = openSessions.value[0].id
+      await fetchSessionData(selectedSessionId.value)
+    } else {
+      errorMessage.value = 'Aucune session ouverte.'
+    }
+  } catch (err) {
+    errorMessage.value = 'Impossible de charger les sessions ouvertes.'
+  }
+}
+const onSessionChange = () => {
+  if (selectedSessionId.value) fetchSessionData(selectedSessionId.value)
+}
+
+// ========== PRODUITS VENDUS ==========
+const resolveCategoryLabel = (line) => line?.product?.category?.name ?? line?.category?.name ?? line?.category_name ?? 'Sans catégorie'
+const getSaleLines = (sale) => (sale?.order_lines || []).map(line => ({
+  id: line.id,
+  name: line.product?.name ?? line.name ?? 'Produit supprimé',
+  quantity: Number(line.quantity ?? 0),
+  categoryLabel: resolveCategoryLabel(line)
+}))
+
+const categoryGroups = computed(() => {
+  const groups = new Map()
+  for (const sale of sessionSales.value) {
+    for (const line of getSaleLines(sale)) {
+      const label = line.categoryLabel
+      if (!groups.has(label)) {
+        groups.set(label, { label, products: 0, productTypes: 0, itemsMap: new Map() })
+      }
+      const g = groups.get(label)
+      g.products += line.quantity
+      if (!g.itemsMap.has(line.name)) {
+        g.itemsMap.set(line.name, { name: line.name, quantity: 0 })
+        g.productTypes++
+      }
+      g.itemsMap.get(line.name).quantity += line.quantity
+    }
+  }
+  return Array.from(groups.values()).map(g => ({
+    label: g.label,
+    products: g.products,
+    productTypes: g.productTypes,
+    items: Array.from(g.itemsMap.values()).sort((a, b) => b.quantity - a.quantity)
+  })).sort((a, b) => b.products - a.products)
+})
+
+const sessionProductsCount = computed(() => {
+  return sessionSales.value.reduce((sum, sale) => sum + getSaleLines(sale).reduce((s, l) => s + l.quantity, 0), 0)
+})
+const totalProductTypes = computed(() => categoryGroups.value.reduce((s, c) => s + c.productTypes, 0))
+
+// ========== CONDITION POUR BILLETAGE : au moins une vente ==========
+const hasAnySale = computed(() => {
+  return sessionSales.value.length > 0
+})
+
+// ========== BILLETAGE ==========
+const actualTotal = computed(() => {
+  return denominations.reduce((sum, d) => sum + d.value * (Number(counts[d.value]) || 0), 0)
+})
+const startingAmount = computed(() => Number(sessionData.value?.starting_amount ?? 0))
+const cashSalesAmount = computed(() => {
+  return cashTransactions.value.filter(t => t.type === 'sale').reduce((s, t) => s + (Number(t.amount) || 0), 0)
+})
+const expectedCashAmount = computed(() => startingAmount.value + cashSalesAmount.value)
+const varianceAmount = computed(() => actualTotal.value - expectedCashAmount.value)
+const varianceStatus = computed(() => {
+  if (Math.abs(varianceAmount.value) < 1) return 'conforme'
+  return varianceAmount.value > 0 ? 'positif' : 'negatif'
+})
+const varianceStatusLabel = computed(() => {
+  if (varianceStatus.value === 'conforme') return 'Caisse conforme'
+  return varianceStatus.value === 'positif' ? 'Excédent (alerte)' : 'Manquant (alerte)'
+})
+const varianceCardClass = computed(() => varianceStatus.value === 'conforme' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700')
+const varianceBadgeClass = computed(() => varianceStatus.value === 'conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')
 
 const submit = async () => {
-  if (!sessionId.value) {
-    errorMessage.value = 'Aucune session active pour enregistrer le billetage.'
-    return
-  }
-  if (sessionClosed.value) {
-    errorMessage.value = 'La session est clôturée, impossible de modifier le billetage.'
-    return
-  }
-  if (hasRecordedBilletage.value) {
-    errorMessage.value = 'Le billetage a déjà été enregistré pour cette session.'
-    return
-  }
-
-  if (!hasUserInput.value) {
-    window.alert('Aucun montant n\'a été saisi pour le billetage.')
-    errorMessage.value = 'Aucun montant saisi pour le billetage.'
-    return
-  }
-
-  const confirmed = window.confirm('Confirmez-vous l\'enregistrement du billetage ?')
-  if (!confirmed) {
-    return
-  }
+  if (!sessionId.value) { errorMessage.value = 'Session introuvable.'; return }
+  if (sessionClosed.value) { errorMessage.value = 'Session déjà clôturée.'; return }
+  if (hasRecordedBilletage.value) { errorMessage.value = 'Billetage déjà enregistré.'; return }
+  if (!canEditBilletage.value) { errorMessage.value = 'Vous n’avez pas la permission de valider le billetage.'; return }
+  if (!hasAnySale.value) { errorMessage.value = 'Aucune vente dans cette session. Le billetage n’est pas requis.'; return }
+  if (actualTotal.value === 0) { errorMessage.value = 'Saisissez au moins un billet.'; return }
+  if (!confirm(`Valider le billetage à ${formatCurrency(actualTotal.value)} ?`)) return
 
   isSubmitting.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-
   try {
     await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: actualTotal.value
-    }, {
-      headers: authHeaders()
-    })
+    }, { headers: authHeaders() })
     successMessage.value = 'Billetage enregistré avec succès.'
     hasRecordedBilletage.value = true
-    if (sessionData.value) {
-      sessionData.value = {
-        ...sessionData.value,
-        actual_cash_amount: actualTotal.value
-      }
-    }
-  } catch (error) {
-    console.error('Erreur enregistrement billetage:', error.response?.data || error.message)
-    errorMessage.value = error.response?.data?.message || "Impossible d'enregistrer le billetage."
+    if (sessionData.value) sessionData.value.actual_cash_amount = actualTotal.value
+  } catch (err) {
+    errorMessage.value = err.response?.data?.message || 'Erreur d’enregistrement.'
   } finally {
     isSubmitting.value = false
   }
 }
 
 const closeSession = async () => {
-  if (!sessionId.value) {
-    errorMessage.value = 'Aucune session active à clôturer.'
-    return
-  }
-  if (sessionClosed.value) {
-    successMessage.value = 'La session est déjà clôturée.'
-    return
-  }
-  if (!hasRecordedBilletage.value) {
-    errorMessage.value = 'Enregistrez le billetage avant de clôturer la session.'
-    return
-  }
+  if (!sessionId.value) { errorMessage.value = 'Session introuvable.'; return }
+  if (sessionClosed.value) { successMessage.value = 'Session déjà clôturée.'; return }
+  if (!hasRecordedBilletage.value) { errorMessage.value = 'Veuillez d’abord enregistrer le billetage.'; return }
+  if (!canEditBilletage.value) { errorMessage.value = 'Vous n’avez pas la permission de clôturer la session.'; return }
+  if (!confirm('Clôturer définitivement cette session ?')) return
 
   isSubmitting.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-
   try {
     await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: actualTotal.value,
       is_closed: true,
       closed_at: new Date().toISOString()
-    }, {
-      headers: authHeaders()
-    })
+    }, { headers: authHeaders() })
     successMessage.value = 'Session clôturée avec succès.'
+    const closedSessionId = sessionId.value
     sessionClosed.value = true
     sessionId.value = null
     sessionData.value = null
     sessionSales.value = []
-    localStorage.removeItem('cashRegisterSession')
-    localStorage.removeItem('cash_register_session')
-    localStorage.removeItem('currentTicketNumber')
-    router.push({ name: 'cash-printer' })
-  } catch (error) {
-    console.error('Erreur clôture session:', error.response?.data || error.message)
-    errorMessage.value = error.response?.data?.message || "Impossible de clôturer la session."
+    cashTransactions.value = []
+    await fetchOpenSessions()
+    
+    // Redirection vers le résumé
+    console.log("DEBUG: Données pour le résumé de session :", {
+      sessionId: closedSessionId,
+      sessionData: sessionData.value,
+      // On peut aussi récupérer le résumé ici si besoin via axios
+    })
+    router.push({ name: 'billetage-summary', params: { sessionId: closedSessionId } })
+  } catch (err) {
+    errorMessage.value = err.response?.data?.message || 'Erreur lors de la clôture.'
   } finally {
     isSubmitting.value = false
   }
 }
 
-const KEYBOARD_WIDTH = 600
-const KEYBOARD_HEIGHT = 400
-const KEYBOARD_MARGIN = 16
-
-const updateKeyboardPosition = () => {
-  const formEl = formRef.value
-  if (!formEl) return
-
-  const rect = formEl.getBoundingClientRect()
-  const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight
-
-  let left = rect.right + KEYBOARD_MARGIN
-  if (left + KEYBOARD_WIDTH > viewportWidth - KEYBOARD_MARGIN) {
-    left = viewportWidth - KEYBOARD_WIDTH - KEYBOARD_MARGIN
-  }
-  left = Math.max(KEYBOARD_MARGIN, left)
-
-  let top = rect.top
-  if (top + KEYBOARD_HEIGHT > viewportHeight - KEYBOARD_MARGIN) {
-    top = viewportHeight - KEYBOARD_HEIGHT - KEYBOARD_MARGIN
-  }
-  top = Math.max(KEYBOARD_MARGIN, top)
-
-  keyboardPosition.value = { top, left }
-}
-
-const handleViewportChange = () => {
-  updateKeyboardPosition()
-}
-
-const detachKeyboardListeners = () => {
-  window.removeEventListener('resize', handleViewportChange)
-  window.removeEventListener('scroll', handleViewportChange, true)
-}
-
-const showKeyboard = async (field) => {
+// ========== CLAVIER VIRTUEL ==========
+const showKeyboard = async (field, event) => {
   activeField.value = field
   keyboardVisible.value = true
   await nextTick()
-  updateKeyboardPosition()
+  updateKeyboardPosition(event.target)
 }
 
 const handleKeyPress = (key) => {
-  if (!activeField.value) return
-
-  if (activeField.value.type === 'denomination') {
-    const denominationValue = activeField.value.value
-    const current = counts[denominationValue]
-    const baseString = current === 0 || current === '' ? '' : String(current)
-
-    if (key === 'BACKSPACE') {
-      const updated = baseString.slice(0, -1)
-      counts[denominationValue] = updated === '' ? '' : Number(updated)
-      return
-    }
-
-    if (!/^[0-9]$/.test(key)) return
-    const updated = `${baseString}${key}`
-    counts[denominationValue] = Number(updated)
+  if (!activeField.value || activeField.value.type !== 'denomination') return
+  const denom = activeField.value.value
+  let val = counts[denom] === 0 || counts[denom] === '' ? 0 : counts[denom]
+  let str = val === 0 ? '' : String(val)
+  if (key === 'BACKSPACE') {
+    str = str.slice(0, -1)
+    counts[denom] = str === '' ? 0 : Number(str)
     return
+  }
+  if (/^[0-9]$/.test(key)) counts[denom] = Number(str + key)
+}
+
+const updateKeyboardPosition = (targetElement) => {
+  const el = targetElement || document.activeElement
+  if (!el || el.tagName !== 'INPUT') return
+
+  const rect = el.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+  
+  const KEYBOARD_WIDTH = 640
+  const KEYBOARD_HEIGHT = 280
+  const MARGIN = 16
+
+  let top = rect.bottom + MARGIN
+  let left = rect.left
+
+  if (left + KEYBOARD_WIDTH > viewportWidth - MARGIN) left = viewportWidth - KEYBOARD_WIDTH - MARGIN
+  if (top + KEYBOARD_HEIGHT > viewportHeight - MARGIN) top = rect.top - KEYBOARD_HEIGHT - MARGIN
+
+  keyboardPosition.value = { 
+    top: Math.max(MARGIN, top), 
+    left: Math.max(MARGIN, Math.max(0, left)) 
   }
 }
 
@@ -711,10 +596,23 @@ const hideKeyboard = () => {
   activeField.value = null
 }
 
-onMounted(fetchActiveSession)
+const handleViewportChange = () => { if (keyboardVisible.value) updateKeyboardPosition() }
+const detachKeyboardListeners = () => {
+  window.removeEventListener('resize', handleViewportChange)
+  window.removeEventListener('scroll', handleViewportChange, true)
+}
 
-watch(keyboardVisible, (isVisible) => {
-  if (isVisible) {
+onMounted(async () => {
+  await loadUserData()
+  if (!isAdmin.value && !hasRole('gerant') && !hasRole('caissier')) {
+    router.push({ name: 'dashboard-overview' })
+    return
+  }
+  await fetchOpenSessions()
+})
+
+watch(keyboardVisible, (visible) => {
+  if (visible) {
     nextTick(() => {
       updateKeyboardPosition()
       window.addEventListener('resize', handleViewportChange)
@@ -724,8 +622,5 @@ watch(keyboardVisible, (isVisible) => {
     detachKeyboardListeners()
   }
 })
-
-onBeforeUnmount(() => {
-  detachKeyboardListeners()
-})
+onBeforeUnmount(detachKeyboardListeners)
 </script>

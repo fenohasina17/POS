@@ -8,60 +8,60 @@
 
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-40 w-72 border-r border-slate-200 bg-white shadow-sm transition-all duration-200 ease-in-out',
+        'fixed inset-y-0 left-0 z-40 border-r border-slate-200 bg-white shadow-sm transition-all duration-200 ease-in-out',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0',
-        sidebarCollapsed ? 'lg:w-20' : 'lg:w-72'
+        sidebarCollapsed ? 'lg:w-16' : 'lg:w-56'
       ]"
     >
       <div class="flex h-full flex-col">
         <div
-          class="flex items-center gap-3 px-6 pt-6 shrink-0"
-          :class="isSidebarCollapsed ? 'lg:px-4 lg:justify-center' : ''"
+          class="flex items-center gap-2 px-4 pt-4 shrink-0"
+          :class="isSidebarCollapsed ? 'lg:px-2 lg:justify-center' : ''"
         >
           <img
             src="../assets/logoigp.jpg"
             alt="Logo International Gastronomy Pizza"
-            class="h-11 w-auto rounded-lg object-cover"
-            :class="isSidebarCollapsed ? 'lg:h-10' : ''"
+            class="h-9 w-auto rounded-lg object-cover"
+            :class="isSidebarCollapsed ? 'lg:h-8' : ''"
           />
-          <div v-if="!isSidebarCollapsed">
-            <p class="text-lg font-semibold text-slate-900">IGP POS</p>
-            <p class="text-xs text-slate-400">Dashboard restaurants</p>
+          <div v-if="!isSidebarCollapsed" class="hidden lg:block">
+            <p class="text-sm font-semibold text-slate-900">IGP POS</p>
+            <p class="text-[10px] text-slate-400">Dashboard restaurants</p>
           </div>
         </div>
 
-        <nav :class="['mt-8 flex-1 overflow-y-auto pb-8', isSidebarCollapsed ? 'px-2' : 'px-4']">
-          <div v-for="section in navigationSections" :key="section.title" class="mb-8">
+        <nav :class="['mt-12 h-12', isSidebarCollapsed ? 'px-1' : 'px-3']">
+          <div v-for="section in navigationSections" :key="section.title" class="mb-6">
             <p
-              class="px-2 text-xs font-semibold uppercase tracking-wide text-slate-400"
+              class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400"
               :class="isSidebarCollapsed ? 'lg:hidden' : ''"
             >
               {{ section.title }}
             </p>
-            <ul class="mt-4 space-y-1">
+            <ul class="space-y-1">
               <li v-for="item in section.items" :key="item.label" class="space-y-1">
                 <button
                   type="button"
                   :class="[
-                    'flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition',
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition',
                     isActive(item) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100',
-                    isSidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-3' : ''
+                    isSidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2' : ''
                   ]"
                   @click="handleNavigation(item)"
                 >
                   <span
-                    class="flex h-10 w-10 items-center justify-center rounded-lg"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg"
                     :class="isActive(item) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
                   >
-                    <FontAwesomeIcon :icon="item.icon" class="text-base" />
+                    <FontAwesomeIcon :icon="item.icon" class="text-sm" />
                   </span>
-                  <span :class="['flex-1 text-left', isSidebarCollapsed ? 'lg:hidden' : '']">{{ item.label }}</span>
+                  <span :class="['flex-1 text-left text-xs', isSidebarCollapsed ? 'lg:hidden' : '']">{{ item.label }}</span>
                   <FontAwesomeIcon
                     v-if="item.children && !isSidebarCollapsed"
                     :icon="faChevronDown"
                     :class="[
-                      'text-xs text-slate-400 transition-transform',
+                      'text-[10px] text-slate-400 transition-transform',
                       isMenuExpanded(item) ? 'rotate-180 text-indigo-500' : ''
                     ]"
                   />
@@ -70,22 +70,22 @@
                 <transition name="fade">
                   <ul
                     v-if="item.children && isMenuExpanded(item) && !isSidebarCollapsed"
-                    class="space-y-1 pl-14"
+                    class="space-y-1 pl-10"
                   >
                     <li v-for="child in item.children" :key="child.label">
                       <button
                         type="button"
                         :class="[
-                          'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition',
+                          'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition',
                           isActive(child) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100'
                         ]"
                         @click="handleNavigation(child)"
                       >
                         <span
-                          class="flex h-8 w-8 items-center justify-center rounded-md"
+                          class="flex h-7 w-7 items-center justify-center rounded-md"
                           :class="isActive(child) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
                         >
-                          <FontAwesomeIcon :icon="child.icon" class="text-sm" />
+                          <FontAwesomeIcon :icon="child.icon" class="text-xs" />
                         </span>
                         <span class="flex-1 text-left">{{ child.label }}</span>
                       </button>
@@ -96,72 +96,80 @@
             </ul>
           </div>
         </nav>
-
       </div>
     </aside>
 
     <div :class="['flex min-h-screen flex-1 flex-col', contentPaddingClass]">
       <header :class="['fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur', headerOffsetClass]">
-        <div class="flex w-full flex-wrap items-center gap-3 px-4 py-0.5 sm:px-6 lg:px-8">
-          <div class="flex items-center gap-3">
+        <div class="flex w-full flex-wrap items-center gap-3 px-3 py-1 sm:px-4 lg:px-6">
+          <div class="flex items-center gap-2">
             <button
               type="button"
-              class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+              class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
               @click="toggleSidebar"
               aria-label="Basculer le menu"
             >
-              <FontAwesomeIcon :icon="faBars" />
+              <FontAwesomeIcon :icon="faBars" class="text-sm" />
             </button>
+
+            <!-- Header loading indicator -->
+            <transition name="fade">
+              <div v-if="globalLoading" class="ml-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-50/50">
+                <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500"></div>
+                <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.15s]"></div>
+                <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.3s]"></div>
+              </div>
+            </transition>
           </div>
 
-          <div class="flex flex-1 items-center justify-end ">
+          <div class="flex flex-1 items-center justify-end gap-2">
             <button
               type="button"
-              class="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+              class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
               aria-label="Notifications"
             >
-              <FontAwesomeIcon :icon="faBell" />
-              <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-orange-400"></span>
+              <FontAwesomeIcon :icon="faBell" class="text-sm" />
+              <span class="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-orange-400"></span>
             </button>
             <div ref="userMenuRef" class="relative flex items-center">
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-left text-sm font-medium text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600 sm:px-2.5"
+                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-left text-sm font-medium text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600"
                 @click="toggleUserMenu"
                 aria-haspopup="true"
                 :aria-expanded="userMenuOpen"
               >
-                <img src="../assets/avatar.png" alt="User avatar" class="h-8 w-8 rounded-full object-cover" />
-                <span class="hidden sm:inline text-sm font-semibold text-slate-700">{{ userDisplayName }}</span>
-                <FontAwesomeIcon :icon="faChevronDown" class="hidden text-xs text-slate-400 sm:inline" />
+                <img src="../assets/avatar.png" alt="User avatar" class="h-7 w-7 rounded-full object-cover" />
+                <span class="hidden text-xs font-semibold text-slate-700 sm:inline">{{ userDisplayName }}</span>
+                <FontAwesomeIcon :icon="faChevronDown" class="hidden text-[10px] text-slate-400 sm:inline" />
               </button>
 
               <transition name="fade">
                 <div
                   v-if="userMenuOpen"
-                  class="absolute right-0 top-12 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg"
+                  class="absolute right-0 top-10 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
                 >
-                  <div class="border-b border-slate-100 px-4 py-3">
+                  <div class="border-b border-slate-100 px-3 py-2">
                     <p class="text-sm font-semibold text-slate-800">{{ userDisplayName }}</p>
-                    <p class="text-xs text-slate-400">{{ userEmail }}</p>
+                    <p class="text-[11px] text-slate-400">{{ userEmail }}</p>
                   </div>
                   <nav class="py-2 text-sm text-slate-600">
                     <button
                       type="button"
-                      class="flex w-full items-center px-4 py-2 transition hover:bg-slate-50"
+                      class="flex w-full items-center px-3 py-1.5 text-xs transition hover:bg-slate-50"
                       @click="navigateTo('dashboard-overview')"
                     >
                       Dashboard
                     </button>
-                    <button type="button" class="flex w-full items-center px-4 py-2 text-slate-400" disabled>
+                    <button type="button" class="flex w-full items-center px-3 py-1.5 text-xs text-slate-400" disabled>
                       Paramètres
                     </button>
-                    <button type="button" class="flex w-full items-center px-4 py-2 text-slate-400" disabled>
+                    <button type="button" class="flex w-full items-center px-3 py-1.5 text-xs text-slate-400" disabled>
                       Revenus
                     </button>
                     <button
                       type="button"
-                      class="flex w-full items-center px-4 py-2 text-rose-600 transition hover:bg-rose-50"
+                      class="flex w-full items-center px-3 py-1.5 text-xs text-rose-600 transition hover:bg-rose-50"
                       @click="logout"
                     >
                       Déconnexion
@@ -174,8 +182,22 @@
         </div>
       </header>
 
-      <main class="flex-1 px-3 pb-6 pt-[3rem] sm:px-4 lg:px-5 lg:pt-[3.5rem]">
-        <RouterView />
+      <main class="flex-1 px-3 pb-6 pt-[3.5rem] sm:px-4 lg:px-5 lg:pt-[4rem]">
+        <router-view v-slot="{ Component }">
+          <transition name="page-fade" mode="out-in">
+            <div v-if="globalLoading" class="flex h-[60vh] flex-col items-center justify-center space-y-6">
+              <div class="relative flex h-20 w-20 items-center justify-center">
+                <div class="absolute inset-0 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
+                <img src="../assets/logoigp.jpg" alt="Loading" class="h-10 w-10 rounded-full shadow-sm" />
+              </div>
+              <div class="flex flex-col items-center gap-2">
+                <p class="animate-pulse text-base font-semibold text-slate-700">Préparation de votre session...</p>
+                <p class="text-xs text-slate-400">Chargement des données en cours</p>
+              </div>
+            </div>
+            <component v-else :is="Component" />
+          </transition>
+        </router-view>
       </main>
     </div>
   </div>
@@ -209,6 +231,7 @@ import {
   faListCheck
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '@/composables/useAuth'
+import { useCategories } from '@/composables/useCategories'
 
 defineOptions({ name: 'DashboardLayout' })
 
@@ -221,21 +244,23 @@ const searchQuery = ref('')
 const userMenuOpen = ref(false)
 const userMenuRef = ref(null)
 const expandedMenus = ref(new Set())
+const globalLoading = ref(true)
 
 const isDesktop = ref(false)
 
-const { user, isAdmin, loadUserData } = useAuth()
+const { user, isAdmin, hasRole, loadUserData } = useAuth()
+const { loadCategories } = useCategories()
 
 const isSidebarCollapsed = computed(() => sidebarCollapsed.value && isDesktop.value)
 
 const headerOffsetClass = computed(() => {
   if (!isDesktop.value) return ''
-  return sidebarCollapsed.value ? 'lg:left-20' : 'lg:left-72'
+  return sidebarCollapsed.value ? 'lg:left-16' : 'lg:left-56'
 })
 
 const contentPaddingClass = computed(() => {
   if (!isDesktop.value) return ''
-  return sidebarCollapsed.value ? 'lg:pl-20' : 'lg:pl-72'
+  return sidebarCollapsed.value ? 'lg:pl-16' : 'lg:pl-56'
 })
 
 const setInitialSidebarState = () => {
@@ -259,7 +284,19 @@ const handleResize = () => {
 
 onMounted(async () => {
   setInitialSidebarState()
-  await loadUserData()
+
+  try {
+    // Parallelize initialization of user data and categories/products
+    await Promise.all([
+      loadUserData(),
+      loadCategories()
+    ])
+  } catch (error) {
+    console.error('Initialisation Dashboard échouée:', error)
+  } finally {
+    globalLoading.value = false
+  }
+
   document.addEventListener('click', handleDocumentClick)
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize)
@@ -273,17 +310,26 @@ onBeforeUnmount(() => {
   }
 })
 
-const filterAdminItems = (items) =>
-  items
-    .filter((item) => !item.adminOnly || isAdmin.value)
+const filterAdminItems = (items) => {
+  return items
+    .filter((item) => {
+      if (item.adminOnly && !isAdmin.value) return false
+      if (item.caissierOnly && !hasRole('caissier') && !isAdmin.value) return false
+      return true
+    })
     .map((item) =>
       item.children
         ? {
             ...item,
-            children: item.children.filter((child) => !child.adminOnly || isAdmin.value),
+            children: item.children.filter((child) => {
+              if (child.adminOnly && !isAdmin.value) return false
+              if (child.caissierOnly && !hasRole('caissier') && !isAdmin.value) return false
+              return true
+            }),
           }
         : item,
     )
+}
 
 const navigationSections = computed(() => {
   const menuItems = filterAdminItems([
@@ -302,13 +348,12 @@ const navigationSections = computed(() => {
     { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup },
     { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, adminOnly: true },
     { label: 'Mes ventes', name: 'dashboard-user-sales', icon: faReceipt },
-    { label: 'Remise à zéro', name: 'dashboard-retour', icon: faArrowRotateLeft },
+    { label: 'Remise à zéro', name: 'dashboard-retour', icon: faArrowRotateLeft, caissierOnly: true },
   ])
 
   const toolItems = filterAdminItems([
     { label: 'Point de vente', name: 'dashboard-point-of-sale', icon: faStore, adminOnly: true },
-    { label: 'Imprimantes', name: 'dashboard-printers', icon: faPrint },
-    { label: 'Sessions caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList },
+    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
     ...(isAdmin.value
       ? [
@@ -485,7 +530,7 @@ const userEmail = computed(() => user.value?.email || 'user@example.com')
 
 <style scoped>
 aside::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 aside::-webkit-scrollbar-thumb {
@@ -502,5 +547,14 @@ aside::-webkit-scrollbar-thumb {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(4px);
+}
+
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
 }
 </style>

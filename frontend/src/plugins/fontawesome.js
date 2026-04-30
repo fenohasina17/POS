@@ -63,6 +63,9 @@ import {
   faMinus,
   faCheck,
   faSearch,
+  faPenToSquare,
+  faCircleInfo,
+  faBox,
 } from '@fortawesome/free-solid-svg-icons'
 
 // Ajoute les icônes dans la bibliothèque
@@ -126,6 +129,9 @@ library.add(
   faMinus,
   faCheck,
   faSearch,
+  faPenToSquare,
+  faCircleInfo,
+  faBox,
 )
 
 export { FontAwesomeIcon }

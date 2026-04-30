@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -24,21 +25,43 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         try {
-            // Validation des paramètres
             $request->validate([
                 'with_pricing' => 'sometimes|boolean',
                 'point_of_sale_id' => 'required_if:with_pricing,true|integer',
                 'with_products' => 'sometimes|boolean'
             ]);
 
-            // Configuration des relations à charger
-            $relations = $this->resolveRelations($request);
+            $pointOfSaleId = $request->input('point_of_sale_id');
+            $withProducts = $request->boolean('with_products');
+            $withPricing = $request->boolean('with_pricing');
 
-            // Construction de la requête
             $query = Category::query();
 
-            if (!empty($relations)) {
-                $query->with($relations);
+            if ($withProducts) {
+                // Relation produits avec éventuellement filtrage par point de vente si on veut limiter
+                $productsRelation = function ($q) use ($pointOfSaleId, $withPricing) {
+                    if ($pointOfSaleId) {
+                        $q->whereHas('pointsOfSale', function ($sq) use ($pointOfSaleId) {
+                            $sq->where('point_of_sale_id', $pointOfSaleId);
+                        });
+                    }
+                    if ($withPricing && $pointOfSaleId) {
+                        $q->with([
+                            'pricing' => function ($pq) use ($pointOfSaleId) {
+                                $pq->where('point_of_sale_id', $pointOfSaleId);
+                            }
+                        ]);
+                    }
+                };
+                $query->with(['products' => $productsRelation]);
+            } elseif ($withPricing && $pointOfSaleId) {
+                // Si seulement with_pricing sans with_products, on peut charger les produits avec pricing
+                $query->with([
+                    'products' => function ($q) use ($pointOfSaleId) {
+                        $q->whereHas('pointsOfSale', fn($sq) => $sq->where('point_of_sale_id', $pointOfSaleId))
+                            ->with(['pricing' => fn($pq) => $pq->where('point_of_sale_id', $pointOfSaleId)]);
+                    }
+                ]);
             }
 
             $categories = $query->get();
@@ -47,17 +70,10 @@ class CategoryController extends Controller
                 'success' => true,
                 'data' => $categories
             ]);
-
         } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Validation error',
-                'errors' => $e->errors(),
-            ], 422);
+            return response()->json(['message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Server error',
-                'error' => $e->getMessage()
-            ], 500);
+            return response()->json(['message' => 'Server error', 'error' => $e->getMessage()], 500);
         }
     }
 
@@ -80,13 +96,172 @@ class CategoryController extends Controller
         // Option 2: Chargement des produits avec prix
         if ($request->boolean('with_pricing')) {
             $relations['products'] = function ($query) use ($pointOfSaleId) {
-                $query->with(['pricing' => function ($q) use ($pointOfSaleId) {
-                    $q->where('point_of_sale_id', $pointOfSaleId);
-                }]);
+                $query->with([
+                    'pricing' => function ($q) use ($pointOfSaleId) {
+                        $q->where('point_of_sale_id', $pointOfSaleId);
+                    }
+                ]);
             };
         }
 
         return $relations;
+    }
+
+    /**
+     * Récupère les produits d'une catégorie spécifique
+     *
+     * GET /api/categories/{id}/products
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProducts($id)
+    {
+        try {
+            // Vérifier si la catégorie existe
+            $category = Category::find($id);
+
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Catégorie non trouvée'
+                ], 404);
+            }
+
+            // Récupérer les produits de la catégorie
+            $products = Product::where('category_id', $id)->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $products,
+                'count' => $products->count(),
+                'category' => [
+                    'id' => $category->id,
+                    'name' => $category->name
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur serveur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupère les produits d'une catégorie avec leurs prix
+     *
+     * GET /api/categories/{id}/products-with-prices?point_of_sale_id=1
+     *
+     * @param Request $request
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProductsWithPrices(Request $request, $id)
+    {
+        try {
+            $pointOfSaleId = $request->query('point_of_sale_id');
+
+            if (!$pointOfSaleId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'point_of_sale_id est requis'
+                ], 422);
+            }
+
+            $category = Category::find($id);
+
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Catégorie non trouvée'
+                ], 404);
+            }
+
+            $products = Product::where('category_id', $id)
+                ->with([
+                    'pricings' => function ($query) use ($pointOfSaleId) {
+                        $query->where('point_of_sale_id', $pointOfSaleId)
+                            ->where('is_active', true);
+                    }
+                ])
+                ->get();
+
+            $formattedProducts = $products->map(function ($product) {
+                $pricing = $product->pricings->first();
+                $price = $pricing ? $pricing->price : ($product->price ?? 0);
+
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'description' => $product->description,
+                    'price' => (float) $price,
+                    'selling_price' => (float) $price,
+                    'stock_quantity' => $product->stock_quantity ?? 0,
+                    'image' => $product->image,
+                    'category_id' => $product->category_id,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $formattedProducts,
+                'count' => $formattedProducts->count(),
+                'category' => $category->name
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur serveur: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Récupère les produits d'une catégorie avec la route originale
+     *
+     * GET /api/product_of_category_with_price?category_id={id}
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function product_of_category_with_price(Request $request)
+    {
+        try {
+            $categoryId = $request->query('category_id');
+
+            if (!$categoryId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'category_id est requis'
+                ], 422);
+            }
+
+            $category = Category::find($categoryId);
+
+            if (!$category) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Catégorie non trouvée'
+                ], 404);
+            }
+
+            $products = Product::where('category_id', $categoryId)->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $products,
+                'count' => $products->count()
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur serveur: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

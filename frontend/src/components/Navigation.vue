@@ -1,36 +1,36 @@
 <template>
-  <nav class="bg-slate-800 shadow-md px-4 py-2">
+  <nav class="bg-slate-800 shadow-md px-2 h-8 flex items-center justify-center">
     <div class="flex flex-wrap items-center justify-center gap-4 md:gap-6">
       <router-link
         to="/pos"
-        class="inline-flex items-center gap-2 rounded-md bg-red-500 px-3 py-2 font-semibold text-white hover:bg-red-600"
+        class="inline-flex items-center gap-1 rounded-lg bg-red-500 px-2 py-0.5 font-semibold text-white hover:bg-red-600 text-[10px]"
       >
         <font-awesome-icon icon="shopping-cart" />
-        <span class="text-sm">POS</span>
+        <span>POS</span>
       </router-link>
 
       <router-link
         to="/roles"
-        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-white hover:bg-slate-700"
+        class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-white hover:bg-slate-700 text-[10px]"
       >
         <font-awesome-icon icon="users" />
-        <span class="text-sm">Roles</span>
+        <span>Roles</span>
       </router-link>
 
       <router-link
         to="/users"
-        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-white hover:bg-slate-700"
+        class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-white hover:bg-slate-700 text-[10px]"
       >
         <font-awesome-icon icon="user" />
-        <span class="text-sm">Users</span>
+        <span>Users</span>
       </router-link>
 
       <router-link
         to="/"
-        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-white hover:bg-slate-700"
+        class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-white hover:bg-slate-700 text-[10px]"
       >
         <font-awesome-icon icon="home" />
-        <span class="text-sm">Home</span>
+        <span>Home</span>
       </router-link>
 
       <!-- POS Selector for Admins -->

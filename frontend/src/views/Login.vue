@@ -49,7 +49,7 @@
             <p class="mt-2 text-sm text-slate-500">Identifiez-vous pour retrouver vos sessions, vos ventes et les actions rapides d’IGP POS.</p>
           </div>
 
-          <div class="space-y-5">
+          <form class="space-y-5" @submit.prevent="login">
             <div class="space-y-2">
               <label for="email" class="text-sm font-medium text-slate-600">Identifiant</label>
               <input
@@ -77,9 +77,8 @@
             </div>
 
             <button
-              type="button"
+              type="submit"
               class="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              @click="login"
             >
               <i class="fas fa-right-to-bracket mr-2"></i>
               Se connecter
@@ -88,7 +87,7 @@
             <p v-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
               {{ error }}
             </p>
-          </div>
+          </form>
 
           <div class="mt-10 text-xs text-slate-400">
             <p>En vous connectant, vous acceptez les conditions d’utilisation et la politique de confidentialité d’IGP POS.</p>
@@ -106,6 +105,7 @@
 </template>
 
 <script setup>
+import { storage } from '@/utils/storage';
 defineOptions({ name: 'LoginPage' })
 import { ref, nextTick, onBeforeUnmount } from 'vue'
 import Keyboard from '../components/tools/Keyboard.vue'
@@ -138,16 +138,14 @@ const login = async () => {
       password: password.value
     });
 
+
     if (response.data.token && response.data.user) {
       // Durée de vie des cookies : 60 minutes (en millisecondes)
       const expirationTime = 24 * 60 * 60 * 1000; // 60 minutes
       const expirationDate = new Date().getTime() + expirationTime;
 
-      // Stockage des informations avec expiration
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('token_expiration', expirationDate.toString());
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      localStorage.setItem('user_expiration', expirationDate.toString());
+      // Stockage des informations avec expiration en utilisant l'utilitaire storage
+      storage.setAuth(response.data.token, response.data.user, [], [], 24);
 
       // Mise à jour du state
       user.value = response.data.user;
@@ -180,10 +178,7 @@ initUser();
 function showKeyboard(field) {
   activeField.value = field
   keyboardVisible.value = true
-  nextTick(() => {
-    updateKeyboardPosition()
-  })
-}
+  }
 
 function handleKeyPress(key) {
   if (key === 'BACKSPACE') {
@@ -239,22 +234,12 @@ const handleResize = () => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize, { passive: true })
-  const token = localStorage.getItem('token')
-  const tokenExpiration = localStorage.getItem('token_expiration')
 
-  // Vérifier si le token a expiré
-  if (token && tokenExpiration) {
-    const currentTime = new Date().getTime()
-    if (currentTime > parseInt(tokenExpiration)) {
-      // Token expiré, nettoyer le localStorage
-      localStorage.removeItem('token')
-      localStorage.removeItem('token_expiration')
-      localStorage.removeItem('user')
-      localStorage.removeItem('user_expiration')
-      return
-    }
+  // Vérifier si une session auth valide existe
+  const authData = storage.getAuth(); // Use storage utility
 
-    // Tente de récupérer l'URL précédente ou redirige vers /direct par défaut
+  if (authData) {
+    // Redirige vers le dashboard si déjà connecté
     window.location.href = '/dashboard'
   }
 })
@@ -266,3 +251,4 @@ onBeforeUnmount(() => {
 
 <style scoped>
 </style>
+

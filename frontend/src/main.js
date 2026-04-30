@@ -8,6 +8,47 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { FontAwesomeIcon } from './plugins/fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { 
+  faUserGear, 
+  faArrowLeft, 
+  faTrash, 
+  faTriangleExclamation, 
+  faTag, 
+  faLock, 
+  faFloppyDisk, 
+  faSpinner, 
+  faShieldHalved, 
+  faXmark, 
+  faCircleInfo, 
+  faCircleCheck, 
+  faPlus,
+  faStore,
+  faUserCheck,
+  faUser,
+  faPen,
+  faTable,
+  faRotate,
+  faEye,
+  faPrint,
+  faSearch,
+  faShoppingCart,
+  faCheck,
+  faTableList,
+  faClock,
+  faCheckCircle,
+  faBoxes,
+  faUsers
+} from '@fortawesome/free-solid-svg-icons'
+
+library.add(
+  faUserGear, faArrowLeft, faTrash, faTriangleExclamation, 
+  faTag, faLock, faFloppyDisk, faSpinner, faShieldHalved, 
+  faXmark, faCircleInfo, faCircleCheck, faPlus,
+  faStore, faUserCheck, faUser, faPen, faTable, faRotate,
+  faEye, faPrint, faSearch, faShoppingCart, faCheck,
+  faTableList, faClock, faCheckCircle, faBoxes, faUsers
+)
 
 const app = createApp(App)
 

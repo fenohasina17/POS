@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
+import { dataCacheService } from '@/services/dataCacheService'
 
 export function useCategories() {
   const categories = ref([])
@@ -10,7 +11,7 @@ export function useCategories() {
   const categoryPrinterTypes = ref({})
   const productCatalog = ref({})
 
-  const loadCategories = async () => {
+  const loadCategories = async (forceRefresh = false) => {
     console.log('loadCategories : démarrage de l\'exécution')
 
     try {
@@ -37,21 +38,10 @@ export function useCategories() {
         return
       }
 
-      console.log('loadCategories : appel de l\'API /categories avec le point_of_sale_id :', user.point_of_sale_id)
-      const response = await axios.get(`${API_BASE_URL}/categories`, {
-        params: {
-          'with_products': 1,
-          'point_of_sale_id': user.point_of_sale_id,
-          'with_pricing': 1,
-        },
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      const rawCategories = Array.isArray(response.data) ? response.data : response.data.data || []
-      console.log('loadCategories : catégories brutes reçues :', rawCategories.length, 'catégories')
+      console.log('loadCategories : récupération des catégories (cache ou API)')
+      const rawCategories = await dataCacheService.getCategories(user.point_of_sale_id, token, forceRefresh)
+      
+      console.log('loadCategories : catégories reçues :', rawCategories.length, 'catégories')
 
       const categoryPrinterMap = { ...categoryPrinterTypes.value }
       const aggregatedProducts = []

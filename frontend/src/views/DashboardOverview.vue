@@ -412,6 +412,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { API_BASE_URL } from '@/utils/api'
 import { useAuth } from '@/composables/useAuth'
+import { useCategories } from '@/composables/useCategories'
 
 defineOptions({ name: 'DashboardOverview' })
 
@@ -1083,12 +1084,12 @@ const fetchPointOfSales = async () => {
 }
 
 onMounted(async () => {
-  try {
-    await loadUserData()
-  } catch (error) {
-    console.error('Erreur chargement utilisateur (dashboard):', error)
-  }
-  await Promise.allSettled([loadSalesData(), fetchPointOfSales()])
+  // We no longer need to loadUserData or loadCategories here 
+  // as they are handled by the DashboardLayout (Dashboard.vue)
+  await Promise.allSettled([
+    loadSalesData(), 
+    fetchPointOfSales()
+  ])
 })
 
 const targetDeltaValue = computed(() => currentMonthBucket.value.value - monthlyTarget.value)

@@ -149,15 +149,35 @@ const imageError = ref('')
 const fetchCategories = async () => {
   try {
     const token = localStorage.getItem('token')
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const pointOfSaleId = user?.point_of_sale_id
+
+    console.log('🔍 pointOfSaleId utilisé:', pointOfSaleId)
+
     const response = await axios.get(`${API_BASE_URL}/categories`, {
+      params: { point_of_sale_id: pointOfSaleId },
       headers: { Authorization: `Bearer ${token}` }
     })
-    categories.value = response.data
+
+    console.log('📦 Réponse brute /categories:', response.data)
+
+    // Extraction flexible
+    let data = response.data
+    if (data?.data && Array.isArray(data.data)) data = data.data
+    if (data?.categories && Array.isArray(data.categories)) data = data.categories
+    if (!Array.isArray(data)) {
+      console.warn('⚠️ Pas de tableau trouvé, structure:', data)
+      categories.value = []
+      return
+    }
+
+    categories.value = data
+    console.log(`✅ ${categories.value.length} catégories chargées:`, categories.value)
   } catch (error) {
-    console.error('Erreur:', error.response?.data || error.message)
+    console.error('❌ Erreur chargement catégories:', error.response?.data || error.message)
+    categories.value = []
   }
 }
-
 onMounted(fetchCategories)
 
 watch(

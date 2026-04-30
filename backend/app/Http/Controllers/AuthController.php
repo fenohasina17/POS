@@ -62,19 +62,16 @@ class AuthController extends BaseController
             $user = Auth::guard('web')->user();
             $token = $user->createToken('auth_token')->plainTextToken;
 
+            // Récupérer le nom du premier rôle Spatie
+            $roleName = $user->getRoleNames()->first();
+
             return response()->json([
                 'message' => 'Connexion réussie',
                 'token' => $token,
                 'user' => $user,
             ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Erreur de validation',
-                'errors' => $e->errors(),
-            ], 422);
         } catch (\Exception $e) {
-            Log::error('Erreur lors de la connexion : ' . $e->getMessage());
-            return response()->json(['message' => 'Erreur interne du serveur'], 500);
+            return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
         }
     }
 

@@ -100,10 +100,7 @@ class CashRegisterSession extends Model
         return $this->hasMany(SessionDiscrepancy::class, 'session_id');
     }
 
-    public function closures()
-    {
-        return $this->hasMany(SessionClosure::class, 'session_id');
-    }
+  
 
     public function sales()
     {

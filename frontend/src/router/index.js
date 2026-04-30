@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import axios from 'axios'
+import { storage } from '@/utils/storage'
 import Login from '../views/Login.vue'
 import DirectSale from '../views/DirectSale.vue'
 import Pos from '../views/Pos.vue'
@@ -11,8 +12,8 @@ import PointOfSaleManage from '../views/PointOfSaleManage.vue'
 import CategoryManage from '../views/CategoryManage.vue'
 import Dashboard from '../views/Dashboard.vue'
 import DashboardOverview from '../views/DashboardOverview.vue'
-import TableSales from '../views/TableSales.vue'
 import TableSale from '../views/TableSale.vue'
+import FloorManager from '../views/FloorManager.vue'
 import TableManage from '../views/TableManage.vue'
 
 import RoleList from '@/views/roles/RoleList.vue'
@@ -25,152 +26,75 @@ import UserRoleManagement from '@/views/users/UserRoleManagement.vue'
 import Printer from '../views/Printer.vue'
 import { API_BASE_URL } from '@/utils/api'
 
-// Fonction de vérification de l'expiration du token
-function checkTokenExpiration() {
-  const token = localStorage.getItem('token')
-  const tokenExpiration = localStorage.getItem('token_expiration')
+// ==================== FONCTIONS UTILITAIRES ====================
 
-  if (token && tokenExpiration) {
-    const currentTime = new Date().getTime()
-    if (currentTime > parseInt(tokenExpiration)) {
-      // Token expiré, nettoyer le localStorage
-      localStorage.removeItem('token')
-      localStorage.removeItem('token_expiration')
-      localStorage.removeItem('user')
-      localStorage.removeItem('user_expiration')
-      localStorage.removeItem('user_roles')
-      localStorage.removeItem('user_permissions')
-      return false
-    }
-    return true
-  }
-  return false
-}
+const ensureAdminAccess = async () => {
+  const auth = storage.getAuth();
+  if (!auth?.user) return false;
+  
+  if (auth.user.roles?.includes('admin')) return true;
 
-const readStoredRoles = () => {
   try {
-    const raw = localStorage.getItem('user_roles')
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-const fetchRolesFromApi = async () => {
-  try {
-    const userStr = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
-    if (!userStr || !token) return []
-    const parsedUser = JSON.parse(userStr)
-    const userId = parsedUser?.id
-    if (!userId) return []
-
-    const { data } = await axios.get(`${API_BASE_URL}/users/${userId}/roles`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const { data } = await axios.get(`${API_BASE_URL}/users/${auth.user.id}/roles`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
     })
 
     const roles = (data?.data || data || []).map((role) => role.name)
-    localStorage.setItem('user_roles', JSON.stringify(roles))
-    return roles
+    // Mettre à jour le stockage si les rôles ont changé
+    storage.setAuth(auth.token, auth.user, roles, auth.user.permissions);
+    return roles.includes('admin')
   } catch (error) {
     console.error('Erreur chargement des rôles:', error.response?.data || error.message)
-    return []
+    return false
   }
 }
 
-const ensureAdminAccess = async () => {
-  const storedRoles = readStoredRoles()
-  if (storedRoles.includes('admin')) {
-    return true
-  }
+// === NOUVELLE FONCTION AJOUTÉE ===
+const isCashPrinterRoute = (to) => {
+  if (!to || !to.name) return false
 
-  const fetchedRoles = await fetchRolesFromApi()
-  return fetchedRoles.includes('admin')
+  const printerRoutes = [
+    'cash-printer',
+    'cash-registers-machine-link',
+    'cashier-dashboard', // si tu veux l'inclure
+    'printers-create',
+  ]
+
+  return (
+    printerRoutes.includes(to.name) ||
+    to.path.includes('printer') ||
+    to.path.includes('cash-printer')
+  )
 }
+
+// ==================== ROUTER ====================
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    {
-      path: '/',
-      name: 'login',
-      component: Login,
-    },
-    {
-      path: '/pos',
-      name: 'pos',
-      component: Pos,
-    },
-    {
-      path: '/direct',
-      redirect: { name: 'dashboard-direct' },
-    },
-    {
-      path: '/table',
-      name: 'table',
-      component: () => import('../views/TableSales.vue'),
-    },
-    {
-      path: '/table-sales',
-      name: 'table-sales',
-      component: () => import('../views/TableSales.vue'),
-    },
-    {
-      path: '/table/order/:tableId?',
-      redirect: (to) => ({ name: 'dashboard-table-order', params: to.params }),
-    },
-    {
-      path: '/tables/manage',
-      name: 'tables-manage',
-      component: () => import('../views/TableManage.vue'),
-    },
-    {
-      path: '/tables/layout',
-      name: 'tables-layout',
-      component: () => import('../views/TableLayout.vue'),
-    },
-    {
-      path: '/tables/selector',
-      name: 'tables-selector',
-      component: () => import('../views/TableSelector.vue'),
-      redirect: { name: 'dashboard-table' },
-    },
-    {
-      path: '/product',
-      redirect: { name: 'dashboard-product' },
-    },
-    // Dashboard with nested tabs
+    { path: '/', name: 'login', component: Login },
+    { path: '/pos', name: 'pos', component: Pos },
+    { path: '/direct', redirect: { name: 'dashboard-direct' } },
+
+    // Dashboard avec routes enfants
     {
       path: '/dashboard',
       name: 'dashboard',
       component: Dashboard,
       children: [
-        {
-          path: '',
-          name: 'dashboard-overview',
-          component: DashboardOverview,
-        },
-        {
-          path: 'direct',
-          name: 'dashboard-direct',
-          component: DirectSale,
-        },
+        { path: '', name: 'dashboard-overview', component: DashboardOverview },
+        { path: 'direct', name: 'dashboard-direct', component: DirectSale },
         {
           path: 'table',
           name: 'dashboard-table',
-          component: TableSales,
+          component: FloorManager,
           props: { embedded: true },
         },
         {
           path: 'table/order/:tableId?',
           name: 'dashboard-table-order',
           component: TableSale,
-          props: (route) => ({
-            tableId: route.params.tableId,
-            embedded: true,
-          }),
+          props: true,
         },
         {
           path: 'table/manage',
@@ -178,21 +102,12 @@ const router = createRouter({
           component: TableManage,
           props: { embedded: true },
         },
-        {
-          path: 'product',
-          name: 'dashboard-product',
-          component: Product,
-        },
-        {
-          path: 'categories',
-          name: 'dashboard-categories',
-          component: CategoryManage,
-        },
+        { path: 'product', name: 'dashboard-product', component: Product },
+        { path: 'categories', name: 'dashboard-categories', component: CategoryManage },
         {
           path: 'ventes',
           name: 'dashboard-ventes',
           component: () => import('../views/SalesList.vue'),
-          props: { embedded: true },
           meta: { requiresAdmin: true, bypassSessionForAdmin: true },
         },
         {
@@ -217,10 +132,11 @@ const router = createRouter({
           name: 'dashboard-cash-register-sessions',
           component: () => import('../views/CashRegisterSessions.vue'),
         },
-        {
-          path: 'printers',
-          name: 'dashboard-printers',
-          component: Printer,
+        { path: 'printers', name: 'dashboard-printers', component: Printer },
+        { 
+          path: 'printers/test', 
+          name: 'dashboard-printers-test', 
+          component: () => import('../views/PrinterTest.vue') 
         },
         {
           path: 'roles',
@@ -228,157 +144,93 @@ const router = createRouter({
           component: RoleList,
           meta: { requiresAdmin: true },
         },
+        // ... tes autres routes enfants (roles, users, etc.)
+        // --- GESTION DES RÔLES ---
+        {
+          path: 'roles',
+          name: 'dashboard-roles',
+          component: () => import('../views/roles/RoleList.vue'),
+          meta: { requiresAdmin: true },
+        },
         {
           path: 'roles/create',
           name: 'dashboard-roles-create',
-          component: RoleCreate,
+          component: () => import('../views/roles/RoleCreate.vue'),
           meta: { requiresAdmin: true },
         },
         {
           path: 'roles/:id/edit',
           name: 'dashboard-roles-edit',
-          component: RoleEdit,
+          component: () => import('../views/roles/RoleEdit.vue'),
           props: true,
           meta: { requiresAdmin: true },
         },
+
+        // --- GESTION DES PERMISSIONS (Optionnel/Consultation) ---
         {
           path: 'permissions',
           name: 'dashboard-permissions',
-          component: PermissionList,
+          component: () => import('../views/permissions/PermissionList.vue'),
           meta: { requiresAdmin: true },
         },
-        {
-          path: 'permissions/create',
-          name: 'dashboard-permissions-create',
-          component: PermissionCreate,
-          meta: { requiresAdmin: true },
-        },
+
+        // --- GESTION DES UTILISATEURS ---
         {
           path: 'users',
           name: 'dashboard-users',
-          component: UserList,
+          component: () => import('../views/users/UserList.vue'),
           meta: { requiresAdmin: true },
         },
         {
           path: 'users/create',
           name: 'dashboard-users-create',
-          component: () => import('@/views/users/UserCreate.vue'),
+          component: () => import('../views/users/UserCreate.vue'),
           meta: { requiresAdmin: true },
         },
         {
           path: 'users/:id/edit',
           name: 'dashboard-users-edit',
-          component: () => import('@/views/users/UserEdit.vue'),
-          props: true,
-          meta: { requiresAdmin: true },
-        },
-        {
-          path: 'users/:userId/roles',
-          name: 'dashboard-users-roles',
-          component: UserRoleManagement,
+          component: () => import('../views/users/UserEdit.vue'),
           props: true,
           meta: { requiresAdmin: true },
         },
       ],
     },
-    {
-      path: '/cash-printer',
-      name: 'cash-printer',
-      component: CashPrinter,
-    },
-    {
-      path: '/cashier-dashboard',
-      name: 'cashier-dashboard',
-      component: () => import('../views/CashierDashboard.vue'),
-    },
 
-    {
-      path: '/user-sales',
-      redirect: { name: 'dashboard-user-sales' },
-    },
-    {
-      path: '/retour',
-      redirect: { name: 'dashboard-retour' },
-    },
-    {
-      path: '/point-of-sale',
-      redirect: { name: 'dashboard-point-of-sale' },
-    },
-    {
-      path: '/cash-register-sessions',
-      redirect: { name: 'dashboard-cash-register-sessions' },
-    },
+    { path: '/cash-printer', name: 'cash-printer', component: CashPrinter },
     {
       path: '/cash-registers/machine-link',
       name: 'cash-registers-machine-link',
-      component: () => import('../views/CashRegisterMachineView.vue'),
+      component: CashPrinter,
     },
-    { path: '/roles', redirect: { name: 'dashboard-roles' } },
-    { path: '/roles/create', redirect: { name: 'dashboard-roles-create' } },
-    {
-      path: '/roles/:id/edit',
-      redirect: (to) => ({ name: 'dashboard-roles-edit', params: to.params }),
-    },
-    { path: '/permissions', redirect: { name: 'dashboard-permissions' } },
-    { path: '/permissions/create', redirect: { name: 'dashboard-permissions-create' } },
-    {
-      path: '/users',
-      redirect: { name: 'dashboard-users' },
-    },
-    {
-      path: '/users/create',
-      redirect: { name: 'dashboard-users-create' },
-    },
-    {
-      path: '/users/:id/edit',
-      redirect: (to) => ({ name: 'dashboard-users-edit', params: to.params }),
-    },
-    {
-      path: '/users/:userId/roles',
-      redirect: (to) => ({ name: 'dashboard-users-roles', params: to.params }),
-    },
-    {
-      path: '/printers',
-      redirect: { name: 'dashboard-printers' },
-    },
-    {
-      path: '/printers/create',
-      name: 'printers-create',
-      component: () => import('../views/PrinterCreateView.vue'),
-    },
-    {
-      path: '/categories',
-      redirect: { name: 'dashboard-categories' },
-    },
-    {
-      path: '/cash-transactions',
-      name: 'cash-transactions',
-      component: () => import('../views/CashTransactions.vue'),
-    },
-    {
-      path: '/billetage',
-      name: 'billetage',
-      component: () => import('../views/Billetage.vue'),
-    },
+    { path: '/billetage', name: 'billetage', component: () => import('../views/Billetage.vue') },
     {
       path: '/billetage/:sessionId/resume',
       name: 'billetage-summary',
       component: () => import('../views/BilletageSummary.vue'),
     },
+
+    // Redirections
+    { path: '/user-sales', redirect: { name: 'dashboard-user-sales' } },
+    { path: '/retour', redirect: { name: 'dashboard-retour' } },
+    { path: '/point-of-sale', redirect: { name: 'dashboard-point-of-sale' } },
+    { path: '/cash-register-sessions', redirect: { name: 'dashboard-cash-register-sessions' } },
   ],
 })
 
-// Vérification de l'expiration du token avant chaque navigation
+// ==================== GUARD GLOBAL ====================
+
 router.beforeEach(async (to, from, next) => {
-  // Ne pas vérifier pour la page de login
+  // Ignorer la page login
   if (to.path === '/' || to.path === '/login') {
     next()
     return
   }
 
-  // Vérifier l'expiration du token
-  if (!checkTokenExpiration()) {
-    // Token expiré, rediriger vers la page de login
+  // Vérification expiration token
+  // Vérification expiration token via storage.getAuth() (gère l'expiration)
+  const auth = storage.getAuth()
+  if (!auth || !auth.token) {
     next('/')
     return
   }
@@ -386,45 +238,50 @@ router.beforeEach(async (to, from, next) => {
   const cashRegisterRequiredRoutes = new Set([
     'dashboard-direct',
     'dashboard-table',
-    'dashboard-table-manage',
-    'dashboard-product',
-    'dashboard-ventes',
-    'dashboard-user-sales',
+    'dashboard-table-order',
     'table',
     'table-sales',
-    'dashboard-table-order',
-    'tables-manage',
-    'tables-layout',
-    'tables-selector',
     'direct',
-    'product',
-    'user-sales'
   ])
 
-  const isCashPrinterRoute = to.name === 'cash-printer' || to.path.startsWith('/cash-printer')
-  const requiresCashRegister = to.matched.some((record) => cashRegisterRequiredRoutes.has(String(record.name)))
+  const requiresCashRegister = to.matched.some((record) =>
+    cashRegisterRequiredRoutes.has(String(record.name)),
+  )
+
   const requiresAdminAccess = to.matched.some((record) => record.meta?.requiresAdmin)
   const adminBypassSession = to.matched.some((record) => record.meta?.bypassSessionForAdmin)
-  const sessionData = localStorage.getItem('cashRegisterSession') || localStorage.getItem('cash_register_session')
+
+  const sessionData =
+    localStorage.getItem('cashRegisterSession') || localStorage.getItem('cash_register_session')
   const hasActiveSession = Boolean(sessionData)
 
-  let adminCheckResult = null
   const verifyAdminAccess = async () => {
-    if (adminCheckResult === null) {
-      adminCheckResult = await ensureAdminAccess()
-    }
-    return adminCheckResult
+    return await ensureAdminAccess()
   }
 
-  if (requiresCashRegister && !hasActiveSession && !isCashPrinterRoute) {
-    if (adminBypassSession && (await verifyAdminAccess())) {
+  // === CORRECTION PRINCIPALE ICI ===
+  if (requiresCashRegister && !hasActiveSession) {
+    // Si c'est une route liée à l'imprimante/caisse, on autorise
+    if (isCashPrinterRoute(to)) {
       next()
       return
     }
+
+    // Si c'est un admin avec bypass
+    if (adminBypassSession) {
+      const isAdmin = await verifyAdminAccess()
+      if (isAdmin) {
+        next()
+        return
+      }
+    }
+
+    // Sinon → rediriger vers la connexion caisse
     next({ name: 'cash-printer' })
     return
   }
 
+  // Vérification accès admin
   if (requiresAdminAccess) {
     const isAdminUser = await verifyAdminAccess()
     if (!isAdminUser) {

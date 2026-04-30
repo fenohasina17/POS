@@ -5,10 +5,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'sales';
 
@@ -27,6 +29,8 @@ class Sale extends Model
         'notes',
         'cancelled_at',
         'cancellation_reason',
+        'deleted_by',
+        'deletion_reason'
     ];
 
     protected $casts = [
@@ -62,6 +66,14 @@ class Sale extends Model
     public function orderlines()
     {
         return $this->hasMany(Orderline::class);
+    }
+
+    /**
+     * Alias pour orderlines (utilisé par le frontend)
+     */
+    public function order_lines()
+    {
+        return $this->orderlines();
     }
 
     public function payments()

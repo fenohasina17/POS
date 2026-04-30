@@ -9,7 +9,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class CashTransactionService
 {
-// app/Services/CashTransactionService.php
+
 
 public function createTransaction(array $data)
 {

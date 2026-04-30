@@ -1,122 +1,116 @@
 <template>
-  <div class="modern-edit-modal-overlay" @click.self="close">
-    <div class="modern-edit-modal-content">
-      <!-- Header Section -->
-      <div class="edit-modal-header">
-        <div class="edit-modal-title-section">
-          <h2 class="edit-modal-title">
-            <i class="fas fa-edit"></i>
+  <div v-if="isOpen" class="modal-overlay" @click.self="close">
+    <div class="modal-container">
+      <!-- Header -->
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title">
+            <font-awesome-icon icon="fa-regular fa-pen-to-square" class="title-icon" />
             Modifier la vente
           </h2>
-          <div class="edit-modal-subtitle">
-            <span class="edit-modal-ticket">
-              <i class="fas fa-hashtag"></i>
-              Ticket #{{ sale.ticket_number }}
-            </span>
-            <span class="edit-modal-date">
-              <i class="fas fa-calendar-alt"></i>
-              {{ formatDate(sale.created_at) }}
-            </span>
+          <div class="modal-subtitle">
+            <span class="badge">Ticket #{{ sale?.ticket_number || 'N/A' }}</span>
+            <span class="date">{{ formatDate(sale?.created_at) }}</span>
           </div>
         </div>
-        <div class="edit-modal-total">
-          <div class="total-amount">
-            {{ formatPrice(calculateTotal()) }}
-          </div>
-          <div class="total-label">Total actuel</div>
+        <div class="total-badge">
+          <span class="total-label">Total actuel</span>
+          <span class="total-amount">{{ formatPrice(calculateTotal()) }}</span>
         </div>
+        <button class="close-btn" @click="close">&times;</button>
       </div>
 
-      <!-- Content Section -->
-      <form @submit.prevent="save" class="edit-modal-form">
-        <!-- Basic Information -->
-        <div class="edit-info-section">
+      <!-- Form -->
+      <form @submit.prevent="save" class="modal-form">
+        <!-- Informations générales -->
+        <div class="info-card">
           <h3 class="section-title">
-            <i class="fas fa-info-circle"></i>
+            <font-awesome-icon icon="fa-regular fa-circle-info" />
             Informations générales
           </h3>
           <div class="info-grid">
-            <div class="info-field">
-              <label for="ticketNumber">
-                <i class="fas fa-hashtag"></i>
-                Numéro de ticket
-              </label>
-              <input id="ticketNumber" type="number" min="0" step="1" v-model.number="editableSale.ticket_number" required />
-            </div>
-            <div class="info-field">
-              <label for="status">
-                <i class="fas fa-flag"></i>
-                Statut
-              </label>
-              <select id="status" v-model="editableSale.status" required>
+            <div class="field">
+              <label>Statut</label>
+              <select v-model="editableSale.status" class="input">
                 <option value="pending">En attente</option>
                 <option value="completed">Terminée</option>
                 <option value="cancelled">Annulée</option>
               </select>
             </div>
+            <div class="field">
+              <label>Remise (%)</label>
+              <input type="number" v-model.number="editableSale.discount_percentage" class="input" step="0.01" min="0" max="100" />
+            </div>
           </div>
         </div>
 
-        <!-- Order Lines Section -->
-        <div class="edit-products-section">
-          <div class="section-header">
+        <!-- Produits -->
+        <div class="products-card">
+          <div class="card-header">
             <h3 class="section-title">
-              <i class="fas fa-shopping-cart"></i>
+              <font-awesome-icon icon="fa-solid fa-cart-shopping" />
               Produits
             </h3>
-            <div class="section-badge">
-              {{ editableSale.order_lines?.length || 0 }} produit{{ (editableSale.order_lines?.length || 0) > 1 ? 's' : '' }}
-            </div>
+            <span class="badge-count">{{ editableSale.orderlines?.length || 0 }} produit(s)</span>
           </div>
 
-          <div class="products-edit-list">
-            <div v-for="(line, index) in editableSale.order_lines" :key="line.id" class="product-edit-item">
-              <div class="product-edit-header">
-                <div class="product-name">
-                  <i class="fas fa-box"></i>
-                  {{ line.product?.name || 'N/A' }}
-                </div>
-                <button type="button" @click="removeProduct(index)" class="remove-product-btn">
-                  <i class="fas fa-trash"></i>
+          <!-- Liste des produits existants -->
+          <div class="products-list">
+            <div v-for="(line, idx) in editableSale.orderlines" :key="line.id || idx" class="product-row">
+              <div class="product-name-cell">
+                <font-awesome-icon icon="fa-solid fa-box" class="item-icon" />
+                {{ line.product?.name || 'Produit inconnu' }}
+              </div>
+              <div class="product-price-cell">
+                {{ formatPrice(line.price) }}
+              </div>
+              <div class="quantity-control">
+                <button type="button" class="qty-btn" @click="decrementQuantity(idx)">
+                  <font-awesome-icon icon="fa-solid fa-minus" />
+                </button>
+                <span class="qty-value">{{ line.quantity }}</span>
+                <button type="button" class="qty-btn" @click="incrementQuantity(idx)">
+                  <font-awesome-icon icon="fa-solid fa-plus" />
                 </button>
               </div>
-
-              <div class="product-edit-fields">
-                <div class="field-group">
-                  <label>Quantité</label>
-                  <input type="number" min="1" v-model.number="editableSale.order_lines[index].quantity" required />
-                </div>
-                <div class="field-group">
-                  <label>Prix unitaire</label>
-                  <input type="number" min="0" step="0.01" v-model.number="editableSale.order_lines[index].price" required />
-                </div>
-                <div class="field-group total-field">
-                  <label>Total</label>
-                  <div class="calculated-total">
-                    {{ formatPrice(calculateLineTotal(line)) }}
-                  </div>
-                </div>
+              <div class="product-total-cell">
+                {{ formatPrice(line.quantity * line.price) }}
               </div>
+              <button type="button" class="remove-product-btn" @click="removeProduct(idx)">
+                <font-awesome-icon icon="fa-solid fa-trash" />
+              </button>
             </div>
           </div>
 
-          <!-- Add Product Button -->
-          <button type="button" @click="addProduct" class="add-product-btn">
-            <i class="fas fa-plus"></i>
-            Ajouter un produit
-          </button>
+          <!-- Ajout de produit (admin uniquement) -->
+          <div v-if="isAdmin" class="add-product-section">
+            <div class="add-product-controls">
+              <div class="product-select-field">
+                <label>Produit</label>
+                <select v-model="selectedProductId" class="input">
+                  <option value="">-- Sélectionner un produit --</option>
+                  <option v-for="product in products" :key="product.id" :value="product.id">
+                    {{ product.name }} - {{ formatPrice(product.price) }}
+                  </option>
+                </select>
+              </div>
+              <div class="quantity-field">
+                <label>Quantité</label>
+                <input type="number" v-model.number="newProductQuantity" class="input" min="1" />
+              </div>
+              <button type="button" class="add-product-btn" @click="addSelectedProduct">
+                <font-awesome-icon icon="fa-solid fa-plus" />
+                Ajouter
+              </button>
+            </div>
+          </div>
+          <p v-else class="info-message">Seul un administrateur peut ajouter des produits.</p>
         </div>
 
         <!-- Actions -->
-        <div class="edit-modal-actions">
-          <button type="submit" class="save-btn">
-            <i class="fas fa-save"></i>
-            Enregistrer
-          </button>
-          <button type="button" @click="close" class="cancel-btn">
-            <i class="fas fa-times"></i>
-            Annuler
-          </button>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" @click="close">Annuler</button>
+          <button type="submit" class="btn-primary">Enregistrer</button>
         </div>
       </form>
     </div>
@@ -124,510 +118,582 @@
 </template>
 
 <script setup>
-import { reactive, watch, defineEmits, defineProps } from 'vue'
+import { ref, watch } from 'vue'
+import axios from 'axios'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { API_BASE_URL } from '@/utils/api'
+import { useAuth } from '@/composables/useAuth'
 
+// Props
 const props = defineProps({
-  sale: {
-    type: Object,
-    required: true
+  sale: { type: Object, default: null }
+})
+const emit = defineEmits(['close', 'save'])
+
+// État local
+const isOpen = ref(false)
+const editableSale = ref({
+  id: null,
+  ticket_number: '',
+  status: 'pending',
+  discount_percentage: 0,
+  orderlines: []
+})
+
+// Authentification
+const { isAdmin, currentUser } = useAuth()
+console.log('🔍 [EditSaleModal] isAdmin =', isAdmin.value)
+console.log('🔍 [EditSaleModal] currentUser =', currentUser.value)
+
+// Données pour l'ajout de produit
+const products = ref([])
+const selectedProductId = ref('')
+const newProductQuantity = ref(1)
+
+// Headers API
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token')
+  if (!token) throw new Error("Token d'authentification manquant")
+  return { Authorization: `Bearer ${token}` }
+}
+
+// Récupération de tous les produits (gestion pagination + extraction prix)
+const fetchAllProducts = async (url) => {
+  const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`
+  const { data } = await axios.get(fullUrl, { headers: getAuthHeaders() })
+
+  let pageProducts = []
+  if (Array.isArray(data)) pageProducts = data
+  else if (data?.data && Array.isArray(data.data)) pageProducts = data.data
+  else if (data?.items && Array.isArray(data.items)) pageProducts = data.items
+  else if (data?.results && Array.isArray(data.results)) pageProducts = data.results
+  else {
+    for (const key in data) {
+      if (Array.isArray(data[key])) {
+        pageProducts = data[key]
+        break
+      }
+    }
   }
-})
 
-const emit = defineEmits(['save', 'close'])
+  // Extraction du prix depuis le tableau pricing
+  const userPointOfSaleId = currentUser.value?.point_of_sale_id
+  pageProducts = pageProducts.map(product => {
+    let price = 0
+    if (product.pricing && Array.isArray(product.pricing)) {
+      const pricing = product.pricing.find(p => p.point_of_sale_id === userPointOfSaleId)
+      if (pricing) price = Number(pricing.price)
+      else if (product.pricing[0]) price = Number(product.pricing[0].price)
+    }
+    return { ...product, price }
+  })
 
-const editableSale = reactive(JSON.parse(JSON.stringify(props.sale)))
+  // Récupération de la page suivante (plusieurs formats possibles)
+  let nextUrl = data?.links?.next || data?.next_page_url || null
+  if (nextUrl) {
+    const nextProducts = await fetchAllProducts(nextUrl)
+    return [...pageProducts, ...nextProducts]
+  }
+  return pageProducts
+}
 
+const fetchProducts = async () => {
+  if (!isAdmin.value) return
+  try {
+    console.log('🔄 Chargement des produits...')
+    const allProducts = await fetchAllProducts(`${API_BASE_URL}/products?per_page=100`)
+    products.value = allProducts
+    console.log(`✅ ${products.value.length} produits chargés`)
+    if (products.value.length) console.log('Exemple produit avec prix:', products.value[0])
+  } catch (error) {
+    console.error('❌ Erreur chargement produits:', error)
+  }
+}
+
+// Ajouter un produit sélectionné
+const addSelectedProduct = () => {
+  if (!selectedProductId.value) {
+    alert('Veuillez sélectionner un produit')
+    return
+  }
+  const product = products.value.find(p => p.id === selectedProductId.value)
+  if (!product) return
+
+  const quantity = newProductQuantity.value || 1
+  const price = product.price
+
+  editableSale.value.orderlines.push({
+    id: `temp_${Date.now()}_${Math.random()}`,
+    product: {
+      id: product.id,
+      name: product.name
+    },
+    quantity: quantity,
+    price: price,
+    total: quantity * price
+  })
+
+  // Réinitialiser la sélection
+  selectedProductId.value = ''
+  newProductQuantity.value = 1
+}
+
+// Synchronisation avec la prop sale
 watch(() => props.sale, (newSale) => {
-  Object.assign(editableSale, JSON.parse(JSON.stringify(newSale)))
-})
+  if (newSale) {
+    const cloned = JSON.parse(JSON.stringify(newSale))
+    // Convertir order_lines (API) → orderlines (modale)
+    if (cloned.order_lines && !cloned.orderlines) {
+      cloned.orderlines = cloned.order_lines
+    }
+    if (!cloned.orderlines) cloned.orderlines = []
+    editableSale.value = cloned
+    isOpen.value = true
+    if (isAdmin.value) fetchProducts()
+  } else {
+    isOpen.value = false
+  }
+}, { immediate: true, deep: true })
 
-const close = () => {
-  emit('close')
-}
-
+// Utilitaires
 const formatPrice = (price) => {
-  return `${parseFloat(price).toFixed(2)} Ar`
+  const value = Math.round(Number(price) || 0)
+  return `${value.toLocaleString('fr-FR')} Ar`
 }
 
-const formatDate = (dateString) => {
-  const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }
-  return new Date(dateString).toLocaleDateString('fr-FR', options)
-}
-
-const calculateLineTotal = (line) => {
-  return (line.quantity || 0) * (line.price || 0)
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 const calculateTotal = () => {
-  if (!editableSale.order_lines || !Array.isArray(editableSale.order_lines)) return 0
-  return editableSale.order_lines.reduce((total, line) => total + calculateLineTotal(line), 0)
+  const subtotal = editableSale.value.orderlines.reduce((sum, line) => sum + (line.quantity * line.price), 0)
+  const discount = (subtotal * (editableSale.value.discount_percentage || 0)) / 100
+  return Math.round(subtotal - discount)
 }
 
-const addProduct = () => {
-  editableSale.order_lines.push({
-    id: Date.now(), // Temporary ID
-    product: { name: 'Nouveau produit' },
-    quantity: 1,
-    price: 0,
-    total: 0
-  })
+const incrementQuantity = (index) => {
+  editableSale.value.orderlines[index].quantity++
+}
+
+const decrementQuantity = (index) => {
+  if (editableSale.value.orderlines[index].quantity > 1) {
+    editableSale.value.orderlines[index].quantity--
+  }
 }
 
 const removeProduct = (index) => {
-  if (editableSale.order_lines.length > 1) {
-    editableSale.order_lines.splice(index, 1)
+  if (editableSale.value.orderlines.length > 1) {
+    editableSale.value.orderlines.splice(index, 1)
   }
 }
 
 const save = () => {
-  console.log('Save method called with editableSale:', editableSale)
-
-  // Calculate total for each order line and convert to integer
-  editableSale.order_lines.forEach(line => {
-    line.total = Math.round(calculateLineTotal(line)) // Convert to integer
-    line.price = Math.round(line.price) // Ensure price is integer
+  editableSale.value.orderlines.forEach(line => {
+    line.total = Math.round(line.quantity * line.price)
+    line.price = Math.round(line.price)
   })
+  editableSale.value.total_amount = calculateTotal()
+  emit('save', editableSale.value)
+  close()
+}
 
-  // Calculate total amount for sale and convert to integer
-  editableSale.total_amount = Math.round(calculateTotal())
-
-  emit('save', editableSale)
+const close = () => {
+  isOpen.value = false
+  emit('close')
 }
 </script>
 
+<!-- Les styles CSS ont été volontairement omis comme demandé -->
 <style scoped>
-/* Modern Edit Modal Styles */
-.modern-edit-modal-overlay {
+.modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
 }
 
-.modern-edit-modal-content {
-  background: #ffffff;
-  border-radius: 12px;
+.modal-container {
+  background: white;
+  border-radius: 1.5rem;
   width: 100%;
-  max-width: 700px;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #333;
+  max-width: 950px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
-/* Header Section */
-.edit-modal-header {
-  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+.modal-header {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  border-radius: 1.5rem 1.5rem 0 0;
+  z-index: 10;
 }
 
-.edit-modal-title-section {
-  flex: 1;
-}
-
-.edit-modal-title {
-  font-size: 1.5rem;
+.modal-title {
+  font-size: 1.3rem;
   font-weight: 700;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.2rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-.edit-modal-title i {
-  font-size: 1.2rem;
+.modal-subtitle {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
   opacity: 0.9;
 }
 
-.edit-modal-subtitle {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.9rem;
-  opacity: 0.9;
-}
-
-.edit-modal-ticket,
-.edit-modal-date {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.edit-modal-total {
+.total-badge {
   text-align: right;
 }
 
-.total-amount {
-  font-size: 2rem;
-  font-weight: 800;
-  line-height: 1;
-  margin-bottom: 0.2rem;
-}
-
 .total-label {
-  font-size: 0.8rem;
-  opacity: 0.8;
+  font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  opacity: 0.8;
+  display: block;
 }
 
-/* Content Section */
-.edit-modal-form {
-  padding: 1.5rem;
-  max-height: calc(90vh - 200px);
-  overflow-y: auto;
+.total-amount {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
-/* Info Section */
-.edit-info-section {
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-form {
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.info-card,
+.products-card {
   background: #f8fafc;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
 }
 
 .section-title {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #1e293b;
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.75rem 0;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.section-title i {
-  color: #d32f2f;
 }
 
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
-.info-field {
+.field {
   display: flex;
   flex-direction: column;
+  gap: 0.2rem;
 }
 
-.info-field label {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
+.field label {
+  font-size: 0.65rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #444;
-  font-size: 0.9rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
-.info-field input,
-.info-field select {
-  padding: 0.6rem 0.8rem;
-  border: 1.5px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.info-field input:focus,
-.info-field select:focus {
-  outline: none;
-  border-color: #d32f2f;
-  box-shadow: 0 0 8px rgba(211, 47, 47, 0.3);
-}
-
-/* Products Section */
-.edit-products-section {
-  background: #f8fafc;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.section-badge {
-  background: #d32f2f;
-  color: white;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.products-edit-list {
-  margin-bottom: 1rem;
-}
-
-.product-edit-item {
+.input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.6rem;
+  font-size: 0.85rem;
   background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.product-edit-header {
+.card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
-.product-name {
+.badge-count {
+  background: #e2e8f0;
+  color: #475569;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  font-size: 0.65rem;
   font-weight: 600;
-  color: #1e293b;
+}
+
+.products-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.product-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid #e2e8f0;
+  flex-wrap: wrap;
 }
 
-.product-name i {
-  color: #d32f2f;
+.product-name-cell {
+  flex: 2;
+  min-width: 130px;
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.item-icon {
+  color: #4f46e5;
+  font-size: 0.7rem;
+}
+
+.product-price-cell {
+  min-width: 70px;
+  font-size: 0.85rem;
+  color: #475569;
+  text-align: center;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: #f1f5f9;
+  border-radius: 2rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.qty-btn {
+  background: none;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  transition: all 0.2s;
+  color: #4f46e5;
+}
+
+.qty-btn:hover {
+  background: #e2e8f0;
+}
+
+.qty-value {
+  min-width: 30px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.product-total-cell {
+  min-width: 80px;
+  text-align: center;
+  font-weight: 700;
+  color: #4f46e5;
+  background: #f1f5f9;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
 }
 
 .remove-product-btn {
-  background: #ef4444;
-  color: white;
+  background: none;
   border: none;
-  border-radius: 6px;
-  padding: 0.5rem;
+  color: #ef4444;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  padding: 0.2rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  margin-left: auto;
 }
 
 .remove-product-btn:hover {
-  background: #dc2626;
+  background: #fee2e2;
 }
 
-.product-edit-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1rem;
+.add-product-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #cbd5e1;
 }
 
-.field-group {
+.add-product-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.product-select-field,
+.quantity-field {
   display: flex;
   flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 150px;
 }
 
-.field-group label {
+.product-select-field label,
+.quantity-field label {
+  font-size: 0.65rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #444;
-  font-size: 0.9rem;
-}
-
-.field-group input {
-  padding: 0.6rem 0.8rem;
-  border: 1.5px solid #ddd;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.field-group input:focus {
-  outline: none;
-  border-color: #d32f2f;
-  box-shadow: 0 0 8px rgba(211, 47, 47, 0.3);
-}
-
-.calculated-total {
-  padding: 0.6rem 0.8rem;
-  background: #f8fafc;
-  border: 1.5px solid #ddd;
-  border-radius: 8px;
-  font-weight: 600;
-  color: #d32f2f;
-  text-align: center;
+  color: #64748b;
+  text-transform: uppercase;
 }
 
 .add-product-btn {
   background: #22c55e;
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  cursor: pointer;
+  border-radius: 2rem;
+  padding: 0.5rem 1rem;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  margin: 0 auto;
-  transition: background-color 0.3s ease;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.8rem;
+  height: fit-content;
 }
 
 .add-product-btn:hover {
   background: #16a34a;
 }
 
-/* Actions */
-.edit-modal-actions {
+.info-message {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-style: italic;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e2e8f0;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
 }
 
-.save-btn {
-  background: #d32f2f;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  cursor: pointer;
+.btn-primary,
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.3s ease;
-}
-
-.save-btn:hover {
-  background: #b71c1c;
-}
-
-.cancel-btn {
-  background: #6b7280;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
+  font-size: 0.8rem;
   cursor: pointer;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.3s ease;
+  transition: all 0.2s;
+  border: none;
 }
 
-.cancel-btn:hover {
-  background: #4b5563;
+.btn-primary {
+  background: #4f46e5;
+  color: white;
 }
 
-/* Responsive Styles */
+.btn-primary:hover {
+  background: #4338ca;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+.modal-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.modal-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
 @media (max-width: 768px) {
-  .modern-edit-modal-content {
-    max-width: 95vw;
-    margin: 1rem;
-  }
-
-  .edit-modal-header {
-    flex-direction: column;
-    text-align: center;
-    gap: 1rem;
-    padding: 1rem;
-  }
-
-  .edit-modal-title {
-    font-size: 1.3rem;
-    justify-content: center;
-  }
-
-  .edit-modal-subtitle {
-    justify-content: center;
+  .product-row {
     flex-wrap: wrap;
   }
-
-  .edit-modal-total {
-    text-align: center;
+  .product-name-cell {
+    width: 100%;
+    margin-bottom: 0.3rem;
   }
-
-  .total-amount {
-    font-size: 1.5rem;
+  .quantity-control,
+  .product-price-cell,
+  .product-total-cell {
+    margin-top: 0.2rem;
   }
-
-  .edit-modal-form {
-    padding: 1rem;
-  }
-
   .info-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
   }
-
-  .product-edit-fields {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .edit-modal-actions {
+  .add-product-controls {
     flex-direction: column;
+    align-items: stretch;
   }
-
-  .save-btn,
-  .cancel-btn {
-    width: 100%;
+  .add-product-btn {
     justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .modern-edit-modal-content {
-    max-width: 98vw;
-    margin: 0.5rem;
-  }
-
-  .edit-modal-header {
-    padding: 0.75rem;
-  }
-
-  .edit-modal-title {
-    font-size: 1.1rem;
-  }
-
-  .edit-modal-subtitle {
-    font-size: 0.8rem;
-    gap: 0.5rem;
-  }
-
-  .total-amount {
-    font-size: 1.3rem;
-  }
-
-  .edit-modal-form {
-    padding: 0.75rem;
-  }
-
-  .edit-info-section,
-  .edit-products-section {
-    padding: 0.75rem;
-  }
-
-  .section-title {
-    font-size: 0.9rem;
-  }
-
-  .product-edit-item {
-    padding: 0.75rem;
-  }
-
-  .product-name {
-    font-size: 0.9rem;
   }
 }
 </style>

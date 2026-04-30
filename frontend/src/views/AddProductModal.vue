@@ -38,15 +38,16 @@
                 />
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-600">Référence</label>
+                <label class="text-sm font-semibold text-slate-600">Référence (max 4 caractères)</label>
                 <input
                   v-model="localProduct.ref"
                   type="text"
-                  maxlength="20"
+                  maxlength="4"
                   required
-                  placeholder="Référence du produit"
+                  placeholder="Ex: B001"
                   class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
                 />
+                <p class="text-xs text-slate-400">{{ localProduct.ref.length }}/4 caractères</p>
               </div>
             </div>
 
@@ -158,7 +159,6 @@ import { API_BASE_URL, API_URL } from '@/utils/api'
 const props = defineProps({
   isOpen: Boolean
 })
-
 const emits = defineEmits(['close', 'added'])
 
 const localProduct = reactive({
@@ -174,18 +174,57 @@ const localProduct = reactive({
 const categories = ref([])
 const imageError = ref('')
 const fileInput = ref(null)
+const isSaving = ref(false)
+const saveError = ref('')
 
+// Récupération des catégories avec gestion de la réponse
 const fetchCategories = async () => {
   try {
     const token = localStorage.getItem('token')
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    const pointOfSaleId = user?.point_of_sale_id
+
+    if (!pointOfSaleId) {
+      console.warn('Point de vente non trouvé pour l’utilisateur')
+      categories.value = []
+      return
+    }
+
     const response = await axios.get(`${API_BASE_URL}/categories`, {
+      params: { point_of_sale_id: pointOfSaleId },
       headers: { Authorization: `Bearer ${token}` }
     })
-    categories.value = response.data
+
+    // Extraction flexible du tableau de catégories
+    let data = response.data
+    if (data?.data && Array.isArray(data.data)) data = data.data
+    if (data?.categories && Array.isArray(data.categories)) data = data.categories
+    if (!Array.isArray(data)) {
+      console.warn('Format de réponse inattendu:', data)
+      categories.value = []
+      return
+    }
+
+    categories.value = data
+    console.log(`${categories.value.length} catégories chargées`)
   } catch (error) {
-    console.error('Erreur:', error.response?.data || error.message)
+    console.error('Erreur chargement catégories:', error.response?.data || error.message)
+    categories.value = []
   }
 }
+
+// Chargement au montage
+onMounted(() => {
+  fetchCategories()
+})
+
+// Recharger les catégories à chaque ouverture du modal (utile si elles ont changé)
+watch(() => props.isOpen, (isOpen) => {
+  if (isOpen) {
+    fetchCategories()
+    resetForm()
+  }
+})
 
 const resetForm = () => {
   localProduct.name = ''
@@ -198,17 +237,6 @@ const resetForm = () => {
   imageError.value = ''
   saveError.value = ''
 }
-
-onMounted(fetchCategories)
-
-watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen) {
-      resetForm()
-    }
-  }
-)
 
 const imageUrl = computed(() => {
   return localProduct.imagePreview || `${API_URL}/storage/products/default-product-image.jpg`
@@ -226,7 +254,6 @@ const onImageChange = (event) => {
     imageError.value = 'Fichier trop volumineux (max 2MB)'
     return
   }
-
   imageError.value = ''
   localProduct.image = file
   localProduct.imagePreview = URL.createObjectURL(file)
@@ -235,9 +262,6 @@ const onImageChange = (event) => {
 const triggerFileDialog = () => {
   fileInput.value?.click()
 }
-
-const isSaving = ref(false)
-const saveError = ref('')
 
 const convertFileToBase64 = (file) => {
   return new Promise((resolve) => {
@@ -269,8 +293,8 @@ const addProduct = async () => {
     })
     const updatedProductData = {
       ...response.data.product,
-      price: localProduct.price // Ajoutez le prix depuis le state local
-    };
+      price: localProduct.price
+    }
     emits('added', updatedProductData)
     emits('close')
   } catch (error) {
@@ -283,12 +307,12 @@ const addProduct = async () => {
 
 const closeModal = () => emits('close')
 </script>
+
 <style scoped>
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.15s ease, transform 0.2s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;

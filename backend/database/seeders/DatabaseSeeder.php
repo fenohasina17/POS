@@ -15,6 +15,7 @@ use Database\Seeders\RoleSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\CashRegisterSessionSeeder;
 use Database\Seeders\SalePaymentPermissionSeeder;
+use Database\Seeders\TableSeeder;
 
 
 class DatabaseSeeder extends Seeder
@@ -57,8 +58,9 @@ class DatabaseSeeder extends Seeder
             PricingSeeder::class,
             PaymentSeeder::class,
             PointOfSaleProductSeeder::class,
-            CashRegisterSessionSeeder::class,
-            SalePaymentPermissionSeeder::class,
+          //  CashRegisterSessionSeeder::class,
+         //   SalePaymentPermissionSeeder::class,
+            TableSeeder::class,
             
         ]);
               // Assign admin role to benzenito

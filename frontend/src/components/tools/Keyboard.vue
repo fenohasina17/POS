@@ -11,7 +11,7 @@
     >
       <div class="flex items-center">
         <span class="mr-2 text-gray-400">
-          <MoveIcon />
+          <i class="fas fa-arrows-alt"></i>
         </span>
         <strong>Clavier Virtuel</strong>
       </div>
@@ -22,7 +22,7 @@
           @click="closeKeyboard"
           title="Fermer le clavier"
         >
-          <CloseIcon class="h-4 w-4" />
+          <i class="fas fa-times"></i>
         </button>
       </div>
     </div>
@@ -67,7 +67,6 @@
 <script setup>
 defineOptions({ name: 'VirtualKeyboard' })
 import { ref, onMounted, watch } from 'vue'
-import { Move as MoveIcon, X as CloseIcon } from 'lucide-vue-next'
 
 const props = defineProps({
   initialPosition: {

@@ -108,7 +108,7 @@ class SalesSeeder extends Seeder
                 $sessionsForDay[$register->id] = [];
                 $slotNumber = 0;
                 foreach ($slots as $slot => $hours) {
-                $cashier = $cashiers->first();
+                    $cashier = $cashiers->first();
                     $openedAt = $day->copy()->setTime($hours['start'][0], $hours['start'][1], 0);
                     $closedAt = $day->copy()->setTime($hours['end'][0], $hours['end'][1], 0);
 
@@ -150,8 +150,6 @@ class SalesSeeder extends Seeder
                     'discount_percentage' => $discount,
                     'final_amount' => 0,
                     'status' => 'completed',
-                    'payment_id' => $payment->id,
-                    'payment_reference' => 'PAY-' . Str::upper(Str::random(8)),
                     'amount_received' => 0,
                     'change_amount' => 0,
                     'created_at' => $saleDateTime,

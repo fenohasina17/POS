@@ -1,30 +1,16 @@
 import { ref, computed } from 'vue'
 import userService from '@/services/userService'
-
-const readStoredArray = (key) => {
-  try {
-    const value = localStorage.getItem(key)
-    if (!value) return []
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
+import { storage } from '@/utils/storage'
 
 export function useAuth() {
-  const user = ref(null)
-  const roles = ref(readStoredArray('user_roles'))
-  const permissions = ref(readStoredArray('user_permissions'))
+  const authState = ref(storage.getAuth())
+
+  const user = computed(() => authState.value?.user || null)
+  const roles = computed(() => authState.value?.user?.roles || [])
+  const permissions = computed(() => authState.value?.user?.permissions || [])
 
   const isAuthenticated = computed(() => {
-    const token = localStorage.getItem('token')
-    return !!token
-  })
-
-  const currentUser = computed(() => {
-    const userStr = localStorage.getItem('user')
-    return userStr ? JSON.parse(userStr) : null
+    return !!authState.value?.token
   })
 
   const hasRole = (roleName) => {
@@ -40,29 +26,38 @@ export function useAuth() {
   })
 
   const loadUserData = async () => {
+    const currentAuth = storage.getAuth()
+    if (!currentAuth?.user?.id) return
+
     try {
-      const userData = currentUser.value
-      if (userData && userData.id) {
-        user.value = userData
+      // Recharger les rôles et permissions depuis l'API pour être à jour
+      const [rolesRes, permsRes] = await Promise.all([
+        userService.getRoles(currentAuth.user.id),
+        userService.getPermissions(currentAuth.user.id)
+      ])
 
-        // Load user roles
-        const rolesResponse = await userService.getRoles(userData.id)
-        roles.value = rolesResponse.data.map((role) => role.name)
-        localStorage.setItem('user_roles', JSON.stringify(roles.value))
+      const newRoles = rolesRes.data.map(r => r.name)
+      const newPerms = permsRes.data.map(p => p.name)
 
-        // Load user permissions
-        const permissionsResponse = await userService.getPermissions(userData.id)
-        permissions.value = permissionsResponse.data.map((permission) => permission.name)
-        localStorage.setItem('user_permissions', JSON.stringify(permissions.value))
-      } else {
-        roles.value = []
-        permissions.value = []
-        localStorage.removeItem('user_roles')
-        localStorage.removeItem('user_permissions')
-      }
+      // Mettre à jour le stockage
+      storage.setAuth(
+        currentAuth.token,
+        currentAuth.user,
+        newRoles,
+        newPerms
+      )
+
+      // Mettre à jour l'état réactif
+      authState.value = storage.getAuth()
     } catch (error) {
-      console.error('Erreur lors du chargement des données utilisateur :', error)
+      console.error('Erreur lors du rechargement des données utilisateur :', error)
     }
+  }
+
+  const logout = () => {
+    storage.clearAuth()
+    storage.clearSession()
+    authState.value = null
   }
 
   return {
@@ -70,10 +65,10 @@ export function useAuth() {
     roles,
     permissions,
     isAuthenticated,
-    currentUser,
     hasRole,
     hasPermission,
     isAdmin,
     loadUserData,
+    logout
   }
 }

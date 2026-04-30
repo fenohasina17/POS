@@ -91,4 +91,5 @@ class OrderLineController extends Controller
             return response()->json(['error' => 'Failed to delete order line'], 500);
         }
     }
+
 }

@@ -20,10 +20,7 @@ return new class extends Migration
                     ->nullable();
             }
 
-            if (!Schema::hasColumn('sales', 'payment_reference')) {
-                $table->string('payment_reference')
-                    ->nullable();
-            }
+
 
             if (!Schema::hasColumn('sales', 'amount_received')) {
                 $table->decimal('amount_received', 10, 2)
@@ -52,12 +49,6 @@ return new class extends Migration
         if (Schema::hasColumn('sales', 'amount_received')) {
             Schema::table('sales', function (Blueprint $table) {
                 $table->dropColumn('amount_received');
-            });
-        }
-
-        if (Schema::hasColumn('sales', 'payment_reference')) {
-            Schema::table('sales', function (Blueprint $table) {
-                $table->dropColumn('payment_reference');
             });
         }
 

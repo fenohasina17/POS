@@ -21,10 +21,22 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UserPermissionController;
+use App\Http\Controllers\QZSignatureController;
 
 // Routes publiques (non authentifiées)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/qz/sign', [QZSignatureController::class, 'sign']);
+
+Route::get('/logo', function () {
+    $path = public_path('photos/logo.png');
+    if (!file_exists($path)) {
+        return response()->json(['error' => 'Logo not found'], 404);
+    }
+    $type = pathinfo($path, PATHINFO_EXTENSION);
+    $data = file_get_contents($path);
+    return base64_encode($data);
+});
 
 // Toutes les routes protégées par Sanctum
 Route::middleware('auth:sanctum')->group(function () {
@@ -37,6 +49,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
 
     // ========== POINTS DE VENTE ==========
+    Route::apiResource('point_of_sales', PointOfSaleController::class);
+    // Detaché ou attché user sur pos
+    Route::delete('/point-of-sales/{pointOfSale}/users/{user}', [PointOfSaleController::class, 'detachUser']);
+    Route::post('/point-of-sales/{pointOfSale}/users/{user}', [PointOfSaleController::class, 'attachUser']);
+
     Route::prefix('point-of-sales')->group(function () {
         Route::apiResource('', PointOfSaleController::class)->names('point-of-sales');
         Route::get('/{pointOfSale}/monthly-sales', [SaleController::class, 'monthlySales'])
@@ -48,30 +65,32 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ========== CATÉGORIES ET PRODUITS ==========
     Route::apiResource('categories', CategoryController::class);
-    Route::get('product_of_category_with_price', [CategoryController::class, 'product_of_category_with_price']);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('pricings', PricingController::class);
+    // ========== PRODUITS PAR CATÉGORIE ==========
+    Route::get('categories/{id}/products', [CategoryController::class, 'getProducts']);
+    Route::get('categories/{id}/products-with-prices', [CategoryController::class, 'getProductsWithPrices']);
+
+    // Routes pour les ventes de la session courante
+    Route::get('/sales/current-session', [SaleController::class, 'getSalesForCurrentSession'])->name('sales.current-session');
 
     // ========== VENTES ==========
     Route::apiResource('sales', SaleController::class);
-    
-    // Routes pour les ventes de la session courante
-    Route::get('/sales/current-session', [SaleController::class, 'getSalesForCurrentSession'])->name('sales.current-session');
-    
+
     // Routes pour les commandes en attente
     Route::post('/sales/pending-order', [SaleController::class, 'createPendingOrder'])->name('sales.pending.create');
     Route::post('/sales/{saleId}/add-products', [SaleController::class, 'addToPendingOrder'])->name('sales.pending.add');
     Route::post('/sales/{saleId}/remove-products', [SaleController::class, 'removeFromPendingOrder'])->name('sales.pending.remove');
     Route::post('/sales/{saleId}/validate', [SaleController::class, 'validatePendingOrder'])->name('sales.pending.validate');
     Route::get('/tables/{tableId}/pending-orders', [SaleController::class, 'getPendingOrdersForTable'])->name('tables.pending.orders');
-    
+
     // Routes pour l'annulation de vente
     Route::post('/sales/{saleId}/cancel', [SaleController::class, 'cancelSale'])->name('sales.cancel');
-    
+
     // Route pour récupérer les données formatées par catégorie (sans PDF)
     Route::get('/sales/{saleId}/formatted', [SaleController::class, 'getFormattedSale'])->name('sales.formatted');
     Route::get('/sales/{saleId}/categories', [SaleController::class, 'getSaleCategories'])->name('sales.categories');
-    
+
     // Routes pour les transactions cash
     Route::get('/sales/{saleId}/cash-transaction', [SaleController::class, 'getCashTransaction'])->name('sales.cash-transaction');
     Route::post('/sales/{saleId}/refund', [SaleController::class, 'refundSale'])->name('sales.refund');
@@ -84,8 +103,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('payments/{payment}', [SalePaymentController::class, 'update'])->name('sales.payments.update');
         Route::delete('payments/{payment}', [SalePaymentController::class, 'destroy'])->name('sales.payments.destroy');
     });
-    
+
     // ========== LIGNES DE COMMANDE ==========
+    Route::put('/sales/{sale}/order-lines', [SaleController::class, 'replaceOrderLines']);
     Route::apiResource('orderlines', OrderLineController::class);
 
     // ========== MODES DE PAIEMENT ==========
@@ -100,14 +120,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('cash-registers', CashRegisterController::class);
 
     // ========== SESSIONS DE CAISSE ==========
+    Route::get('/cash-register-sessions/open', [CashRegisterSessionController::class, 'openSessions']);
     Route::apiResource('cash-register-sessions', CashRegisterSessionController::class);
-    Route::get('/cash-register-session/my-active-session', [CashRegisterSessionController::class, 'myActiveSession']);
+    // Dans routes/api.php
+    Route::get('/my-active-session', [CashRegisterSessionController::class, 'myActiveSession'])->name('my-active-session');
     Route::post('/cash-register-sessions/{id}/reopen', [CashRegisterSessionController::class, 'reopen'])->name('cash-register-sessions.reopen');
     Route::get('/cash-register-sessions/{id}/discrepancies', [CashRegisterSessionController::class, 'listDiscrepancies'])->name('cash-register-sessions.discrepancies.list');
     Route::post('/cash-register-sessions/{id}/discrepancies', [CashRegisterSessionController::class, 'addDiscrepancy'])->name('cash-register-sessions.discrepancies.add');
     Route::get('/cash-register-sessions/{id}/summary', [CashRegisterSessionController::class, 'summary'])->name('cash-register-sessions.summary');
-    Route::get('/cash-registers-sessions/{id}/status', [CashRegisterSessionController::class, 'status'])->name('cash-register-sessions.status');
-    
+    Route::get('/cash-register-sessions/status/{cashRegisterId}', [CashRegisterSessionController::class, 'status'])->name('cash-register-sessions.status');
     // Routes pour les statistiques des sessions
     Route::get('/cash-register-sessions/{id}/balance', [CashRegisterSessionController::class, 'getBalance'])
         ->name('cash-register-sessions.balance');
@@ -121,7 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{id}', [CashTransactionController::class, 'show']);
         Route::put('/{id}', [CashTransactionController::class, 'update']);
         Route::delete('/{id}', [CashTransactionController::class, 'destroy']);
-        
+
         // Routes spécifiques
         Route::get('/session/{sessionId}', [CashTransactionController::class, 'getBySession'])
             ->name('cash-transactions.by-session');

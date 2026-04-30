@@ -7,70 +7,127 @@ use App\Models\Sale;
 use App\Models\OrderLine;
 use App\Models\CashRegisterSession;
 use App\Models\PointOfSale;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Models\Payment;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use App\Services\SaleService;
 use App\Services\PrintGroupingService;
+use App\Services\CashTransactionService;
+use Illuminate\Support\Facades\DB;
 
 class SaleController extends Controller
 {
- protected SaleService $saleService;
+    protected SaleService $saleService;
     protected ?PrintGroupingService $printGroupingService = null;
-
-    public function __construct(SaleService $saleService, ?PrintGroupingService $printGroupingService = null)
+    protected $cashTransactionService;
+    /**
+     * Constructeur du contrôleur
+     *
+     * @param SaleService $saleService Service de gestion des ventes
+     * @param PrintGroupingService|null $printGroupingService Service de regroupement pour impression (optionnel)
+     */
+    public function __construct(SaleService $saleService, ?PrintGroupingService $printGroupingService = null, CashTransactionService $cashTransactionService)
     {
+        $this->cashTransactionService = $cashTransactionService;
         $this->saleService = $saleService;
         $this->printGroupingService = $printGroupingService;
     }
 
-/**
- * POST /api/sales/{saleId}/validate
- */
-public function validatePendingOrder(Request $request, $saleId)
-{
-    try {
-        $validated = $request->validate([
-            'payment_id' => 'required|exists:payments,id',
-            'discount_percentage' => 'nullable|numeric|min:0|max:100',
-            'amount_received' => 'nullable|numeric|min:0',
-            'change_amount' => 'nullable|numeric|min:0',
-        ]);
+    /**
+     * POST /api/sales/{saleId}/validate
+     * 
+     * Valide une commande en attente (pending) et la transforme en vente complète
+     *
+     * @param Request $request Requête HTTP contenant :
+     *                         REQUIS :
+     *                         - payment_id (int) : ID du mode de paiement (existe dans payments)
+     *                         OPTIONNELS :
+     *                         - discount_percentage (float|numeric) : Remise en % (min:0, max:100)
+     *                         - amount_received (float|numeric) : Montant reçu (min:0, par défaut = final_amount)
+     *                         - change_amount (float|numeric) : Monnaie rendue (min:0, calculé auto si absent)
+     * @param int|string $saleId ID de la commande à valider
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : {
+     *             success: true,
+     *             message: "Commande validée avec succès",
+     *             data: array,      // Données formatées par catégorie (sale, categories, totals, payments)
+     *             print_groups: array // Groupes pour impression (optionnel)
+     *         }
+     *         ERREURS :
+     *         - 404 : Commande non trouvée
+     *         - 422 : Erreur de validation (paramètres invalides)
+     *         - 500 : Erreur serveur
+     */
+    public function validatePendingOrder(Request $request, $saleId)
+    {
+        try {
+            $validated = $request->validate([
+                'payment_id' => 'required_without:payments|exists:payments,id',
+                'discount_percentage' => 'nullable|numeric|min:0|max:100',
+                'amount_received' => 'nullable|numeric|min:0',
+                'change_amount' => 'nullable|numeric|min:0',
+                'payments' => 'nullable|array',
+                'payments.*.payment_id' => 'required|exists:payments,id',
+                'payments.*.amount' => 'required|numeric|min:0',
+                'payments.*.reference' => 'nullable|string',
+                'payments.*.notes' => 'nullable|string',
+            ]);
 
-        $sale = Sale::findOrFail($saleId);
-        $validatedSale = $this->saleService->validatePendingOrder($sale, $validated);
-        
-        // Récupérer les données formatées
-        $formattedData = $this->saleService->getFormattedSaleData($validatedSale);
-        
-        // Ajouter le regroupement par imprimante (si le service existe)
-        $printGroups = [];
-        if (isset($this->printGroupingService)) {
-            $printGroups = $this->printGroupingService->preparePrintData($validatedSale);
+            $sale = Sale::findOrFail($saleId);
+            $validatedSale = $this->saleService->validatePendingOrder($sale, $validated);
+
+            $formattedData = $this->saleService->getFormattedSaleData($validatedSale);
+
+            $printGroups = [];
+            if (isset($this->printGroupingService)) {
+                $printGroups = $this->printGroupingService->preparePrintData($validatedSale);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Commande validée avec succès',
+                'data' => $formattedData,
+                'print_groups' => $printGroups
+            ], 200);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Commande non trouvée.'], 404);
+        } catch (ValidationException $e) {
+            return response()->json(['error' => 'Erreur de validation', 'details' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Commande validée avec succès',
-            'data' => $formattedData,
-            'print_groups' => $printGroups
-        ], 200);
-        
-    } catch (ModelNotFoundException $e) {
-        return response()->json(['error' => 'Commande non trouvée.'], 404);
-    } catch (ValidationException $e) {
-        return response()->json(['error' => 'Erreur de validation', 'details' => $e->errors()], 422);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
     }
-}
+
+    /**
+     * GET /api/sales
+     * 
+     * Liste toutes les ventes avec filtres
+     * - Admin : voit toutes les ventes
+     * - Gérant : voit uniquement les ventes de son point de vente
+     * - Gérant : peut filtrer par session de caisse (uniquement celles de son point de vente)
+     * - Gérant : peut filtrer par utilisateur (uniquement ceux de son point de vente)
+     * - Caissier : voit uniquement ses propres ventes
+     *
+     * @param Request $request Requête HTTP avec paramètres query :
+     *                         OPTIONNELS :
+     *                         - cash_register_session_id (int) : Filtrer par session de caisse
+     *                         - user_id (int) : Filtrer par utilisateur (caissier)
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Collection de ventes avec relations (user, orderLines.product, payments.payment)
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée ou session/user n'appartient pas au point de vente du gérant
+     *         - 404 : Session de caisse non trouvée
+     *         - 500 : Erreur serveur
+     */
     public function index(Request $request)
     {
         try {
@@ -84,40 +141,86 @@ public function validatePendingOrder(Request $request, $saleId)
             }
 
             $sessionId = $request->query('cash_register_session_id');
-            $sales = Sale::with(['user', 'orderLines.product', 'payments.payment']);
+            $userId = $request->query('user_id');
 
-            if ($sessionId) {
-                $sales->where('cash_register_session_id', $sessionId);
-            }
-
-            if ($request->filled('user_id')) {
-                $sales->where('user_id', $request->query('user_id'));
-            }
+            // Charger les relations : utilisateur, lignes, produits, paiements + méthode de paiement
+            $sales = Sale::with([
+                'user',
+                'orderlines.product',
+                'payments.payment'  // ← relation payments.payment (SalePayment -> Payment)
+            ]);
 
             $isAdmin = $user->hasRole('admin', 'api');
             $isManager = $user->hasAnyRole(['gerant', 'gérant'], 'api');
+            $pointOfSaleId = $user->point_of_sale_id;
 
+            // ========== RESTRICTIONS ==========
             if (!$isAdmin) {
-                if ($isManager) {
-                    $pointOfSaleId = $user->point_of_sale_id;
-                    if ($pointOfSaleId) {
-                        $sales->where('point_of_sale_id', $pointOfSaleId);
-                    } else {
-                        $sales->where('user_id', $user->id);
-                    }
+                if ($isManager && $pointOfSaleId) {
+                    $sales->where('point_of_sale_id', $pointOfSaleId);
                 } else {
                     $sales->where('user_id', $user->id);
                 }
+
+                if ($sessionId) {
+                    $sessionQuery = CashRegisterSession::where('id', $sessionId);
+                    if ($isManager && $pointOfSaleId) {
+                        $sessionQuery->where('point_of_sale_id', $pointOfSaleId);
+                    } else {
+                        $sessionQuery->where('user_id', $user->id);
+                    }
+                    if (!$sessionQuery->exists()) {
+                        return response()->json(['message' => 'Session non trouvée ou accès non autorisé.'], 403);
+                    }
+                }
+
+                if ($userId) {
+                    if ($isManager && $pointOfSaleId) {
+                        $targetUser = User::find($userId);
+                        if (!$targetUser || $targetUser->point_of_sale_id != $pointOfSaleId) {
+                            return response()->json(['message' => 'Utilisateur non autorisé.'], 403);
+                        }
+                    } elseif ((int) $userId !== (int) $user->id) {
+                        return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
+                    }
+                }
+            } else {
+                if ($sessionId && !CashRegisterSession::where('id', $sessionId)->exists()) {
+                    return response()->json(['message' => 'Session non trouvée.'], 404);
+                }
             }
 
-            return response()->json($sales->orderByDesc('created_at')->get());
+            // ========== FILTRES ==========
+            if ($sessionId) {
+                $sales->where('cash_register_session_id', $sessionId);
+            }
+            if ($userId) {
+                $sales->where('user_id', $userId);
+            }
+
+            $sales = $sales->orderByDesc('created_at')->get();
+
+            return response()->json($sales);
+
         } catch (\Exception $e) {
+            \Log::error('Erreur dans SalesController@index : ' . $e->getMessage());
             return response()->json(['error' => 'Erreur lors de la récupération des ventes.'], 500);
         }
     }
-
     /**
      * GET /api/point-of-sales/{pointOfSale}/kpis
+     * 
+     * Récupère les KPIs produits pour un point de vente (quantités vendues et chiffre d'affaires par produit)
+     *
+     * @param PointOfSale $pointOfSale Instance du point de vente (route model binding)
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Collection avec pour chaque produit :
+     *                         - name (string) : Nom du produit
+     *                         - total_quantity (int) : Quantité totale vendue
+     *                         - total_revenue (float) : Chiffre d'affaires généré
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée ou accès restreint (gérant ne peut voir que son point de vente)
      */
     public function productKpis(PointOfSale $pointOfSale)
     {
@@ -158,6 +261,51 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * GET /api/sales/monthly/{pointOfSaleId}
+     * 
+     * Récupère les statistiques mensuelles et journalières des ventes pour un point de vente
+     *
+     * @param Request $request Requête HTTP avec paramètres query :
+     *                         OPTIONNELS :
+     *                         - year (int) : Année (défaut: année courante)
+     *                         - start_date (string|date) : Date de début (format Y-m-d)
+     *                         - end_date (string|date) : Date de fin (format Y-m-d)
+     *                         - statuses (string|array) : Statuts à inclure (ex: 'completed')
+     *                         - payment_ids (string|array) : IDs des modes de paiement
+     * @param int|string $pointOfSaleId ID du point de vente
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : {
+     *             data: [{
+     *                 period: string (Y-m),
+     *                 label: string (ex: "Janvier 2024"),
+     *                 total_sales: int,
+     *                 transactions: int,
+     *                 average_ticket: int,
+     *                 cash_sales: int,
+     *                 cash_transactions: int,
+     *                 daily_breakdown: [{
+     *                     date: string,
+     *                     label: string,
+     *                     transactions: int,
+     *                     total_sales: int
+     *                 }]
+     *             }],
+     *             meta: {
+     *                 year: int,
+     *                 point_of_sale_id: int,
+     *                 filters: {start_date: string, end_date: string},
+     *                 overall: {
+     *                     total_sales: int,
+     *                     transactions: int,
+     *                     average_ticket: int,
+     *                     cash_sales: int,
+     *                     cash_transactions: int
+     *                 }
+     *             }
+     *         }
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée (seuls admin et gérants)
+     *         - 422 : Format de date invalide
      */
     public function monthlySales(Request $request, $pointOfSaleId)
     {
@@ -362,40 +510,103 @@ public function validatePendingOrder(Request $request, $saleId)
     /**
      * POST /api/sales
      * 
-     * Crée une vente complète et retourne les données formatées par catégorie
+     * Crée une vente complète (payée immédiatement)
+     * Supporte les paiements uniques ou multiples
+     *
+     * @param Request $request Requête HTTP contenant :
+     *                         REQUIS :
+     *                         - user_id (int) : ID du caissier (existe dans users)
+     *                         - point_of_sale_id (int) : ID du point de vente (existe dans point_of_sales)
+     *                         - cash_register_session_id (int) : ID de la session caisse (existe dans cash_register_sessions)
+     *                         - total_amount (float|numeric) : Montant total avant remise (min:0)
+     *                         - final_amount (float|numeric) : Montant final après remise (min:0)
+     *                         - status (string) : 'pending', 'completed' ou 'cancelled'
+     *                         - items (array) : Articles vendus (min:1)
+     *                           - items.*.product_id (int) : ID produit (existe dans products)
+     *                           - items.*.quantity (int) : Quantité (min:1)
+     *                           - items.*.unit_price (float) : Prix unitaire (min:0)
+     *                           - items.*.total (float) : Total ligne (min:0)
+     *                         OPTIONNELS :
+     *                         - table_id (int|null) : ID de la table (existe dans tables, null = emporter)
+     *                         - discount_percentage (float) : Remise en % (min:0, max:100)
+     *                         - notes (string|null) : Notes optionnelles
+     *                         
+     *                         FORMAT PAIEMENT UNIQUE :
+     *                         - payment_id (int) : ID du mode de paiement (existe dans payments)
+     *                         - amount_received (float) : Montant reçu (min:0)
+     *                         - change_returned (float|null) : Monnaie rendue (min:0)
+     *                         
+     *                         FORMAT PAIEMENTS MULTIPLES :
+     *                         - payments (array) : Tableau des paiements (min:1)
+     *                           - payments.*.payment_id (int) : ID du mode de paiement
+     *                           - payments.*.amount (float) : Montant (min:0.01)
+     *                           - payments.*.reference (string|null) : Référence (max:100)
+     *                           - payments.*.notes (string|null) : Notes (max:255)
+     *                         - change_amount (float|null) : Monnaie rendue (min:0)
+     * 
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (201) : {
+     *             success: true,
+     *             message: "Vente créée avec succès",
+     *             data: array  // Données formatées par catégorie
+     *         }
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée ou session fermée ou point de vente incorrect
+     *         - 422 : Erreur de validation
+     *         - 500 : Erreur serveur
      */
     public function store(Request $request)
     {
+
         $user = auth()->guard('api')->user();
 
         if (!$user) {
             return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
         }
 
-<<<<<<< HEAD
         if (!$user->hasPermissionTo('create.sales', 'api')) {
             return response()->json(['message' => 'Vous n\'avez pas la permission de créer une vente.'], 403);
         }
-
         try {
-            $validated = $request->validate([
-                'table_id' => 'required|exists:tables,id',
+            // Validation (inchangée)
+            $baseRules = [
+                'table_id' => 'nullable|exists:tables,id',
                 'user_id' => 'required|exists:users,id',
                 'point_of_sale_id' => 'required|exists:point_of_sales,id',
                 'cash_register_session_id' => 'required|exists:cash_register_sessions,id',
                 'total_amount' => 'required|numeric|min:0',
                 'discount_percentage' => 'nullable|numeric|min:0|max:100',
                 'final_amount' => 'required|numeric|min:0',
-                'amount_received' => 'required|numeric|min:0',
-                'change_returned' => 'nullable|numeric|min:0',
-                'payment_id' => 'required|exists:payments,id',
                 'status' => 'required|in:pending,completed,cancelled',
                 'items' => 'required|array|min:1',
                 'items.*.product_id' => 'required|exists:products,id',
                 'items.*.quantity' => 'required|integer|min:1',
                 'items.*.unit_price' => 'required|numeric|min:0',
                 'items.*.total' => 'required|numeric|min:0',
-            ]);
+            ];
+
+            if ($request->has('payments')) {
+                $paymentRules = [
+                    'payments' => 'required|array|min:1',
+                    'payments.*.payment_id' => 'required|exists:payments,id',
+                    'payments.*.amount' => 'required|numeric|min:0.01',
+                    'payments.*.reference' => 'nullable|string|max:100',
+                    'payments.*.notes' => 'nullable|string|max:255',
+                    'amount_received' => 'sometimes|numeric|min:0',
+                    'change_amount' => 'nullable|numeric|min:0',
+                ];
+                $rules = array_merge($baseRules, $paymentRules);
+            } else {
+                $singlePaymentRules = [
+                    'payment_id' => 'required|exists:payments,id',
+                    'amount_received' => 'required|numeric|min:0',
+                    'change_returned' => 'nullable|numeric|min:0',
+                ];
+                $rules = array_merge($baseRules, $singlePaymentRules);
+            }
+
+            $validated = $request->validate($rules);
 
             $isAdmin = $user->hasRole('admin', 'api');
             if (!$isAdmin) {
@@ -409,9 +620,45 @@ public function validatePendingOrder(Request $request, $saleId)
                 }
             }
 
-            $sale = $this->saleService->createSale($validated, $user);
+            // Préparer les données pour le service
+            $saleData = $validated;
 
-            // Récupérer les données formatées par catégorie
+            if ($request->has('payments')) {
+                $saleData['payments'] = $validated['payments'];
+                $saleData['amount_received'] = collect($validated['payments'])->sum('amount');
+                $saleData['change_amount'] = $validated['change_amount'] ?? max(0, $saleData['amount_received'] - $validated['final_amount']);
+            } else {
+                $saleData['payment_id'] = $validated['payment_id'];
+                $saleData['amount_received'] = $validated['amount_received'];
+                $saleData['change_amount'] = $validated['change_returned'] ?? max(0, $validated['amount_received'] - $validated['final_amount']);
+            }
+
+            // Création de la vente et des transactions caisse dans une transaction
+            $sale = DB::transaction(function () use ($saleData, $user, $request, $validated) {
+                $sale = $this->saleService->createSale($saleData, $user);
+
+                // Normalisation des paiements
+                $payments = $request->has('payments')
+                    ? $validated['payments']
+                    : [['payment_id' => $validated['payment_id'], 'amount' => $validated['amount_received'], 'reference' => null]];
+
+                foreach ($payments as $payment) {
+                    $paymentMethod = Payment::find($payment['payment_id']);
+                    if ($paymentMethod && strtolower($paymentMethod->name) === 'espèce') {
+                        $this->cashTransactionService->createTransaction([
+                            'session_id' => $validated['cash_register_session_id'],
+                            'type' => 'sale',
+                            'amount' => $payment['amount'],
+                            'description' => "Vente n°{$sale->id} - Paiement espèces",
+                            'reference' => $payment['reference'] ?? 'VENTE_' . $sale->id,
+                            'created_by' => $user->id,
+                        ]);
+                    }
+                }
+
+                return $sale;
+            });
+
             $formattedData = $this->saleService->getFormattedSaleData($sale);
 
             return response()->json([
@@ -425,17 +672,32 @@ public function validatePendingOrder(Request $request, $saleId)
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 500);
         }
-=======
-    try {
-        $sale = $saleService->createSale($request->validated(), $user);
-
-        return response()->json($sale, 201);
-    } catch (\Exception $e) {
-        return response()->json(['message' => $e->getMessage()], 500);
->>>>>>> 85008940c5a48f81fac431603537bfe947e1baad
     }
+
     /**
      * POST /api/sales/pending-orders
+     * 
+     * Crée une commande en attente (non payée, pour commande en salle)
+     *
+     * @param Request $request Requête HTTP contenant :
+     *                         REQUIS :
+     *                         - table_id (int) : ID de la table (existe dans tables)
+     *                         - user_id (int) : ID du caissier (existe dans users)
+     *                         - point_of_sale_id (int) : ID du point de vente (existe dans point_of_sales)
+     *                         - cash_register_session_id (int) : ID session caisse (existe dans cash_register_sessions)
+     *                         - order_lines (array) : Lignes de commande (min:1)
+     *                           - order_lines.*.product_id (int) : ID produit (existe dans products)
+     *                           - order_lines.*.quantity (int) : Quantité (min:1)
+     *                           - order_lines.*.price (float) : Prix unitaire (min:0)
+     *                         OPTIONNELS :
+     *                         - discount_percentage (float) : Remise en % (min:0, max:100)
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (201) : Instance de Sale (commande en attente) avec relations (orderLines.product, table)
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée
+     *         - 422 : Erreur de validation
+     *         - 500 : Erreur serveur
      */
     public function createPendingOrder(Request $request)
     {
@@ -473,6 +735,16 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * GET /api/sales/{id}
+     * 
+     * Récupère les détails d'une vente spécifique
+     *
+     * @param int|string $id ID de la vente
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Instance de Sale avec relations (orderLines.product, payments.payment)
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée
+     *         - 404 : Vente non trouvée
      */
     public function show($id)
     {
@@ -519,6 +791,26 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * PUT/PATCH /api/sales/{id}
+     * 
+     * Met à jour une vente existante
+     * (Seuls les administrateurs peuvent modifier)
+     *
+     * @param Request $request Requête HTTP avec paramètres :
+     *                         OPTIONNELS :
+     *                         - total_amount (float|numeric) : Montant total (min:0)
+     *                         - discount_percentage (float) : Remise en % (min:0, max:100)
+     *                         - status (string) : Statut de la vente
+     *                         - ticket_number (int) : Numéro de ticket (unique par session)
+     *                         - amount_received (float|null) : Montant reçu (min:0)
+     *                         - change_amount (float|null) : Monnaie rendue (min:0)
+     * @param int|string $id ID de la vente à modifier
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Instance de Sale mise à jour
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée (seuls admins)
+     *         - 404 : Vente non trouvée
+     *         - 422 : Erreur de validation
      */
     public function update(Request $request, $id)
     {
@@ -528,7 +820,7 @@ public function validatePendingOrder(Request $request, $saleId)
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
-            if (!$user->hasPermissionTo('edit.sales', 'api') && !$user->hasRole('admin', 'api')) {
+            if (!$user->hasPermissionTo('update.sales', 'api') && !$user->hasRole('admin', 'api')) {
                 return response()->json(['message' => 'Vous n\'avez pas la permission de modifier une vente.'], 403);
             }
 
@@ -551,8 +843,18 @@ public function validatePendingOrder(Request $request, $saleId)
                 ],
                 'amount_received' => 'sometimes|nullable|numeric|min:0',
                 'change_amount' => 'sometimes|nullable|numeric|min:0',
+                'items' => 'sometimes|array',
+                'items.*.product_id' => 'required|exists:products,id',
+                'items.*.quantity' => 'required|numeric|min:0.001',
+                'items.*.price' => 'required|numeric|min:0',      // ← utilise price
+                'payments' => 'sometimes|array',
+                'payments.*.payment_id' => 'required|exists:payments,id',
+                'payments.*.amount' => 'required|numeric|min:0',
+                'payments.*.reference' => 'nullable|string',
+                'payments.*.notes' => 'nullable|string',
             ]);
 
+            // Mise à jour des champs simples
             $totalAmount = isset($validatedData['total_amount']) ? (int) round($validatedData['total_amount']) : (int) $sale->total_amount;
             $discount = isset($validatedData['discount_percentage']) ? (int) round($validatedData['discount_percentage']) : (int) $sale->discount_percentage;
             $finalAmount = (int) round($totalAmount * (100 - $discount) / 100);
@@ -560,6 +862,8 @@ public function validatePendingOrder(Request $request, $saleId)
             $amountReceived = array_key_exists('amount_received', $validatedData) ? (int) round($validatedData['amount_received']) : ($sale->amount_received !== null ? (int) $sale->amount_received : null);
             $changeAmount = array_key_exists('change_amount', $validatedData) ? (int) round($validatedData['change_amount']) : ($sale->change_amount !== null ? (int) $sale->change_amount : null);
 
+            $oldStatus = $sale->status;
+            
             $sale->update(array_merge($validatedData, [
                 'total_amount' => $totalAmount,
                 'discount_percentage' => $discount,
@@ -568,16 +872,70 @@ public function validatePendingOrder(Request $request, $saleId)
                 'change_amount' => $changeAmount,
             ]));
 
-            return response()->json($sale);
+            // Si le statut passe à completed, libérer la table
+            if ($oldStatus !== 'completed' && $sale->status === 'completed' && $sale->table) {
+                $sale->table->update(['status' => 'available']);
+            }
+
+            // Gestion des items (order_lines)
+            if ($request->has('items')) {
+                $sale->orderLines()->delete();
+                foreach ($request->input('items') as $item) {
+                    $sale->orderLines()->create([
+                        'product_id' => $item['product_id'],
+                        'quantity' => $item['quantity'],
+                        'price' => $item['price'],          // ← utilise price
+                        'total' => $item['price'] * $item['quantity'],
+                    ]);
+                }
+            }
+
+            // Gestion des paiements
+            if ($request->has('payments')) {
+                $sale->payments()->delete();
+                foreach ($request->input('payments') as $payment) {
+                    $sale->payments()->create([
+                        'payment_id' => $payment['payment_id'],
+                        'amount' => $payment['amount'],
+                        'reference' => $payment['reference'],
+                        'notes' => $payment['notes'],
+                    ]);
+                }
+            }
+
+            $sale->load('orderLines', 'payments');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vente mise à jour avec succès',
+                'data' => [
+                    'sale' => $sale,
+                    'payments' => $sale->payments,
+                ]
+            ]);
         } catch (ModelNotFoundException $e) {
             return response()->json(['error' => 'Vente non trouvée.'], 404);
         } catch (ValidationException $e) {
             return response()->json(['error' => 'Erreur de validation', 'details' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            \Log::error('Erreur update sale: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['message' => 'Server Error', 'error' => $e->getMessage()], 500);
         }
     }
 
     /**
      * DELETE /api/sales/{id}
+     * 
+     * Supprime une vente (soft delete)
+     * (Seuls les administrateurs peuvent supprimer)
+     *
+     * @param int|string $id ID de la vente à supprimer
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (204) : Pas de contenu
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée
+     *         - 404 : Vente non trouvée
      */
     public function destroy($id)
     {
@@ -606,27 +964,88 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * GET /api/sales/current-session
+     * 
+     * Récupère toutes les ventes de la session de caisse actuellement ouverte pour l'utilisateur
+     *
+     * @param Request $request Requête HTTP
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : {
+     *             success: true,
+     *             session_info: {
+     *                 id: int,
+     *                 opened_at: string,
+     *                 starting_amount: float,
+     *                 current_total_sales: float
+     *             },
+     *             sales_count: int,
+     *             data: array  // Collection des ventes
+     *         }
+     *         ERREURS :
+     *         - 404 : Aucune session ouverte trouvée
+     *         - 500 : Erreur serveur
      */
     public function getSalesForCurrentSession(Request $request)
     {
         try {
             $user = $request->user();
-            $cashRegisterSessionId = $request->query('cash_register_session_id');
 
-            if (!$user || !$cashRegisterSessionId) {
-                return response()->json(['error' => 'Session ou utilisateur invalide.'], 400);
+            $currentSession = CashRegisterSession::where('user_id', $user->id)
+                ->where('is_closed', false)
+                ->latest('opened_at')
+                ->first();
+
+            if (!$currentSession) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Aucune session de caisse ouverte trouvée pour cet utilisateur.'
+                ], 404);
             }
 
-            $sales = Sale::with('orderLines.product')->where('cash_register_session_id', $cashRegisterSessionId)->get();
+            $sales = Sale::with(['orderLines.product', 'payments.payment'])
+                ->where('cash_register_session_id', $currentSession->id)
+                ->orderByDesc('created_at')
+                ->get();
 
-            return response()->json($sales);
+            return response()->json([
+                'success' => true,
+                'session_info' => [
+                    'id' => $currentSession->id,
+                    'opened_at' => $currentSession->opened_at,
+                    'starting_amount' => $currentSession->starting_amount,
+                    'current_total_sales' => $currentSession->total_sales,
+                ],
+                'sales_count' => $sales->count(),
+                'data' => $sales
+            ], 200);
+
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Erreur lors de la récupération des ventes.'], 500);
+            return response()->json([
+                'success' => false,
+                'error' => 'Erreur lors de la récupération des ventes.',
+                'debug' => $e->getMessage()
+            ], 500);
         }
     }
 
     /**
      * POST /api/sales/{saleId}/add-products
+     * 
+     * Ajoute des produits à une commande en attente
+     *
+     * @param Request $request Requête HTTP contenant :
+     *                         REQUIS :
+     *                         - order_lines (array) (min:1)
+     *                           - order_lines.*.product_id (int) : ID produit (existe dans products)
+     *                           - order_lines.*.quantity (int) : Quantité (min:1)
+     *                           - order_lines.*.price (float) : Prix unitaire (min:0)
+     * @param int|string $saleId ID de la commande
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Instance de Sale mise à jour
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 404 : Commande non trouvée
+     *         - 422 : Erreur de validation
+     *         - 500 : Erreur serveur
      */
     public function addToPendingOrder(Request $request, $saleId)
     {
@@ -659,6 +1078,20 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * POST /api/sales/{saleId}/remove-products
+     * 
+     * Supprime des lignes de commande d'une commande en attente
+     *
+     * @param Request $request Requête HTTP contenant :
+     *                         REQUIS :
+     *                         - order_line_ids (array) (min:1)
+     *                           - order_line_ids.* (int) : IDs des lignes à supprimer (existent dans order_lines)
+     * @param int|string $saleId ID de la commande
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Instance de Sale mise à jour
+     *         ERREURS :
+     *         - 404 : Commande non trouvée
+     *         - 422 : Erreur de validation
+     *         - 500 : Erreur serveur
      */
     public function removeFromPendingOrder(Request $request, $saleId)
     {
@@ -684,6 +1117,20 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * POST /api/sales/{saleId}/cancel
+     * 
+     * Annule une vente (rembourse si déjà payée)
+     *
+     * @param Request $request Requête HTTP contenant :
+     *                         OPTIONNELS :
+     *                         - reason (string|null) : Motif de l'annulation (max:255)
+     * @param int|string $saleId ID de la vente à annuler
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Instance de Sale annulée
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 404 : Vente non trouvée
+     *         - 422 : Erreur de validation
+     *         - 500 : Erreur serveur
      */
     public function cancelSale(Request $request, $saleId)
     {
@@ -713,6 +1160,21 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * GET /api/sales/{saleId}/formatted
+     * 
+     * Récupère les données d'une vente formatées par catégorie
+     * (Version complète avec toutes les informations)
+     *
+     * @param int|string $saleId ID de la vente
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : {
+     *             success: true,
+     *             data: array  // Données formatées (sale, categories, totals, payments)
+     *         }
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée
+     *         - 404 : Vente non trouvée
+     *         - 500 : Erreur serveur
      */
     public function getFormattedSale($saleId)
     {
@@ -750,6 +1212,27 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * GET /api/sales/{saleId}/categories
+     * 
+     * Récupère uniquement les articles d'une vente regroupés par catégorie
+     * (Version simplifiée sans les détails de paiement)
+     *
+     * @param int|string $saleId ID de la vente
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : {
+     *             success: true,
+     *             sale_id: int,
+     *             ticket_number: int,
+     *             table: string,
+     *             cashier: string,
+     *             date: string,
+     *             categories: array,
+     *             total_amount: float
+     *         }
+     *         ERREURS :
+     *         - 401 : Utilisateur non authentifié
+     *         - 403 : Permission refusée
+     *         - 404 : Vente non trouvée
+     *         - 500 : Erreur serveur
      */
     public function getSaleCategories($saleId)
     {
@@ -791,11 +1274,19 @@ public function validatePendingOrder(Request $request, $saleId)
 
     /**
      * GET /api/sales/tables/{tableId}/pending-orders
+     * 
+     * Récupère toutes les commandes en attente (pending) pour une table spécifique
+     *
+     * @param int|string $tableId ID de la table
+     * @return \Illuminate\Http\JsonResponse
+     *         SUCCÈS (200) : Collection des commandes en attente
+     *         ERREURS :
+     *         - 500 : Erreur serveur
      */
     public function getPendingOrdersForTable($tableId)
     {
         try {
-            $orders = Sale::with(['orderLines.product', 'user'])
+            $orders = Sale::with(['order_lines.product', 'user'])
                 ->where('table_id', $tableId)
                 ->where('status', 'pending')
                 ->orderBy('created_at', 'desc')
@@ -809,10 +1300,83 @@ public function validatePendingOrder(Request $request, $saleId)
 
     // ========== MÉTHODES PRIVÉES ==========
 
-    private function userIsManager(?\App\Models\User $user): bool
+    /**
+     * Vérifie si un utilisateur a le rôle de gérant (gerant ou gérant)
+     *
+     * @param User|null $user Instance utilisateur ou null
+     * @return bool True si l'utilisateur est gérant, false sinon
+     */
+    private function userIsManager(?User $user): bool
     {
         if (!$user)
             return false;
         return $user->hasAnyRole(['gerant', 'gérant'], 'api');
+    }
+    public function replaceOrderLines(Request $request, Sale $sale)
+    {
+        try {
+            $request->validate([
+                'order_lines' => 'required|array',
+                'order_lines.*.product_id' => 'required|exists:products,id',
+                'order_lines.*.quantity' => 'required|integer|min:0',
+                'order_lines.*.price' => 'required|integer|min:0',
+                'order_lines.*.total' => 'required|integer|min:0',
+            ]);
+
+            // Vérifier que la vente est en attente (status 'pending' ou non finalisée)
+            if ($sale->status !== 'pending') {
+                return response()->json(['error' => 'Seules les commandes en attente peuvent être modifiées'], 422);
+            }
+
+            DB::beginTransaction();
+
+            // Supprimer toutes les anciennes lignes
+            $sale->orderLines()->delete();
+
+            // Créer les nouvelles lignes
+            foreach ($request->order_lines as $line) {
+                if ($line['quantity'] > 0) {
+                    $sale->orderLines()->create([
+                        'product_id' => $line['product_id'],
+                        'quantity' => $line['quantity'],
+                        'price' => $line['price'],
+                        'total' => $line['total'],
+                    ]);
+                }
+            }
+
+            // Recharger la relation et calculer les totaux
+            $sale->refresh();
+            $totalAmount = (float) $sale->orderLines()->sum('total');
+            $sale->total_amount = (float) $totalAmount; // Conversion explicite
+
+            $discount = (float) ($sale->discount_percentage ?? 0);
+            $finalAmount = $totalAmount * (1 - $discount / 100);
+            $sale->final_amount = (float) $finalAmount; // Conversion explicite
+
+            $sale->save();
+
+            DB::commit();
+
+            $sale->load('orderLines.product');
+
+            return response()->json([
+                'message' => 'Lignes mises à jour avec succès',
+                'sale' => $sale
+            ], 200);
+
+        } catch (ValidationException $e) {
+            DB::rollBack();
+            \Log::error('Validation error replaceOrderLines: ', $e->errors());
+            return response()->json(['error' => 'Données invalides', 'details' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Erreur replaceOrderLines: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'sale_id' => $sale->id ?? null,
+                'request_data' => $request->all()
+            ]);
+            return response()->json(['error' => 'Erreur serveur: ' . $e->getMessage()], 500);
+        }
     }
 }

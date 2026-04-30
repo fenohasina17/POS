@@ -489,7 +489,7 @@ watch(pointOfSaleFilter, () => {
 
 const fetchActiveSession = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-session/my-active-session`, {
+    const { data } = await axios.get(`${API_BASE_URL}/my-active-session`, {
       headers: authHeaders()
     })
 

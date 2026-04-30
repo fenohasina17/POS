@@ -9,6 +9,18 @@ class Table extends Model
 {
     use HasFactory;
 
+    // Définition des zones pour la liste déroulante
+    public static $availableZones = [
+        'rdc'       => 'Rez-de-chaussée',
+        'etage_1'   => 'Étage 1',
+        'etage_2'   => 'Étage 2',
+        'terrasse'  => 'Terrasse',
+        'exterieur' => 'Extérieur',
+        'jardin'    => 'Jardin',
+        'vip'       => 'Espace VIP',
+        'bar'       => 'Bar / Comptoir'
+    ];
+
     protected $fillable = [
         'table_number',
         'name',
@@ -16,7 +28,7 @@ class Table extends Model
         'status',
         'description',
         'point_of_sale_id',
-        'location'
+        'location' // Contient le JSON {zone: 'rdc', x: 0, y: 0}
     ];
 
     protected $casts = [
@@ -24,7 +36,8 @@ class Table extends Model
         'capacity' => 'integer'
     ];
 
-    // Relations
+    // --- RELATIONS ---
+
     public function pointOfSale()
     {
         return $this->belongsTo(PointOfSale::class);
@@ -35,25 +48,17 @@ class Table extends Model
         return $this->hasMany(Sale::class);
     }
 
-    // Scopes
+    // --- SCOPES ---
+
     public function scopeAvailable($query)
     {
         return $query->where('status', 'available');
     }
 
-    public function scopeOccupied($query)
+    public function scopeInZone($query, $zone)
     {
-        return $query->where('status', 'occupied');
-    }
-
-    public function scopeReserved($query)
-    {
-        return $query->where('status', 'reserved');
-    }
-
-    public function scopeOutOfOrder($query)
-    {
-        return $query->where('status', 'out_of_order');
+        // Recherche dans le champ JSON location
+        return $query->where('location->zone', $zone);
     }
 
     public function scopeByPointOfSale($query, $pointOfSaleId)
@@ -61,18 +66,35 @@ class Table extends Model
         return $query->where('point_of_sale_id', $pointOfSaleId);
     }
 
-    // Accessors & Mutators
+    // --- ACCESSORS & MUTATORS ---
+
+    /**
+     * Récupère le nom lisible de la zone (ex: "Rez-de-chaussée")
+     */
+    public function getZoneLabelAttribute()
+    {
+        $zoneKey = $this->location['zone'] ?? 'rdc';
+        return self::$availableZones[$zoneKey] ?? $zoneKey;
+    }
+
     public function getDisplayNameAttribute()
     {
-        return $this->name ?: $this->table_number;
+        return $this->name ?: "Table " . $this->table_number;
     }
 
-    public function getIsActiveAttribute()
+    // --- METHODS ---
+
+    /**
+     * Helper pour changer la zone facilement
+     */
+    public function setZone(string $zoneKey)
     {
-        return in_array($this->status, ['available', 'occupied', 'reserved']);
+        $currentLocation = $this->location ?? [];
+        $currentLocation['zone'] = $zoneKey;
+        $this->location = $currentLocation;
+        $this->save();
     }
 
-    // Methods
     public function markAsOccupied()
     {
         $this->update(['status' => 'occupied']);
@@ -83,36 +105,4 @@ class Table extends Model
         $this->update(['status' => 'available']);
     }
 
-    public function markAsReserved()
-    {
-        $this->update(['status' => 'reserved']);
-    }
-
-    public function markAsOutOfOrder()
-    {
-        $this->update(['status' => 'out_of_order']);
-    }
-
-    public function getCurrentSale()
-    {
-        return $this->sales()
-            ->whereIn('status', ['pending', 'in_progress'])
-            ->latest()
-            ->first();
-    }
-
-    public function getActiveSales()
-    {
-        return $this->sales()
-            ->whereIn('status', ['pending', 'in_progress'])
-            ->get();
-    }
-
-    public function getSalesHistory()
-    {
-        return $this->sales()
-            ->whereIn('status', ['completed', 'cancelled'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
 }

@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -13,20 +14,22 @@ return new class extends Migration
     {
         Schema::create('tables', function (Blueprint $table) {
             $table->id();
-            $table->string('table_number'); // Numéro de la table (ex: "T01", "Table 1")
-            $table->string('name')->nullable(); // Nom optionnel de la table
-            $table->integer('capacity')->default(4); // Capacité d'accueil (nombre de personnes)
-            $table->string('status')->default('available'); // available, occupied, reserved, out_of_order
-            $table->text('description')->nullable(); // Description ou notes sur la table
-            $table->foreignId('point_of_sale_id')->constrained()->onDelete('cascade'); // Point de vente associé
-            $table->json('location')->nullable(); // Position dans le restaurant (coordonnées x,y ou zone)
+            $table->string('table_number');
+            $table->string('name')->nullable();
+            $table->integer('capacity')->default(4);
+            $table->string('status')->default('available');
+            $table->text('description')->nullable();
+            $table->foreignId('point_of_sale_id')->constrained()->onDelete('cascade');
+            $table->jsonb('location')->nullable(); 
             $table->timestamps();
 
-            // Index pour optimiser les requêtes
+            // Index standard sur les colonnes simples
             $table->index(['point_of_sale_id', 'status']);
-            $table->unique(['point_of_sale_id', 'table_number']);
-            $table->index('table_number');
         });
+
+        // Index spécifique pour PostgreSQL sur la clé 'zone' à l'intérieur du JSON
+        // On utilise un DB::statement car Blueprint ne gère pas les index JSON complexes nativement
+        DB::statement("CREATE INDEX tables_location_zone_index ON tables ((location->>'zone'))");
     }
 
     /**

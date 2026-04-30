@@ -1,0 +1,34 @@
+[33ma29a485[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{0}: checkout: moving from dev to main
+[33m72989f8[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{1}: checkout: moving from main to dev
+[33ma29a485[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{2}: checkout: moving from dev to main
+[33m72989f8[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{3}: checkout: moving from dev to dev
+[33m72989f8[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{4}: checkout: moving from main to dev
+[33ma29a485[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{5}: checkout: moving from dev to main
+[33m72989f8[m[33m ([m[1;31morigin/dev[m[33m, [m[1;32mdev[m[33m)[m HEAD@{6}: commit: .env
+[33mc7987bb[m HEAD@{7}: commit: add boostrap
+[33m707e561[m HEAD@{8}: commit: add storage
+[33m84eeb87[m HEAD@{9}: commit: add public
+[33m8718449[m HEAD@{10}: commit: add database
+[33m19d6865[m HEAD@{11}: checkout: moving from fc99c635bcc660a6f006ea63580c5c32776e56ab to dev
+[33mfc99c63[m HEAD@{12}: commit: mise a niveau
+[33ma22e295[m HEAD@{13}: checkout: moving from main to a22e295e
+[33ma29a485[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{14}: checkout: moving from a22e295e17e5f319a0b689f3a3be668cbd9eb8f6 to main
+[33ma22e295[m HEAD@{15}: checkout: moving from main to a22e295e17e5f319a0b689f3a3be668cbd9eb8f6
+[33ma29a485[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{16}: reset: moving to HEAD
+[33ma29a485[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{17}: commit (merge): fix
+[33ma22e295[m HEAD@{18}: commit: creation des test et fix
+[33m1948d16[m HEAD@{19}: commit: fix sale payment create
+[33m8ee2c35[m HEAD@{20}: commit: fix sale payment test
+[33m89cc82e[m HEAD@{21}: commit: fix sale
+[33ma7ad4bd[m HEAD@{22}: commit: feat salepayment mutiple
+[33m08c658d[m HEAD@{23}: commit: test
+[33ma9eb1da[m HEAD@{24}: checkout: moving from dev to main
+[33m19d6865[m HEAD@{25}: reset: moving to HEAD
+[33m19d6865[m HEAD@{26}: commit: fix ficiher ignoiré
+[33ma9eb1da[m HEAD@{27}: checkout: moving from main to dev
+[33ma9eb1da[m HEAD@{28}: merge dev: Fast-forward
+[33m2f4b797[m HEAD@{29}: checkout: moving from dev to main
+[33ma9eb1da[m HEAD@{30}: commit: Fix: correct .gitignore and track project files
+[33m2f4b797[m HEAD@{31}: checkout: moving from dev to dev
+[33m2f4b797[m HEAD@{32}: checkout: moving from main to dev
+[33m2f4b797[m HEAD@{33}: commit (initial): initialise

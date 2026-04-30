@@ -1,8 +1,12 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header
+      class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8"
+    >
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">
+          Administration
+        </p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
           <font-awesome-icon icon="fa-solid fa-user-gear" class="text-indigo-500" />
           Modifier le rôle
@@ -35,10 +39,14 @@
       v-if="loading"
       class="flex flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500 shadow-sm"
     >
-      <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
+      <span
+        class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"
+      ></span>
       <div>
         <p class="font-semibold text-slate-700">Chargement du rôle…</p>
-        <p class="text-xs text-slate-400">Nous récupérons les informations du rôle et ses permissions.</p>
+        <p class="text-xs text-slate-400">
+          Nous récupérons les informations du rôle et ses permissions.
+        </p>
       </div>
     </div>
 
@@ -69,7 +77,9 @@
             <div class="space-y-2">
               <label class="text-sm font-medium text-slate-600">Nom du rôle</label>
               <div class="relative">
-                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                <span
+                  class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                >
                   <font-awesome-icon icon="fa-solid fa-tag" />
                 </span>
                 <input
@@ -80,7 +90,10 @@
                   placeholder="Nom du rôle"
                 />
               </div>
-              <p v-if="role.name === 'admin'" class="flex items-center gap-2 text-xs font-semibold text-amber-500">
+              <p
+                v-if="role.name === 'admin'"
+                class="flex items-center gap-2 text-xs font-semibold text-amber-500"
+              >
                 <font-awesome-icon icon="fa-solid fa-lock" />
                 Le rôle administrateur ne peut pas être renommé.
               </p>
@@ -92,14 +105,19 @@
               @click="updateRole"
               :disabled="isSaving || role.name === 'admin'"
             >
-              <font-awesome-icon :icon="isSaving ? 'fa-solid fa-spinner' : 'fa-solid fa-floppy-disk'" :class="{ 'animate-spin': isSaving }" />
+              <font-awesome-icon
+                :icon="isSaving ? 'fa-solid fa-spinner' : 'fa-solid fa-floppy-disk'"
+                :class="{ 'animate-spin': isSaving }"
+              />
               {{ isSaving ? 'Enregistrement…' : 'Enregistrer' }}
             </button>
           </div>
 
           <div class="border-t border-slate-100 px-6 py-4">
             <h3 class="text-base font-semibold text-slate-800">Permissions actuelles</h3>
-            <p class="mt-1 text-xs text-slate-400">Retirez des permissions pour limiter les actions autorisées.</p>
+            <p class="mt-1 text-xs text-slate-400">
+              Retirez des permissions pour limiter les actions autorisées.
+            </p>
           </div>
           <div class="px-6 pb-6">
             <div
@@ -111,8 +129,7 @@
                 :key="permission.id"
                 class="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-600"
               >
-                <font-awesome-icon icon="fa-solid fa-shield-check" />
-                {{ permission.name }}
+                <font-awesome-icon icon="fa-solid fa-shield-halved" /> {{ permission.name }}
                 <button
                   type="button"
                   class="rounded-full border border-indigo-100 px-1 text-[11px] text-indigo-500 transition hover:bg-white"
@@ -136,7 +153,9 @@
         <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div class="border-b border-slate-100 px-6 py-4">
             <h2 class="text-base font-semibold text-slate-800">Ajouter des permissions</h2>
-            <p class="mt-1 text-xs text-slate-400">Sélectionnez des permissions à ajouter puis validez.</p>
+            <p class="mt-1 text-xs text-slate-400">
+              Sélectionnez des permissions à ajouter puis validez.
+            </p>
           </div>
 
           <div class="space-y-6 px-6 pb-6">
@@ -176,7 +195,10 @@
                 @click="assignPermissions"
                 :disabled="selectedPermissions.length === 0 || isAssigning"
               >
-                <font-awesome-icon :icon="isAssigning ? 'fa-solid fa-spinner' : 'fa-solid fa-plus'" :class="{ 'animate-spin': isAssigning }" />
+                <font-awesome-icon
+                  :icon="isAssigning ? 'fa-solid fa-spinner' : 'fa-solid fa-plus'"
+                  :class="{ 'animate-spin': isAssigning }"
+                />
                 Ajouter la sélection
               </button>
               <button
@@ -236,7 +258,7 @@ const fetchAvailablePermissions = async () => {
     const response = await permissionService.getAll()
     if (role.value?.permissions) {
       availablePermissions.value = response.data.filter(
-        (permission) => !role.value.permissions.some((p) => p.id === permission.id)
+        (permission) => !role.value.permissions.some((p) => p.id === permission.id),
       )
     } else {
       availablePermissions.value = response.data
@@ -333,5 +355,4 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

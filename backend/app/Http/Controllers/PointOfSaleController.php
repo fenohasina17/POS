@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\PointOfSale;
+use App\Models\User;
 
 
 class PointOfSaleController extends Controller
@@ -92,5 +93,47 @@ class PointOfSaleController extends Controller
         $pointOfSale->delete();
 
         return response()->json(['message' => 'Point de vente supprimé']);
+    }
+    /* Détacher un utilisateur d'un point de vente.
+     * Met à jour l'utilisateur en définissant point_of_sale_id = null.
+     */
+    public function detachUser(PointOfSale $pointOfSale, User $user)
+    {
+        // Vérifier que l'utilisateur appartient bien à ce point de vente (optionnel)
+        if ($user->point_of_sale_id !== $pointOfSale->id) {
+            return response()->json([
+                'message' => 'Cet utilisateur n\'est pas associé à ce point de vente.'
+            ], 422);
+        }
+
+        // Dissocier l'utilisateur
+        $user->point_of_sale_id = null;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Utilisateur retiré du point de vente avec succès.',
+            'user' => $user
+        ]);
+    }
+    /**
+     * Associer un utilisateur à un point de vente.
+     */
+    public function attachUser(PointOfSale $pointOfSale, User $user)
+    {
+        // Vérifier que l'utilisateur n'est pas déjà associé à un autre point de vente (optionnel)
+        if ($user->point_of_sale_id !== null && $user->point_of_sale_id !== $pointOfSale->id) {
+            return response()->json([
+                'message' => 'Cet utilisateur est déjà associé à un autre point de vente.'
+            ], 422);
+        }
+
+        // Associer l'utilisateur au point de vente
+        $user->point_of_sale_id = $pointOfSale->id;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Utilisateur associé au point de vente avec succès.',
+            'user' => $user
+        ]);
     }
 }

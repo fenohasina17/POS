@@ -77,7 +77,7 @@ class CashRegisterSessionController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
-        $sessions = $query->with(['cashRegister', 'user', 'transactions', 'discrepancies', 'closures'])->get();
+        $sessions = $query->with(['cashRegister', 'user', 'transactions', 'discrepancies'])->get();
 
         return response()->json($sessions);
     }
@@ -85,7 +85,6 @@ class CashRegisterSessionController extends Controller
     /**
      * Store a newly created cash register session (open session).
      */
-
     public function store(Request $request)
     {
         /** @var \App\Models\User|null $user */
@@ -147,32 +146,20 @@ class CashRegisterSessionController extends Controller
         event(new CashRegisterSessionOpened($session));
 
         return response()->json($session, Response::HTTP_CREATED);
-
-   public function store(Request $request)
-{
-    /** @var \App\Models\User|null $user */
-    $user = auth()->guard('api')->user();
-    
-    // 1. Vérification des permissions de base
-    if (!$user || !$user->hasPermissionTo('create.cash_register_sessions', 'api')) {
-        abort(403, 'This action is unauthorized.');
- 85008940c5a48f81fac431603537bfe947e1baad
     }
 
     /**
      * Display the specified cash register session.
      */
-    public function show($id, Request $request)
-    {
-
-        $query = CashRegisterSession::with(['cashRegister', 'user', 'transactions', 'discrepancies', 'closures']);
-
+public function show($id, Request $request)
+{
+   
+    try {
+        $query = CashRegisterSession::with(['cashRegister', 'user', 'transactions', 'discrepancies']);
         if ($request->boolean('with_trashed')) {
             $query->withTrashed();
         }
-
         $session = $query->find($id);
-
         if (!$session) {
             return response()->json(['message' => 'Cash register session not found.'], Response::HTTP_NOT_FOUND);
         }
@@ -195,9 +182,12 @@ class CashRegisterSessionController extends Controller
         } elseif (!$user->hasRole('admin', 'api') && $session->user_id !== $user->id) {
             abort(403, 'This action is unauthorized.');
         }
-
         return response()->json($session);
+    } catch (\Exception $e) {
+        \Log::error('Exception: ' . $e->getMessage());
+        return response()->json(['error' => $e->getMessage()], 500);
     }
+}
 
     /**
      * Update the specified cash register session.
@@ -398,7 +388,7 @@ class CashRegisterSessionController extends Controller
     public function summary($id)
     {
         // 1. Chargement de la session avec sa caisse pour connaître son POS
-        $session = CashRegisterSession::with(['cashRegister', 'transactions', 'discrepancies', 'closures', 'user'])
+        $session = CashRegisterSession::with(['cashRegister', 'transactions', 'discrepancies', 'user'])
             ->find($id);
 
         if (!$session) {
@@ -436,8 +426,7 @@ class CashRegisterSessionController extends Controller
         $service = new CashRegisterSessionSummaryService();
         $summary = $service->build($session);
 
-        // Ajout des détails de billetage (closures)
-        $summary['closures'] = $session->closures;
+       
 
         return response()->json($summary);
     }
@@ -445,54 +434,105 @@ class CashRegisterSessionController extends Controller
     /**
      * Get the status of a specific cash register session.
      */
+    /**
+     * Get the status of a specific cash register session.
+     */
     public function status($cashRegisterId)
     {
-        // Rechercher la session ouverte pour cette caisse
-        $session = CashRegisterSession::where('cash_register_id', $cashRegisterId)
-            ->where('is_closed', false)
-            ->latest('opened_at')
-            ->first();
+        try {
+            // Vérifier que l'utilisateur est authentifié
+            $user = auth()->guard('api')->user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Non authentifié'
+                ], 401);
+            }
 
-        if ($session) {
+            // Rechercher la session ouverte pour cette caisse
+            $session = CashRegisterSession::where('cash_register_id', $cashRegisterId)
+                ->where('is_closed', false)
+                ->latest('opened_at')
+                ->first();
+
+            if ($session) {
+                return response()->json([
+                    'status' => 'in_use',
+                    'in_use' => true,
+                    'opened_at' => $session->opened_at,
+                    'user' => $session->user->name,
+                    'session_id' => $session->id,
+                    'cash_register_id' => $session->cash_register_id
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'available',
+                    'in_use' => false,
+                    'message' => 'Cette caisse est libre, aucune session active.'
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Erreur dans status: ' . $e->getMessage());
             return response()->json([
-                'status' => 'in use',
-                'opened_at' => $session->opened_at,
-                'user' => $session->user->name,
-                'session_id' => $session->id
-            ]);
-        } else {
-            return response()->json([
-                'status' => 'available',
-                'message' => 'Cette caisse est libre, aucune session active.'
-            ]);
+                'status' => 'error',
+                'message' => 'Erreur serveur: ' . $e->getMessage()
+            ], 500);
         }
     }
+    /**
+     * Get the active session for the current user.
+     */
     public function myActiveSession()
     {
+        try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json([
+                    'data' => null,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
 
-        // Vérifier que l'utilisateur est connecté
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
-        if (!$user = Auth::user()) {
-            abort(401, 'Utilisateur non authentifié.');
-        }
+            // Rechercher la session active pour l'utilisateur connecté
+            $session = CashRegisterSession::where('user_id', $user->id)
+                ->where('is_closed', false)
+                ->with(['cashRegister', 'user'])
+                ->first();
 
-        // Rechercher la session active pour l'utilisateur connecté
-        $session = CashRegisterSession::where('user_id', $user->id)
-            ->where('is_closed', false)
-            ->with(['cashRegister', 'user'])
-            ->first();
+            if ($session) {
+                return response()->json([
+                    'data' => $session,
+                    'has_active_session' => true
+                ]);
+            }
 
-        if ($session) {
             return response()->json([
-                'data' => $session
+                'data' => null,
+                'has_active_session' => false,
+                'message' => 'Aucune session active'
             ]);
-        }
 
-        return response()->json([
-            'data' => null,
-            'message' => ' Aucune session active'
-        ], 404);
+        } catch (\Exception $e) {
+            \Log::error('Erreur dans myActiveSession: ' . $e->getMessage());
+            return response()->json([
+                'data' => null,
+                'has_active_session' => false,
+                'message' => 'Erreur serveur'
+            ], 500);
+        }
+    }
+    public function openSessions(Request $request)
+    {
+        $user = $request->user();
+        $pointOfSaleId = $user->point_of_sale_id; // l'utilisateur a un point de vente associé
+        $sessions = CashRegisterSession::whereNull('closed_at')
+            ->whereHas('cashRegister', function ($q) use ($pointOfSaleId) {
+                $q->where('point_of_sale_id', $pointOfSaleId);
+            })
+            ->with(['cashRegister', 'user'])
+            ->get();
+        return response()->json($sessions);
     }
 
 }

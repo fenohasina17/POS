@@ -43,8 +43,6 @@ return new class extends Migration
             $table->timestamp('closed_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
-             $table->decimal('total_sales_amount', 10, 2)->default(0)->after('closing_amount');
-
             // Index pour la performance
             $table->index(['cash_register_id', 'is_closed']);
             $table->index('user_id');

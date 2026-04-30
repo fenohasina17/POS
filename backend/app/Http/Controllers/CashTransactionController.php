@@ -9,6 +9,25 @@ use Illuminate\Http\JsonResponse;
 
 class CashTransactionController extends Controller
 {
+    public function getBySession($sessionId): JsonResponse
+{
+    try {
+        $transactions = CashTransaction::where('session_id', $sessionId)->get();
+
+        $in = $transactions->filter(function ($t) {
+            return $t->type === 'sale' || ($t->type === 'adjustment' && $t->amount > 0);
+        })->values();
+
+        $out = $transactions->filter(function ($t) {
+            return $t->type === 'refund' || ($t->type === 'adjustment' && $t->amount < 0);
+        })->values();
+
+        return response()->json(compact('in', 'out'));
+    } catch (\Exception $e) {
+        \Log::error('Erreur getBySession: ' . $e->getMessage());
+        return response()->json(['error' => 'Erreur interne'], 500);
+    }
+}
     // Injection du service via le constructeur
     public function __construct(
         protected CashTransactionService $transactionService
@@ -41,7 +60,6 @@ class CashTransactionController extends Controller
     return response()->json($transaction, 201);
 }
 
-// app/Http/Controllers/CashTransactionController.php
 
 public function destroy(CashTransaction $cashTransaction)
 {

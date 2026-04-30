@@ -29,13 +29,16 @@
             />
           </div>
 
-          <div v-if="printerTypes.length" class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700">Type d'imprimante</label>
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700">Imprimante de destination</label>
             <select
-              v-model="category.printer_type_id"
+              v-model="category.printer"
               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
             >
-              <option v-for="type in printerTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+              <option value="kitchen">Cuisine (kitchen)</option>
+              <option value="bar">Bar (bar)</option>
+              <option value="receipt">Caisse (receipt)</option>
+              <option value="pizza">Pizza (pizza)</option>
             </select>
           </div>
         </section>
@@ -64,7 +67,6 @@
 
 <script setup>
 import { ref, watch, defineEmits, defineProps } from 'vue'
-import { usePrinterTypes } from '../composables/usePrinterTypes.js'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -73,35 +75,17 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'updated'])
 
-const { printerTypes, fetchPrinterTypes } = usePrinterTypes()
-
-const category = ref({ id: null, name: '', printer_type_id: '', printer_type: '' })
+const category = ref({ id: null, name: '', printer: 'receipt' })
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal && props.categoryData) {
-    fetchPrinterTypes().then(() => {
-      category.value = {
-        id: props.categoryData.id ?? null,
-        name: props.categoryData.name ?? '',
-        printer_type_id:
-          props.categoryData.printer_type_id ?? props.categoryData.printer_type?.id ?? props.categoryData.printer_type ?? '',
-        printer_type:
-          props.categoryData.printer_type_id ?? props.categoryData.printer_type?.id ?? props.categoryData.printer_type ?? '',
-      }
-      if (!category.value.printer_type_id && printerTypes.value.length) {
-        category.value.printer_type_id = printerTypes.value[0].id
-        category.value.printer_type = printerTypes.value[0].id
-      }
-    })
+    category.value = {
+      id: props.categoryData.id ?? null,
+      name: props.categoryData.name ?? '',
+      printer: props.categoryData.printer ?? 'receipt',
+    }
   }
 })
-
-watch(
-  () => category.value.printer_type_id,
-  (value) => {
-    category.value.printer_type = value
-  }
-)
 
 const close = () => {
   emit('close')
@@ -109,11 +93,7 @@ const close = () => {
 
 const submit = () => {
   if (!category.value.name.trim()) return
-  const payload = {
-    ...category.value,
-    printer_type: category.value.printer_type_id || category.value.printer_type,
-  }
-  emit('updated', payload)
+  emit('updated', category.value)
   close()
 }
 </script>
