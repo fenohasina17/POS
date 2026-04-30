@@ -104,7 +104,7 @@ pipeline {
                     -e DB_USERNAME=postgres \
                     -e DB_PASSWORD=password \
                     $BACKEND_IMAGE \
-                    bash -c "php artisan migrate --force && php vendor/bin/phpunit --configuration phpunit.xml" || echo "⚠️ Tests en échec mais on continue"
+                    bash -c "php artisan migrate --force && php vendor/bin/phpunit --configuration /var/www/phpunit.xml" || echo "⚠️ Tests en échec mais on continue"
 
                 docker rm -f pg-test || true
                 docker network rm test-net || true
