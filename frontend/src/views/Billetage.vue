@@ -259,46 +259,56 @@
               <p>Cliquez sur <strong>« Billetage »</strong> pour commencer le comptage.</p>
             </div>
 
-            <!-- Résultat du contrôle -->
-            <div v-if="hasRecordedBilletage" class="space-y-3 rounded-2xl border px-4 py-4" :class="canViewSensitiveInfo ? varianceCardClass : 'border-emerald-200 bg-emerald-50'">
-              <div class="flex items-center justify-between gap-3">
-                <h3 class="text-sm font-semibold">Résultat du contrôle</h3>
-                <span v-if="canViewSensitiveInfo" class="rounded-full px-3 py-1 text-xs font-semibold" :class="varianceBadgeClass">{{ varianceStatusLabel }}</span>
-                <span v-else class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Billetage enregistré</span>
-              </div>
-              <div class="grid gap-2 text-sm">
-                <p class="flex items-center justify-between"><span>Montant compté (réel)</span><strong>{{ formatCurrency(actualTotal) }}</strong></p>
-                <template v-if="canViewSensitiveInfo">
-                  <p class="flex items-center justify-between"><span>Total Ventes Espèces</span><strong>{{ formatCurrency(cashSalesAmount) }}</strong></p>
-                  <p class="flex items-center justify-between">
-                    <span>Écart</span>
-                    <strong :class="varianceAmount === 0 ? 'text-emerald-600' : (varianceAmount > 0 ? 'text-rose-600' : 'text-amber-600')">
-                      {{ varianceAmount > 0 ? '+' : '' }}{{ formatCurrency(varianceAmount) }}
-                    </strong>
+            <!-- Résultat du contrôle (Affichage ergonomique) -->
+            <div v-if="hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all" 
+                 :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
+              
+              <div class="flex items-start justify-between">
+                <div>
+                  <h3 class="text-lg font-bold" :class="varianceStatus === 'conforme' ? 'text-emerald-800' : 'text-rose-800'">
+                    {{ varianceStatusLabel }}
+                  </h3>
+                  <p class="text-sm opacity-80 mt-1">
+                    {{ varianceStatus === 'conforme' 
+                       ? 'La caisse est parfaitement équilibrée.' 
+                       : (varianceAmount > 0 ? 'Il manque des fonds en caisse.' : 'Il y a un excédent de fonds en caisse.') }}
                   </p>
-                </template>
-                <p v-else class="flex items-center justify-between text-slate-500 text-xs"><span>Contrôle effectué</span><span>✅</span></p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs uppercase font-black opacity-60">Écart final</p>
+                  <p class="text-2xl font-black" :class="varianceStatus === 'conforme' ? 'text-emerald-700' : 'text-rose-700'">
+                    {{ varianceAmount > 0 ? '+' : '' }}{{ formatCurrency(varianceAmount) }}
+                  </p>
+                </div>
               </div>
-              <p class="text-xs text-slate-500 italic">
-                <span v-if="canViewSensitiveInfo">Détail complet réservé à l’administration.</span>
-                <span v-else>Le responsable vérifiera la conformité en interne.</span>
-              </p>
 
-              <!-- Actions d'investigation si écart -->
-              <div v-if="varianceAmount !== 0" class="mt-4 flex flex-wrap gap-2 pt-2 border-t border-slate-200">
+              <!-- Détails techniques simplifiés -->
+              <div class="mt-4 grid grid-cols-2 gap-4 rounded-xl bg-white/50 p-3 text-xs border border-white/50">
+                <div>
+                  <p class="opacity-60 uppercase font-bold">Ventes Espèces</p>
+                  <p class="font-bold text-slate-700">{{ formatCurrency(cashSalesAmount) }}</p>
+                </div>
+                <div>
+                  <p class="opacity-60 uppercase font-bold">Total Compté</p>
+                  <p class="font-bold text-slate-700">{{ formatCurrency(actualTotal) }}</p>
+                </div>
+              </div>
+
+              <!-- Actions d'investigation -->
+              <div v-if="varianceAmount !== 0" class="mt-4 flex gap-2">
                 <button
                   type="button"
                   @click="showSalesLines = true"
-                  class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-200"
+                  class="flex-1 rounded-xl bg-white/80 border border-rose-200 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-100"
                 >
-                  <i class="fas fa-list-ul"></i> Voir les tickets
+                  <i class="fas fa-list-ul mr-1"></i> Analyser les tickets
                 </button>
                 <button
                   type="button"
                   @click="showSessionDetails = true"
-                  class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-200"
+                  class="flex-1 rounded-xl bg-white/80 border border-rose-200 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-100"
                 >
-                  <i class="fas fa-info-circle"></i> Détails session
+                  <i class="fas fa-info-circle mr-1"></i> Détails session
                 </button>
               </div>
             </div>
@@ -824,7 +834,7 @@ const cashSalesAmount = computed(() => {
 const varianceAmount = computed(() => cashSalesAmount.value - actualTotal.value)
 
 const varianceStatus = computed(() => {
-  if (Math.abs(varianceAmount.value) < 1) return 'conforme'
+  if (varianceAmount.value === 0) return 'conforme'
   // Si variance > 0 (Ventes > Compté) = Manque d'argent
   // Si variance < 0 (Compté > Ventes) = Excédent
   return varianceAmount.value > 0 ? 'manquant' : 'excedent'
