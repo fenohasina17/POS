@@ -232,6 +232,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '@/composables/useAuth'
 import { useCategories } from '@/composables/useCategories'
+import { storage } from '@/utils/storage'
 
 defineOptions({ name: 'DashboardLayout' })
 
