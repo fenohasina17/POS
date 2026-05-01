@@ -267,12 +267,15 @@
                 <span v-else class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Billetage enregistré</span>
               </div>
               <div class="grid gap-2 text-sm">
-                <p class="flex items-center justify-between"><span>Montant compté</span><strong>{{ formatCurrency(actualTotal) }}</strong></p>
-                <p class="flex items-center justify-between"><span>Fond de caisse</span><strong>{{ formatCurrency(startingAmount) }}</strong></p>
+                <p class="flex items-center justify-between"><span>Montant compté (réel)</span><strong>{{ formatCurrency(actualTotal) }}</strong></p>
                 <template v-if="canViewSensitiveInfo">
-                  <p class="flex items-center justify-between"><span>Ventes espèces</span><strong>{{ formatCurrency(cashSalesAmount) }}</strong></p>
-                  <p class="flex items-center justify-between"><span>Montant attendu</span><strong>{{ formatCurrency(expectedCashAmount) }}</strong></p>
-                  <p class="flex items-center justify-between"><span>Écart</span><strong :class="varianceAmount === 0 ? 'text-emerald-600' : (varianceAmount > 0 ? 'text-amber-600' : 'text-rose-600')">{{ formatCurrency(varianceAmount) }}</strong></p>
+                  <p class="flex items-center justify-between"><span>Total Ventes Espèces</span><strong>{{ formatCurrency(cashSalesAmount) }}</strong></p>
+                  <p class="flex items-center justify-between">
+                    <span>Écart</span>
+                    <strong :class="varianceAmount === 0 ? 'text-emerald-600' : (varianceAmount > 0 ? 'text-rose-600' : 'text-amber-600')">
+                      {{ varianceAmount > 0 ? '+' : '' }}{{ formatCurrency(varianceAmount) }}
+                    </strong>
+                  </p>
                 </template>
                 <p v-else class="flex items-center justify-between text-slate-500 text-xs"><span>Contrôle effectué</span><span>✅</span></p>
               </div>
