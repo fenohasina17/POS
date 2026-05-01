@@ -285,18 +285,18 @@
               </p>
 
               <!-- Actions d'investigation si écart -->
-              <div v-if="varianceAmount !== 0 && canViewSensitiveInfo" class="mt-4 flex flex-wrap gap-2 pt-2 border-t border-slate-200">
+              <div v-if="varianceAmount !== 0" class="mt-4 flex flex-wrap gap-2 pt-2 border-t border-slate-200">
                 <button
                   type="button"
                   @click="showSalesLines = true"
-                  class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                  class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-200"
                 >
                   <i class="fas fa-list-ul"></i> Voir les tickets
                 </button>
                 <button
                   type="button"
                   @click="showSessionDetails = true"
-                  class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                  class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-200"
                 >
                   <i class="fas fa-info-circle"></i> Détails session
                 </button>
