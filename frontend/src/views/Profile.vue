@@ -51,9 +51,9 @@
 
     <nav class="navbar">
       <div class="navbar-start">
-        <button class="menu-toggle" @click="toggleMenu" aria-label="Ouvrir le menu">
+        <!-- <button class="menu-toggle" @click="toggleMenu" aria-label="Ouvrir le menu">
           <font-awesome-icon icon="fa-bars" />
-        </button>
+        </button> -->
       </div>
       <div class="navbar-end">
         <span class="icon avatar-icon">

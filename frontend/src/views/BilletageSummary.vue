@@ -81,6 +81,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Profile from './Profile.vue'
 import { API_BASE_URL } from '@/utils/api'
+import { storage } from '@/utils/storage'
 import { printingService } from '@/services/printing/PrintingService'
 
 const route = useRoute()
@@ -154,8 +155,11 @@ const formatPrice = (price) => {
 const fetchSummary = async () => {
   if (!sessionId.value) return
   try {
+    const auth = storage.getAuth()
+    if (!auth?.token) return
+
     const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}/summary`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      headers: { Authorization: `Bearer ${auth.token}` }
     })
     console.log("DEBUG: Structure complète du résumé :", data)
 

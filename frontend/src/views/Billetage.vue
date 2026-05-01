@@ -1,8 +1,122 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 px-4 py-6 md:px-6">
-    <Profile />
+  <div class="flex min-h-screen bg-slate-100 text-slate-900">
+    <!-- Overlay mobile -->
+    <div
+      class="fixed inset-0 z-30 bg-slate-900/40 transition-opacity duration-200 lg:hidden"
+      :class="sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
+      @click="sidebarOpen = false"
+    ></div>
 
-    <section class="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+    <!-- Sidebar -->
+    <aside
+      :class="[
+        'fixed inset-y-0 left-0 z-40 border-r border-slate-200 bg-white shadow-sm transition-all duration-200 ease-in-out',
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+        'lg:translate-x-0',
+        sidebarCollapsed ? 'lg:w-16' : 'lg:w-56'
+      ]"
+    >
+      <div class="flex h-full flex-col">
+        <div
+          class="flex items-center gap-2 px-4 pt-4 shrink-0"
+          :class="isSidebarCollapsed ? 'lg:px-2 lg:justify-center' : ''"
+        >
+          <img
+            src="../assets/logoigp.jpg"
+            alt="Logo International Gastronomy Pizza"
+            class="h-9 w-auto rounded-lg object-cover"
+            :class="isSidebarCollapsed ? 'lg:h-8' : ''"
+          />
+          <div v-if="!isSidebarCollapsed" class="hidden lg:block">
+            <p class="text-sm font-semibold text-slate-900">IGP POS</p>
+            <p class="text-[10px] text-slate-400">Dashboard restaurants</p>
+          </div>
+        </div>
+
+        <nav :class="['mt-12 h-12', isSidebarCollapsed ? 'px-1' : 'px-3']">
+          <div v-for="section in navigationSections" :key="section.title" class="mb-6">
+            <p
+              class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400"
+              :class="isSidebarCollapsed ? 'lg:hidden' : ''"
+            >
+              {{ section.title }}
+            </p>
+            <ul class="space-y-1">
+              <li v-for="item in section.items" :key="item.label" class="space-y-1">
+                <button
+                  type="button"
+                  :class="[
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition',
+                    isActive(item) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100',
+                    isSidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2' : ''
+                  ]"
+                  @click="handleNavigation(item)"
+                >
+                  <span
+                    class="flex h-8 w-8 items-center justify-center rounded-lg"
+                    :class="isActive(item) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
+                  >
+                    <FontAwesomeIcon :icon="item.icon" class="text-sm" />
+                  </span>
+                  <span :class="['flex-1 text-left text-xs', isSidebarCollapsed ? 'lg:hidden' : '']">{{ item.label }}</span>
+                  <FontAwesomeIcon
+                    v-if="item.children && !isSidebarCollapsed"
+                    :icon="faChevronDown"
+                    :class="[
+                      'text-[10px] text-slate-400 transition-transform',
+                      isMenuExpanded(item) ? 'rotate-180 text-indigo-500' : ''
+                    ]"
+                  />
+                </button>
+
+                <transition name="fade">
+                  <ul
+                    v-if="item.children && isMenuExpanded(item) && !isSidebarCollapsed"
+                    class="space-y-1 pl-10"
+                  >
+                    <li v-for="child in item.children" :key="child.label">
+                      <button
+                        type="button"
+                        :class="[
+                          'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition',
+                          isActive(child) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100'
+                        ]"
+                        @click="handleNavigation(child)"
+                      >
+                        <span
+                          class="flex h-7 w-7 items-center justify-center rounded-md"
+                          :class="isActive(child) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
+                        >
+                          <FontAwesomeIcon :icon="child.icon" class="text-xs" />
+                        </span>
+                        <span class="flex-1 text-left">{{ child.label }}</span>
+                      </button>
+                    </li>
+                  </ul>
+                </transition>
+              </li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Content Area -->
+    <div :class="['flex min-h-screen flex-1 flex-col transition-all duration-200', isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-56']">
+      <!-- Navbar mobile -->
+      <header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
+        <button
+          type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600"
+          @click="sidebarOpen = true"
+        >
+          <i class="fas fa-bars"></i>
+        </button>
+        <span class="text-sm font-semibold text-slate-900">IGP POS</span>
+      </header>
+
+      <div class="px-4 py-6 md:px-6">
+        <section class="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
       <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -166,6 +280,24 @@
                 <span v-if="canViewSensitiveInfo">Détail complet réservé à l’administration.</span>
                 <span v-else>Le responsable vérifiera la conformité en interne.</span>
               </p>
+
+              <!-- Actions d'investigation si écart -->
+              <div v-if="varianceAmount !== 0 && canViewSensitiveInfo" class="mt-4 flex flex-wrap gap-2 pt-2 border-t border-slate-200">
+                <button
+                  type="button"
+                  @click="showSalesLines = true"
+                  class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                >
+                  <i class="fas fa-list-ul"></i> Voir les tickets
+                </button>
+                <button
+                  type="button"
+                  @click="showSessionDetails = true"
+                  class="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-200"
+                >
+                  <i class="fas fa-info-circle"></i> Détails session
+                </button>
+              </div>
             </div>
 
             <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">{{ errorMessage }}</p>
@@ -193,19 +325,119 @@
         </form>
       </div>
     </section>
+  </div>
 
     <Keyboard v-if="keyboardVisible" :initial-position="keyboardPosition" @key-pressed="handleKeyPress" @close="hideKeyboard" />
+
+    <!-- Modal Détails des tickets -->
+    <div v-if="showSalesLines" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <div class="flex h-full max-h-[90vh] w-full max-w-4xl flex-col rounded-3xl bg-white shadow-2xl">
+        <header class="flex items-center justify-between border-b border-slate-100 p-6">
+          <div>
+            <h3 class="text-xl font-bold text-slate-900">Détails des tickets</h3>
+            <p class="text-sm text-slate-500">Liste complète des ventes de la session</p>
+          </div>
+          <button @click="showSalesLines = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-6">
+          <div class="space-y-4">
+            <div v-for="sale in sessionSales" :key="sale.id" class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <div class="mb-3 flex items-center justify-between">
+                <span class="font-bold text-slate-900">Ticket #{{ sale.ticket_number || sale.id }}</span>
+                <span class="text-sm font-semibold text-indigo-600">{{ formatCurrency(sale.final_amount) }}</span>
+              </div>
+              <ul class="space-y-1">
+                <li v-for="line in sale.order_lines" :key="line.id" class="flex justify-between text-xs text-slate-600">
+                  <span>{{ line.product?.name || line.name }} x{{ line.quantity }}</span>
+                  <span>{{ formatCurrency(line.total) }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Détails Session -->
+    <div v-if="showSessionDetails" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
+        <header class="flex items-center justify-between border-b border-slate-100 p-6">
+          <h3 class="text-xl font-bold text-slate-900">Détails de la session</h3>
+          <button @click="showSessionDetails = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </header>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4 text-sm">
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">ID Session</p>
+                <p class="font-semibold text-slate-700">#{{ sessionId }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">Caissier</p>
+                <p class="font-semibold text-slate-700">{{ sessionData?.user?.name }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">Caisse</p>
+                <p class="font-semibold text-slate-700">{{ sessionData?.cash_register?.name }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">Ouverte le</p>
+                <p class="font-semibold text-slate-700">{{ formatDate(sessionData?.opened_at) }}</p>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <h4 class="text-xs font-bold uppercase text-slate-400">Mouvements de caisse</h4>
+              <div class="max-h-60 overflow-y-auto space-y-2">
+                <div v-for="trans in cashTransactions" :key="trans.id" class="flex items-center justify-between rounded-xl border border-slate-100 p-3 text-xs">
+                  <div>
+                    <p class="font-semibold text-slate-700">{{ trans.description || trans.type }}</p>
+                    <p class="text-[10px] text-slate-400">{{ formatDate(trans.created_at) }}</p>
+                  </div>
+                  <span :class="trans.amount >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="font-bold">
+                    {{ trans.amount >= 0 ? '+' : '' }}{{ formatCurrency(trans.amount) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+</div>
 </template>
 
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Keyboard from '../components/tools/Keyboard.vue'
 import { API_BASE_URL } from '@/utils/api'
-import Profile from './Profile.vue'
 import { useAuth } from '@/composables/useAuth'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faArrowRotateLeft,
+  faBars,
+  faBoxesStacked,
+  faCashRegister,
+  faChevronDown,
+  faGaugeHigh,
+  faLayerGroup,
+  faListCheck,
+  faReceipt,
+  faStore,
+  faTableCellsLarge,
+  faUsersGear,
+  faKey,
+  faUserGroup,
+  faChartLine,
+  faClipboardList
+} from '@fortawesome/free-solid-svg-icons'
 
 const denominations = [
   { value: 20000, label: '20 000' },
@@ -219,7 +451,116 @@ const denominations = [
 ]
 
 const router = useRouter()
+const route = useRoute()
 const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
+
+// Layout state
+const sidebarOpen = ref(false)
+const sidebarCollapsed = ref(false)
+const expandedMenus = ref(new Set())
+const isDesktop = ref(window.innerWidth >= 1024)
+
+const isSidebarCollapsed = computed(() => sidebarCollapsed.value && isDesktop.value)
+
+const filterAdminItems = (items) => {
+  return items
+    .filter((item) => {
+      if (item.adminOnly && !isAdmin.value) return false
+      if (item.caissierOnly && !hasRole('caissier') && !isAdmin.value) return false
+      return true
+    })
+    .map((item) =>
+      item.children
+        ? {
+            ...item,
+            children: item.children.filter((child) => {
+              if (child.adminOnly && !isAdmin.value) return false
+              if (child.caissierOnly && !hasRole('caissier') && !isAdmin.value) return false
+              return true
+            }),
+          }
+        : item,
+    )
+}
+
+const navigationSections = computed(() => {
+  const menuItems = filterAdminItems([
+    { label: 'Dashboard', name: 'dashboard-overview', icon: faGaugeHigh },
+    { label: 'Vente directe', name: 'dashboard-direct', icon: faCashRegister },
+    {
+      label: 'Service Salle',
+      name: 'service-salle',
+      icon: faTableCellsLarge,
+      children: [
+        { label: 'Salle', name: 'dashboard-table', icon: faTableCellsLarge },
+        { label: 'Gestion des tables', name: 'dashboard-table-manage', icon: faListCheck },
+      ],
+    },
+    { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked },
+    { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup },
+    { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, adminOnly: true },
+    { label: 'Mes ventes', name: 'dashboard-user-sales', icon: faReceipt },
+    { label: 'Remise à zéro', name: 'dashboard-retour', icon: faArrowRotateLeft, caissierOnly: true },
+  ])
+
+  const toolItems = filterAdminItems([
+    { label: 'Point de vente', name: 'dashboard-point-of-sale', icon: faStore, adminOnly: true },
+    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList },
+    { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
+    ...(isAdmin.value
+      ? [
+          {
+            label: 'Rôles',
+            name: 'dashboard-roles',
+            icon: faUsersGear,
+            names: ['dashboard-roles', 'dashboard-roles-create', 'dashboard-roles-edit'],
+          },
+          {
+            label: 'Permissions',
+            name: 'dashboard-permissions',
+            icon: faKey,
+            names: ['dashboard-permissions', 'dashboard-permissions-create'],
+          },
+        ]
+      : []),
+  ])
+
+  const sections = [
+    { title: 'Menu', items: menuItems },
+    { title: 'Outils', items: toolItems },
+  ]
+
+  return sections.filter((section) => section.items.length > 0)
+})
+
+const isActive = (item) => {
+  const currentName = route.name ? route.name.toString() : ''
+  if (item.name === currentName) return true
+  if (item.names && item.names.includes(currentName)) return true
+  if (item.children) {
+    return item.children.some((child) => child.name === currentName)
+  }
+  return false
+}
+
+const isMenuExpanded = (item) => expandedMenus.value.has(item.label)
+
+const handleNavigation = (item) => {
+  if (item.children) {
+    if (expandedMenus.value.has(item.label)) {
+      expandedMenus.value.delete(item.label)
+    } else {
+      expandedMenus.value.add(item.label)
+    }
+    return
+  }
+  if (!isDesktop.value) sidebarOpen.value = false
+  router.push({ name: item.name })
+}
+
+const handleResize = () => {
+  isDesktop.value = window.innerWidth >= 1024
+}
 
 // Permissions
 const canSelectSession = computed(() => {
@@ -256,6 +597,9 @@ const openSessions = ref([])
 const selectedSessionId = ref(null)
 const loadingDetails = ref(false)
 const loadingProgress = ref(0)
+
+const showSalesLines = ref(false)
+const showSessionDetails = ref(false)
 
 // ========== UTILITAIRES ==========
 const authHeaders = () => {
@@ -603,12 +947,17 @@ const detachKeyboardListeners = () => {
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', handleResize)
   await loadUserData()
   if (!isAdmin.value && !hasRole('gerant') && !hasRole('caissier')) {
     router.push({ name: 'dashboard-overview' })
     return
   }
   await fetchOpenSessions()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
 })
 
 watch(keyboardVisible, (visible) => {

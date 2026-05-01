@@ -34,17 +34,17 @@ class CashRegisterSessionController extends Controller
     public function index(Request $request)
     {
         /** @var \App\Models\User|null $user */
-        $user = auth()->guard('api')->user();
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('view.cash_register_sessions', 'api')) {
+        $user = auth()->user();
+        if (!$user || !$user->hasPermissionTo('view.cash_register_sessions', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
 
         $query = CashRegisterSession::query();
 
-        $managerRoles = ['gerant', 'gérant'];
-        $isManager = collect($managerRoles)->contains(fn($role) => $user->hasRole($role, 'api'));
+        $isManager = $this->userIsManager($user);
+        $isAdmin = $user->hasRole('admin', 'api');
 
-        if (!$user->hasRole('admin', 'api') && $isManager) {
+        if (!$isAdmin && $isManager) {
             $pointOfSaleId = $user->point_of_sale_id;
             if ($pointOfSaleId) {
                 $query->whereHas('cashRegister', function ($q) use ($pointOfSaleId) {
@@ -53,7 +53,7 @@ class CashRegisterSessionController extends Controller
             } else {
                 $query->where('user_id', $user->id);
             }
-        } elseif (!$user->hasRole('admin', 'api') && !$isManager) {
+        } elseif (!$isAdmin) {
             $query->where('user_id', $user->id);
         }
 
@@ -88,7 +88,7 @@ class CashRegisterSessionController extends Controller
     public function store(Request $request)
     {
         /** @var \App\Models\User|null $user */
-        $user = auth()->guard('api')->user();
+        $user = auth()->user();
 
         // 1. Vérification des permissions de base
         if (!$user || !$user->hasPermissionTo('create.cash_register_sessions', 'api')) {
@@ -163,15 +163,15 @@ public function show($id, Request $request)
         if (!$session) {
             return response()->json(['message' => 'Cash register session not found.'], Response::HTTP_NOT_FOUND);
         }
-        $user = auth()->guard('api')->user();
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('view.cash_register_sessions', 'api')) {
+        $user = auth()->user();
+        if (!$user || !$user->hasPermissionTo('view.cash_register_sessions', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
 
-        $managerRoles = ['gerant', 'gérant'];
-        $isManager = collect($managerRoles)->contains(fn($role) => $user->hasRole($role, 'api'));
+        $isManager = $this->userIsManager($user);
+        $isAdmin = $user->hasRole('admin', 'api');
 
-        if (!$user->hasRole('admin', 'api') && $isManager) {
+        if (!$isAdmin && $isManager) {
             $pointOfSaleId = $user->point_of_sale_id;
             if ($pointOfSaleId && optional($session->cashRegister)->point_of_sale_id !== $pointOfSaleId) {
                 abort(403, 'This action is unauthorized.');
@@ -179,7 +179,7 @@ public function show($id, Request $request)
             if (!$pointOfSaleId && $session->user_id !== $user->id) {
                 abort(403, 'This action is unauthorized.');
             }
-        } elseif (!$user->hasRole('admin', 'api') && $session->user_id !== $user->id) {
+        } elseif (!$isAdmin && $session->user_id !== $user->id) {
             abort(403, 'This action is unauthorized.');
         }
         return response()->json($session);
@@ -202,12 +202,25 @@ public function show($id, Request $request)
         }
 
         /** @var \App\Models\User|null $user */
-        $user = auth()->guard('api')->user();
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('update.cash_register_sessions', 'api')) {
-            abort(403, 'This action is unauthorized.');
+        $user = auth()->user(); // Use default auth (sanctum)
+        
+        if (!$user) {
+            abort(401, 'Unauthenticated.');
         }
-        if (!$user->hasRole('admin', 'api') && $this->userIsManager($user)) {
-            abort(403, 'Les gérants ne peuvent pas modifier une session de caisse.');
+
+        // Autorisation : Admin peut tout faire, le caissier peut modifier SA propre session, 
+        // le gérant est bloqué par la restriction métier plus bas.
+        $isOwner = $session->user_id === $user->id;
+        $hasUpdatePerm = $user->hasPermissionTo('update.cash_register_sessions', 'api');
+
+        if (!$user->hasRole('admin', 'api')) {
+            if (!$hasUpdatePerm && !$isOwner) {
+                abort(403, 'This action is unauthorized.');
+            }
+
+            if ($this->userIsManager($user)) {
+                abort(403, 'Les gérants ne peuvent pas modifier une session de caisse.');
+            }
         }
 
         $validated = $request->validate([
