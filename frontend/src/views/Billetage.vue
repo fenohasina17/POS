@@ -812,22 +812,28 @@ const hasAnySale = computed(() => {
 const actualTotal = computed(() => {
   return denominations.reduce((sum, d) => sum + d.value * (Number(counts[d.value]) || 0), 0)
 })
-const startingAmount = computed(() => Number(sessionData.value?.starting_amount ?? 0))
+
 const cashSalesAmount = computed(() => {
   return cashTransactions.value.filter(t => t.type === 'sale').reduce((s, t) => s + (Number(t.amount) || 0), 0)
 })
-const expectedCashAmount = computed(() => startingAmount.value + cashSalesAmount.value)
-const varianceAmount = computed(() => actualTotal.value - expectedCashAmount.value)
+
+// L'écart est défini comme : (Total Ventes Espèces) - (Montant Compté)
+const varianceAmount = computed(() => cashSalesAmount.value - actualTotal.value)
+
 const varianceStatus = computed(() => {
   if (Math.abs(varianceAmount.value) < 1) return 'conforme'
-  return varianceAmount.value > 0 ? 'positif' : 'negatif'
+  // Si variance > 0 (Ventes > Compté) = Manque d'argent
+  // Si variance < 0 (Compté > Ventes) = Excédent
+  return varianceAmount.value > 0 ? 'manquant' : 'excedent'
 })
+
 const varianceStatusLabel = computed(() => {
   if (varianceStatus.value === 'conforme') return 'Caisse conforme'
-  return varianceStatus.value === 'positif' ? 'Excédent (alerte)' : 'Manquant (alerte)'
+  return varianceStatus.value === 'manquant' ? 'Manquant (alerte)' : 'Excédent (alerte)'
 })
-const varianceCardClass = computed(() => varianceStatus.value === 'conforme' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700')
-const varianceBadgeClass = computed(() => varianceStatus.value === 'conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')
+
+const varianceCardClass = computed(() => varianceStatus.value === 'conforme' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700')
+const varianceBadgeClass = computed(() => varianceStatus.value === 'conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700')
 
 const submit = async () => {
   if (!sessionId.value) { errorMessage.value = 'Session introuvable.'; return }
