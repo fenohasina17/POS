@@ -647,6 +647,7 @@ class SaleController extends Controller
                     if ($paymentMethod && strtolower($paymentMethod->name) === 'espèce') {
                         $this->cashTransactionService->createTransaction([
                             'session_id' => $validated['cash_register_session_id'],
+                            'sale_id' => $sale->id, // Add this line
                             'type' => 'sale',
                             'amount' => $payment['amount'],
                             'description' => "Vente n°{$sale->id} - Paiement espèces",
