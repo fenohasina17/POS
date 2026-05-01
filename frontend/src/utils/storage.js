@@ -38,6 +38,13 @@ export const storage = {
       }
     };
     localStorage.setItem(KEYS.AUTH, JSON.stringify(authData));
+
+    // Compatibilité descendante : on définit aussi les anciennes clés individuelles
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('user_roles', JSON.stringify(roles));
+    localStorage.setItem('user_permissions', JSON.stringify(permissions));
+    localStorage.setItem('token_expiration', expires_at.toString());
   },
 
   clearAuth() {

@@ -141,7 +141,7 @@ const editableSale = ref({
 })
 
 // Authentification
-const { isAdmin, currentUser } = useAuth()
+const { isAdmin, user: currentUser } = useAuth()
 console.log('🔍 [EditSaleModal] isAdmin =', isAdmin.value)
 console.log('🔍 [EditSaleModal] currentUser =', currentUser.value)
 

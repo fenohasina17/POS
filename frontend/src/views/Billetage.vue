@@ -219,7 +219,7 @@ const denominations = [
 ]
 
 const router = useRouter()
-const { isAdmin, currentUser, hasRole, loadUserData } = useAuth()
+const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
 
 // Permissions
 const canSelectSession = computed(() => {

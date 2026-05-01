@@ -211,7 +211,7 @@ import { useAuth } from '@/composables/useAuth'
 import { API_BASE_URL } from '@/utils/api'
 
 const router = useRouter()
-const { isAdmin, currentUser, hasRole, loadUserData } = useAuth()
+const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
 
 const canAccessCashActions = computed(() => {
   return isAdmin.value || hasRole('caissier')

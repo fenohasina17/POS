@@ -439,11 +439,8 @@ const handleNavigation = (item) => {
 
 const logout = () => {
   closeUserMenu()
-  localStorage.removeItem('token')
-  localStorage.removeItem('token_expiration')
-  localStorage.removeItem('user')
-  localStorage.removeItem('user_expiration')
-  localStorage.removeItem('cashRegisterSession')
+  storage.clearAuth()
+  storage.clearSession()
   router.push({ name: 'login' })
 }
 

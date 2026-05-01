@@ -254,6 +254,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
+import { storage } from '@/utils/storage'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
@@ -395,15 +396,15 @@ const processData = (data) => {
 }
 
 const loadData = async (forceRefresh = false) => {
-  const token = localStorage.getItem('token')
-  if (!user.value?.point_of_sale_id || !token) return
+  const auth = storage.getAuth()
+  if (!user.value?.point_of_sale_id || !auth?.token) return
 
   try {
     isLoading.value = true
     // Utilisation du cache pour un affichage instantané
     const data = await dataCacheService.getCategories(
       user.value.point_of_sale_id,
-      token,
+      auth.token,
       forceRefresh
     )
     processData(data)
@@ -416,15 +417,15 @@ const loadData = async (forceRefresh = false) => {
 
 // ========== VÉRIFICATION SESSION ACTIVE ==========
 const checkActiveSessionAndRedirect = async () => {
-  const token = localStorage.getItem('token')
-  if (!token) {
+  const auth = storage.getAuth()
+  if (!auth?.token) {
     router.push({ name: 'login' })
     return false
   }
 
   try {
     const response = await axios.get(`${API_BASE_URL}/my-active-session`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${auth.token}` }
     })
     const hasSession = response.data?.has_active_session === true
     if (!hasSession) {
@@ -444,13 +445,9 @@ onMounted(async () => {
   const sessionOk = await checkActiveSessionAndRedirect()
   if (!sessionOk) return
 
-  const userData = localStorage.getItem('user')
-  if (userData) {
-    try {
-      user.value = JSON.parse(userData)
-    } catch (e) {
-      console.error('Erreur parsing user:', e)
-    }
+  const auth = storage.getAuth()
+  if (auth?.user) {
+    user.value = auth.user
   }
 
   // Premier chargement (depuis cache si possible)

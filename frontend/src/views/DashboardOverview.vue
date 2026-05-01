@@ -411,6 +411,7 @@ import {
   faReceipt,
 } from '@fortawesome/free-solid-svg-icons'
 import { API_BASE_URL } from '@/utils/api'
+import { storage } from '@/utils/storage'
 import { useAuth } from '@/composables/useAuth'
 import { useCategories } from '@/composables/useCategories'
 
@@ -425,12 +426,12 @@ const productViewOptions = ['quantité', 'montant']
 const activeProductView = ref('quantité')
 const pointOfSales = ref([])
 const selectedPointOfSale = ref('')
-const { isAdmin, currentUser, loadUserData } = useAuth()
+const { isAdmin, user: currentUser, loadUserData } = useAuth()
 
 const authHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Token manquant. Veuillez vous reconnecter.')
-  return { Authorization: `Bearer ${token}` }
+  const auth = storage.getAuth()
+  if (!auth?.token) throw new Error('Token manquant. Veuillez vous reconnecter.')
+  return { Authorization: `Bearer ${auth.token}` }
 }
 
 const extractArray = (payload) => {

@@ -173,6 +173,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '@/composables/useAuth'
 import { API_BASE_URL } from '@/utils/api'
+import { storage } from '@/utils/storage'
 
 library.add(faChevronDown, faChevronUp, faCircleCheck, faCircleXmark, faClock, faPenToSquare, faTrash)
 
@@ -180,7 +181,7 @@ const props = defineProps({
   embedded: { type: Boolean, default: false }
 })
 const embedded = computed(() => props.embedded)
-const { isAdmin, loadUserData, currentUser } = useAuth()
+const { isAdmin, loadUserData, user: currentUser } = useAuth()
 
 const sales = ref([])
 const loading = ref(true)
@@ -199,13 +200,13 @@ const cashRegisters = ref([])
 const pointOfSales = ref([])
 
 const authHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) {
+  const auth = storage.getAuth()
+  if (!auth?.token) {
     const error = new Error('Token manquant. Veuillez vous reconnecter.')
     error.code = 'NO_TOKEN'
     throw error
   }
-  return { Authorization: `Bearer ${token}` }
+  return { Authorization: `Bearer ${auth.token}` }
 }
 
 const openEditModal = (sale) => {
