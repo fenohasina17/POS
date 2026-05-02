@@ -370,6 +370,11 @@
             </div>
           </div>
         </div>
+        <div class="border-t border-slate-100 p-6">
+          <button @click="showSalesLines = false" class="w-full rounded-xl bg-slate-800 py-3 font-bold text-white transition hover:bg-slate-900">
+            Fermer
+          </button>
+        </div>
       </div>
     </div>
 
@@ -418,6 +423,11 @@
               </div>
             </div>
           </div>
+        </div>
+        <div class="border-t border-slate-100 p-6">
+          <button @click="showSessionDetails = false" class="w-full rounded-xl bg-slate-800 py-3 font-bold text-white transition hover:bg-slate-900">
+            Fermer
+          </button>
         </div>
       </div>
     </div>
