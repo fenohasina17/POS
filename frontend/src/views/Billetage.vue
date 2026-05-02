@@ -101,52 +101,119 @@
       </div>
     </aside>
 
-    <!-- Content Area -->
     <div :class="['flex min-h-screen flex-1 flex-col transition-all duration-200', isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-56']">
       <!-- Navbar mobile -->
       <header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
-        <button
-          type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600"
-          @click="sidebarOpen = true"
-        >
+        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600" @click="sidebarOpen = true">
           <i class="fas fa-bars"></i>
         </button>
         <span class="text-sm font-semibold text-slate-900">IGP POS</span>
       </header>
 
-      <div class="px-4 py-6 md:px-6">
-        <section class="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
-      <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">Sécurité caisse</p>
-            <h1 class="mt-2 text-3xl font-bold text-slate-900">Clôture de session</h1>
-            <p class="mt-2 max-w-3xl text-sm text-slate-500">
-              Comptez les espèces présentes dans la caisse. L’écart sera calculé automatiquement.
-            </p>
+      <main class="h-full flex-1 p-4 md:p-8">
+        <div class="mx-auto grid h-full max-w-7xl grid-cols-1 gap-8 lg:grid-cols-2">
+          
+          <!-- Colonne 1 : Comptage (Billetage) -->
+          <div class="flex flex-col gap-6">
+            <header>
+              <h1 class="text-3xl font-black text-slate-900">Clôture de Caisse</h1>
+              <p class="mt-1 text-slate-500">Saisissez les espèces pour valider la session.</p>
+            </header>
+
+            <form ref="formRef" @submit.prevent="submit" class="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div v-for="denomination in denominations" :key="denomination.value" class="group relative flex flex-col items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 p-4 transition-all hover:border-indigo-200 hover:bg-white">
+                  <label :for="`denom-${denomination.value}`" class="text-xs font-black uppercase text-slate-400">{{ denomination.label }} Ar</label>
+                  <input
+                    :id="`denom-${denomination.value}`"
+                    v-model="counts[denomination.value]"
+                    type="number"
+                    inputmode="numeric"
+                    min="0"
+                    step="1"
+                    :disabled="isSubmitting || isLoading || sessionClosed || hasRecordedBilletage || !canEditBilletage"
+                    @focus="showKeyboard({ type: 'denomination', value: denomination.value }, $event)"
+                    class="my-3 w-full rounded-xl border border-transparent bg-slate-100 px-3 py-2 text-center text-lg font-bold text-slate-900 shadow-inner outline-none transition group-hover:bg-white group-focus-within:border-indigo-200 group-focus-within:bg-white"
+                  />
+                  <p class="text-sm font-black text-indigo-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</p>
+                </div>
+              </div>
+
+              <div class="mt-auto flex items-center justify-between border-t pt-6">
+                <button type="button" @click="resetForm" class="text-sm font-bold text-slate-400 hover:text-slate-600">Réinitialiser</button>
+                <button
+                  type="submit"
+                  class="rounded-xl bg-indigo-600 px-8 py-3 text-sm font-black text-white shadow-lg transition hover:bg-indigo-700 disabled:opacity-50"
+                  :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || hasRecordedBilletage || !canEditBilletage || !hasAnySale"
+                >
+                  {{ isSubmitting ? 'Enregistrement...' : 'Valider le billetage' }}
+                </button>
+              </div>
+            </form>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
-              @click="resetForm"
-              :disabled="isSubmitting || isLoading"
-            >
-              <i class="fas fa-rotate-left text-xs"></i> Réinitialiser
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
-              @click="showCashCount = true"
-              :disabled="!hasAnySale"
-              :title="!hasAnySale ? 'Aucune vente dans cette session, billetage inutile' : 'Commencer le comptage'"
-            >
-              <i class="fas fa-coins text-xs"></i> Billetage
-            </button>
+
+          <!-- Colonne 2 : Résultat & Résumé -->
+          <div class="flex flex-col gap-6">
+            <!-- Résultat du contrôle -->
+            <div v-if="hasRecordedBilletage" class="rounded-3xl border p-8 shadow-sm" 
+                 :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
+              <div class="flex items-start justify-between">
+                <div>
+                  <h3 class="text-2xl font-black" :class="varianceStatus === 'conforme' ? 'text-emerald-900' : 'text-rose-900'">
+                    {{ varianceStatusLabel }}
+                  </h3>
+                  <p class="mt-2 text-sm opacity-80 max-w-sm">
+                    {{ varianceStatus === 'conforme' ? 'La caisse est parfaitement équilibrée.' : (varianceAmount > 0 ? 'Il manque des fonds.' : 'Il y a un excédent.') }}
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-xs uppercase font-black opacity-60">Écart</p>
+                  <p class="text-4xl font-black" :class="varianceStatus === 'conforme' ? 'text-emerald-700' : 'text-rose-700'">
+                    {{ varianceAmount > 0 ? '+' : '' }}{{ formatCurrency(varianceAmount) }}
+                  </p>
+                </div>
+              </div>
+              
+              <div class="mt-8 grid grid-cols-2 gap-4">
+                <div class="rounded-2xl bg-white/60 p-4 border border-white/50">
+                  <p class="text-[10px] font-black uppercase opacity-60">Total Ventes Espèces</p>
+                  <p class="text-xl font-black text-slate-900">{{ formatCurrency(cashSalesAmount) }}</p>
+                </div>
+                <div class="rounded-2xl bg-white/60 p-4 border border-white/50">
+                  <p class="text-[10px] font-black uppercase opacity-60">Total Compté</p>
+                  <p class="text-xl font-black text-slate-900">{{ formatCurrency(actualTotal) }}</p>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div v-if="varianceAmount !== 0" class="mt-8 flex gap-3">
+                <button type="button" @click="showSalesLines = true" class="flex-1 rounded-xl bg-white px-4 py-3 text-xs font-black text-slate-900 shadow-sm hover:bg-slate-50">
+                  <i class="fas fa-list-ul mr-2"></i> Voir les tickets
+                </button>
+                <button type="button" @click="showSessionDetails = true" class="flex-1 rounded-xl bg-white px-4 py-3 text-xs font-black text-slate-900 shadow-sm hover:bg-slate-50">
+                  <i class="fas fa-info-circle mr-2"></i> Détails session
+                </button>
+              </div>
+              
+              <button
+                v-if="!sessionClosed"
+                @click="closeSession"
+                class="mt-4 w-full rounded-xl bg-slate-900 py-3 text-sm font-black text-white shadow-xl transition hover:bg-slate-800"
+              >
+                Clôturer la session
+              </button>
+            </div>
+
+            <!-- État vide ou aide -->
+            <div v-else class="flex h-full flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-12 text-center text-slate-400">
+              <i class="fas fa-calculator mb-6 text-6xl opacity-20"></i>
+              <h2 class="text-xl font-bold text-slate-600">Prêt pour la clôture ?</h2>
+              <p class="mt-2 max-w-xs">Saisissez les billets et pièces dans le formulaire à gauche pour valider le billetage.</p>
+            </div>
           </div>
         </div>
-      </header>
+      </main>
+    </div>
 
       <!-- Sélecteur de session (admin/manager) -->
       <div v-if="canSelectSession" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
