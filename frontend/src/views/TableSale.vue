@@ -47,6 +47,14 @@
             <FontAwesomeIcon icon="fa-solid fa-table-list" />
             <span>Changer</span>
           </button>
+          <button
+            v-if="currentPendingOrder"
+            @click="printBill"
+            class="flex items-center gap-2 rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-indigo-600 active:scale-95"
+          >
+            <FontAwesomeIcon icon="fa-solid fa-receipt" />
+            <span>Imprimer l'Addition</span>
+          </button>
         </div>
       </div>
     </header>
@@ -262,7 +270,7 @@ import { tableService } from '@/services/tableService'
 import { printingService } from '@/services/printing/PrintingService'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { API_BASE_URL, API_URL } from '@/utils/api'
-import { faClock } from '@fortawesome/free-solid-svg-icons'
+import { faClock, faReceipt } from '@fortawesome/free-solid-svg-icons'
 
 const props = defineProps({
   tableId: { type: [Number, String], default: null },
@@ -488,6 +496,19 @@ const onPaymentSuccess = async (data) => {
 }
 
 const onPaymentError = (err) => console.error('Paiement error:', err)
+
+const printBill = async () => {
+  if (!currentPendingOrder.value || !selectedTable.value) return
+  isProcessing.value = true
+  try {
+    await printingService.printBill(currentPendingOrder.value, selectedTable.value)
+  } catch (error) {
+    console.error('Erreur impression addition:', error)
+    alert('Impossible d\'imprimer l\'addition. Veuillez vérifier l\'imprimante.')
+  } finally {
+    isProcessing.value = false
+  }
+}
 
 const paymentTotalAmount = computed(() => displayTotal.value)
 const paymentSaleData = computed(() => {
