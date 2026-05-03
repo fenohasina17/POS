@@ -9,6 +9,8 @@
       @close-modal="handleClosePaymentModal"
       @payment-success="handlePaymentSuccess"
       @payment-error="handlePaymentError"
+      @clear-cart="handleClearCart"  />
+      @clear-cart="handleClearCart"
     />
 
     <InvoiceModal
@@ -34,7 +36,7 @@
               </h2>
               <p class="text-xs text-slate-400 font-medium">Sélectionnez les articles pour la vente</p>
             </div>
-            
+
             <div class="relative w-full sm:max-w-xs group">
               <FontAwesomeIcon
                 icon="fa-solid fa-search"
@@ -102,7 +104,7 @@
                 />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
               </div>
-              
+
               <div class="mt-3 w-full space-y-1">
                 <p class="truncate text-sm font-bold text-slate-800">{{ product.name }}</p>
                 <div class="flex items-center justify-center gap-1.5">
@@ -117,7 +119,7 @@
                   </span>
                 </div>
               </div>
-              
+
               <!-- Badge flottant "Plus" -->
               <div class="absolute right-2 top-2 scale-0 rounded-full bg-indigo-600 p-1.5 text-white shadow-lg transition-transform group-hover:scale-100">
                 <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[10px]" />
@@ -232,7 +234,7 @@
               <span class="text-2xl font-black text-slate-900 tracking-tight">{{ formatPrice(totalPrice) }}</span>
             </div>
           </div>
-          
+
           <button
             type="button"
             class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-slate-900 py-4 font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 active:scale-[0.98] disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none"
@@ -452,7 +454,7 @@ onMounted(async () => {
 
   // Premier chargement (depuis cache si possible)
   await loadData(false)
-  
+
   // Mise à jour silencieuse en arrière-plan pour garantir la fraîcheur des données
   setTimeout(() => loadData(true), 1000)
 })
@@ -487,8 +489,9 @@ const handlePaymentSuccess = (data) => {
   isInvoiceModalOpen.value = true
 }
 
-const handlePaymentError = (error) => {
-  console.error('Erreur paiement:', error)
+const handleClearCart = () => {
+  cart.value = []
+  console.log('Cart cleared from DirectSale component after payment.')
 }
 
 const closeInvoiceModal = () => {
