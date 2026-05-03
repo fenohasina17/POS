@@ -260,7 +260,7 @@
             </div>
 
             <!-- Résultat du contrôle (Affichage ergonomique) -->
-            <div v-if="hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all"
+            <div v-if="validationAttempted || hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all" 
                  :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
 
               <div class="flex items-start justify-between">
@@ -269,9 +269,9 @@
                     {{ varianceStatusLabel }}
                   </h3>
                   <p class="text-sm opacity-80 mt-1">
-                    {{ varianceStatus === 'conforme'
-                       ? 'La caisse est équilibrée.'
-                       : (varianceAmount > 0 ? 'Il manque des fonds en caisse.' : 'Il y a un excédent de fonds en caisse.') }}
+                    {{ varianceStatus === 'conforme' 
+                       ? 'La caisse est équilibrée.' 
+                       : (varianceAmount > 0 ? 'Il y a un excédent de fonds.' : 'Il manque des fonds en caisse.') }}
                   </p>
                 </div>
                 <div class="text-right">
@@ -282,16 +282,39 @@
                 </div>
               </div>
 
-              <!-- Détails techniques simplifiés -->
-              <div class="mt-4 grid grid-cols-2 gap-4 rounded-xl bg-white/50 p-3 text-xs border border-white/50">
-                <div>
-                  <p class="opacity-60 uppercase font-bold">Ventes Espèces</p>
-                  <p class="font-bold text-slate-700">{{ formatCurrency(cashSalesAmount) }}</p>
+              <!-- Détails de calcul pour aider l'explication -->
+              <div class="mt-4 space-y-2 rounded-xl bg-white/60 p-3 border border-white/40">
+                <p class="text-[10px] font-black uppercase text-slate-400 mb-2">Détails du calcul</p>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-500">Fond de caisse (A)</span>
+                  <span class="font-bold text-slate-700">{{ formatCurrency(sessionData?.starting_amount || 0) }}</span>
                 </div>
-                <div>
-                  <p class="opacity-60 uppercase font-bold">Total Compté</p>
-                  <p class="font-bold text-slate-700">{{ formatCurrency(actualTotal) }}</p>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-500">Ventes Espèces (B)</span>
+                  <span class="font-bold text-emerald-600">+ {{ formatCurrency(cashSalesAmount) }}</span>
                 </div>
+                <div class="flex justify-between text-xs border-b border-slate-200 pb-2">
+                  <span class="text-slate-500 text-[10px] italic">(Somme des tickets payés en espèce)</span>
+                </div>
+                <div class="flex justify-between text-xs pt-1">
+                  <span class="font-black text-slate-600 uppercase">Théorique attendu (A + B)</span>
+                  <span class="font-black text-slate-800">{{ formatCurrency(Number(sessionData?.starting_amount || 0) + cashSalesAmount) }}</span>
+                </div>
+                <div class="flex justify-between text-xs pt-1 border-t border-slate-200 mt-1">
+                  <span class="font-black text-indigo-600 uppercase tracking-tighter">Réel Compté (Billetage)</span>
+                  <span class="font-black text-indigo-700">{{ formatCurrency(actualTotal) }}</span>
+                </div>
+              </div>
+
+              <!-- Champ Justification si écart -->
+              <div v-if="varianceAmount !== 0 && !hasRecordedBilletage" class="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label class="block text-xs font-black uppercase text-rose-600 mb-1">Pourquoi y a-t-il un écart ? (Obligatoire)</label>
+                <textarea
+                  v-model="discrepancyExplanation"
+                  rows="3"
+                  class="w-full rounded-xl border border-rose-300 bg-white p-3 text-sm text-slate-800 shadow-inner outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                  placeholder="Ex: Erreur rendu monnaie ticket #12, retrait pour achat fournitures non saisi..."
+                ></textarea>
               </div>
 
               <!-- Actions d'investigation -->
@@ -301,7 +324,7 @@
                   @click="showSalesLines = true"
                   class="flex-1 rounded-xl bg-white/80 border border-rose-200 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-100"
                 >
-                  <i class="fas fa-list-ul mr-1"></i> Analyser les tickets
+                  <i class="fas fa-list-ul mr-1"></i> Analyser tickets
                 </button>
                 <button
                   type="button"
@@ -312,7 +335,6 @@
                 </button>
               </div>
             </div>
-
             <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">{{ errorMessage }}</p>
             <p v-if="successMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-600">{{ successMessage }}</p>
           </div>
@@ -324,7 +346,7 @@
               :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || hasRecordedBilletage || !showCashCount || !canEditBilletage || !hasAnySale"
             >
               <i v-if="isSubmitting" class="fas fa-circle-notch animate-spin"></i>
-              {{ isSubmitting ? 'Enregistrement...' : 'Valider le billetage' }}
+              {{ isSubmitting ? 'Enregistrement...' : (validationAttempted && varianceAmount !== 0 ? 'Confirmer la justification' : 'Valider le billetage') }}
             </button>
             <button
               type="button"
@@ -628,6 +650,8 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const showCashCount = ref(false)
+const discrepancyExplanation = ref('')
+const validationAttempted = ref(false)
 const sessionSales = ref([])
 const sessionData = ref(null)
 const cashTransactions = ref([])
@@ -874,22 +898,57 @@ const varianceCardClass = computed(() => varianceStatus.value === 'conforme' ? '
 const varianceBadgeClass = computed(() => varianceStatus.value === 'conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-500 text-white')
 
 const submit = async () => {
+  errorMessage.value = '' // Réinitialiser le message d'erreur à chaque soumission
+
   if (!sessionId.value) { errorMessage.value = 'Session introuvable.'; return }
   if (sessionClosed.value) { errorMessage.value = 'Session déjà clôturée.'; return }
   if (hasRecordedBilletage.value) { errorMessage.value = 'Billetage déjà enregistré.'; return }
   if (!canEditBilletage.value) { errorMessage.value = 'Vous n’avez pas la permission de valider le billetage.'; return }
   if (!hasAnySale.value) { errorMessage.value = 'Aucune vente dans cette session. Le billetage n’est pas requis.'; return }
   if (actualTotal.value === 0) { errorMessage.value = 'Saisissez au moins un billet.'; return }
-  if (!confirm(`Valider le billetage à ${formatCurrency(actualTotal.value)} ?`)) return
+
+  // Première étape : Afficher l'écart et demander l'explication si nécessaire
+  if (!validationAttempted.value) {
+    validationAttempted.value = true
+    if (varianceAmount.value === 0) {
+      // Pas d'écart, on peut soumettre directement
+      if (!confirm(`Confirmer le billetage de ${formatCurrency(actualTotal.value)} ?`)) return
+    } else {
+      // Il y a un écart, on affiche les détails et on attend l'explication
+      return // On attend la deuxième soumission
+    }
+  }
+
+  // Deuxième étape : Envoi si l'écart est justifié ou inexistant
+  if (varianceAmount.value !== 0 && !discrepancyExplanation.value.trim()) {
+    errorMessage.value = 'Veuillez saisir une explication pour l’écart de caisse.'
+    return
+  }
+
+  if (!confirm(`Confirmer l'enregistrement du billetage ?`)) return
 
   isSubmitting.value = true
   try {
+    // 1. Enregistrement du montant réel de la session
     await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: actualTotal.value
     }, { headers: authHeaders() })
-    successMessage.value = 'Billetage enregistré avec succès.'
+    
+    // 2. Si un écart existe, on enregistre la justification
+    if (varianceAmount.value !== 0 && discrepancyExplanation.value.trim()) {
+      await axios.post(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}/discrepancies`, {
+        description: discrepancyExplanation.value,
+        amount: varianceAmount.value
+      }, { headers: authHeaders() })
+    }
+
+    successMessage.value = 'Billetage et justification enregistrés avec succès.'
     hasRecordedBilletage.value = true
     if (sessionData.value) sessionData.value.actual_cash_amount = actualTotal.value
+    // Réinitialiser l'état après succès pour une nouvelle session potentielle
+    validationAttempted.value = false 
+    discrepancyExplanation.value = ''
+
   } catch (err) {
     errorMessage.value = err.response?.data?.message || 'Erreur d’enregistrement.'
   } finally {
