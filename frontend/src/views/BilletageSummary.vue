@@ -45,8 +45,8 @@
           <!-- Calcul Écart -->
           <div class="pt-4 border-t-2 border-slate-900 mt-4 space-y-1">
             <div class="flex justify-between text-sm">
-              <span class="font-bold">Total Ventes</span>
-              <span class="font-black">{{ formatPrice(totalPaymentsAmount) }}</span>
+              <span class="font-bold">Total Ventes Espèces</span>
+              <span class="font-black">{{ formatPrice(paymentSummary.find(p => p.payment_name === 'Espèce')?.total || 0) }}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="font-bold">Montant compté (Billetage)</span>
@@ -138,8 +138,9 @@ const groupedProducts = computed(() => {
 // Calcul écart
 const variance = computed(() => {
   const actual = Number(sessionInfo.value?.actual_cash_amount || 0)
-  const expected = Number(sessionInfo.value?.starting_amount || 0) + totalPaymentsAmount.value
-  return actual - expected
+  const cashPayments = paymentSummary.value.find(p => p.payment_name === 'Espèce')
+  const cashTotal = Number(cashPayments?.total || 0)
+  return actual - cashTotal
 })
 
 const formatDate = (date) => date ? new Date(date).toLocaleString('fr-FR') : '-'
