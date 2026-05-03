@@ -102,7 +102,7 @@
     </aside>
 
     <!-- Content Area -->
-    <div :class="['flex min-h-screen flex-1 flex-col transition-all duration-200', isSidebarCollapsed ? 'lg:pl-16' : 'lg:pl-56']">
+    <div :class="['flex min-h-screen flex-1 flex-col transition-all duration-200', isSidebarCollapsed ? 'lg:pl-0' : 'lg:pl-0']">
       <!-- Navbar mobile -->
       <header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-slate-200 bg-white/95 px-4 backdrop-blur lg:hidden">
         <button
@@ -115,8 +115,8 @@
         <span class="text-sm font-semibold text-slate-900">IGP POS</span>
       </header>
 
-      <div class="px-4 py-6 md:px-6">
-        <section class="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
+      <div class="py-6 px-0">
+        <section class="flex w-full flex-col gap-6">
       <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -159,7 +159,7 @@
         <p v-if="openSessions.length === 0" class="mt-2 text-sm text-amber-600">Aucune session ouverte pour ce point de vente.</p>
       </div>
 
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_420px]">
+      <div class="grid gap-6 xl:grid-cols-[1fr_420px_auto]">
         <!-- Récapitulatif des ventes -->
         <section class="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-md">
           <div class="mb-3 border-b border-slate-100 pb-3">
@@ -260,17 +260,17 @@
             </div>
 
             <!-- Résultat du contrôle (Affichage ergonomique) -->
-            <div v-if="hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all" 
+            <div v-if="hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all"
                  :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
-              
+
               <div class="flex items-start justify-between">
                 <div>
                   <h3 class="text-lg font-bold" :class="varianceStatus === 'conforme' ? 'text-emerald-800' : 'text-rose-800'">
                     {{ varianceStatusLabel }}
                   </h3>
                   <p class="text-sm opacity-80 mt-1">
-                    {{ varianceStatus === 'conforme' 
-                       ? 'La caisse est équilibrée.' 
+                    {{ varianceStatus === 'conforme'
+                       ? 'La caisse est équilibrée.'
                        : (varianceAmount > 0 ? 'Il manque des fonds en caisse.' : 'Il y a un excédent de fonds en caisse.') }}
                   </p>
                 </div>
@@ -336,6 +336,21 @@
             </button>
           </div>
         </form>
+
+        <!-- COL 3 : Clavier numérique -->
+        <aside class="hidden xl:block">
+          <div class="sticky top-24 space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md">
+            <div class="mb-3 border-b border-slate-100 pb-3">
+              <h2 class="text-lg font-semibold text-slate-900">Clavier numérique</h2>
+              <p class="text-sm text-slate-500">Utilisez ce clavier pour saisir les quantités.</p>
+            </div>
+            <NumericKeypad
+              :disabled="isKeypadDisabled"
+              @press="handleKeyPress"
+              @delete="() => handleKeyPress('DEL')"
+            />
+          </div>
+        </aside>
       </div>
     </section>
   </div>
@@ -350,8 +365,8 @@
             <h3 class="text-xl font-bold text-slate-900">Détails des tickets</h3>
             <p class="text-sm text-slate-500">Liste complète des ventes de la session</p>
           </div>
-          <button @click="showSalesLines = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-            <i class="fas fa-times text-xl"></i>
+          <button @click="showSalesLines = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-rose-600 transition-colors">
+            <FontAwesomeIcon :icon="faXmark" class="text-xl" />
           </button>
         </header>
         <div class="flex-1 overflow-y-auto p-6">
@@ -378,8 +393,8 @@
       <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
         <header class="flex items-center justify-between border-b border-slate-100 p-6">
           <h3 class="text-xl font-bold text-slate-900">Détails de la session</h3>
-          <button @click="showSessionDetails = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-            <i class="fas fa-times text-xl"></i>
+          <button @click="showSessionDetails = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-rose-600 transition-colors">
+            <FontAwesomeIcon :icon="faXmark" class="text-xl" />
           </button>
         </header>
         <div class="p-6">
@@ -430,6 +445,7 @@ import { reactive, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } 
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Keyboard from '../components/tools/Keyboard.vue'
+import NumericKeypad from '@/components/NumericKeypad.vue'
 import { API_BASE_URL } from '@/utils/api'
 import { useAuth } from '@/composables/useAuth'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -449,7 +465,8 @@ import {
   faKey,
   faUserGroup,
   faChartLine,
-  faClipboardList
+  faClipboardList,
+  faXmark
 } from '@fortawesome/free-solid-svg-icons'
 
 const denominations = [
@@ -586,6 +603,10 @@ const canViewSensitiveInfo = computed(() => {
 const canEditBilletage = computed(() => {
   // Autorise uniquement admin et caissier
   return isAdmin.value || hasRole('caissier')
+})
+
+const isKeypadDisabled = computed(() => {
+  return isSubmitting.value || isLoading.value || sessionClosed.value || hasRecordedBilletage.value || !canEditBilletage.value || !hasAnySale.value
 })
 
 // États
@@ -912,9 +933,12 @@ const closeSession = async () => {
 // ========== CLAVIER VIRTUEL ==========
 const showKeyboard = async (field, event) => {
   activeField.value = field
-  keyboardVisible.value = true
+  // N'afficher le clavier flottant que si on n'est pas sur un écran XL (où le clavier fixe est visible)
+  if (window.innerWidth < 1280) {
+    keyboardVisible.value = true
+  }
   await nextTick()
-  updateKeyboardPosition(event.target)
+  if (keyboardVisible.value) updateKeyboardPosition(event.target)
 }
 
 const handleKeyPress = (key) => {
@@ -922,7 +946,7 @@ const handleKeyPress = (key) => {
   const denom = activeField.value.value
   let val = counts[denom] === 0 || counts[denom] === '' ? 0 : counts[denom]
   let str = val === 0 ? '' : String(val)
-  if (key === 'BACKSPACE') {
+  if (key === 'BACKSPACE' || key === 'DEL') {
     str = str.slice(0, -1)
     counts[denom] = str === '' ? 0 : Number(str)
     return
