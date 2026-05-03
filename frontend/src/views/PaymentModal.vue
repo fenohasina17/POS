@@ -291,7 +291,7 @@ const props = defineProps({
   saleData: { type: Object, default: () => ({}) },
 })
 
-const emit = defineEmits(['close-modal', 'payment-success', 'payment-error'])
+const emit = defineEmits(['close-modal', 'payment-success', 'payment-error', 'clear-cart'])
 
 const token = localStorage.getItem('token')
 const mobilePayments = ['Orange Money', 'MVola', 'Airtel Money', 'Telma']
@@ -578,13 +578,8 @@ const confirmPayment = async () => {
     console.log('✅ Vente finalisée avec ID :', saleId)
     console.groupEnd()
 
-    emit('payment-success', {
-      sale_id: saleId,
-      sale: response.data?.data?.sale,
-      payments: response.data?.data?.payments || paymentsList.value,
-      discount_percentage: selectedDiscount.value,
-      final_total: discountedTotal.value,
-    })
+    // Émettre directement les données formatées du backend
+    emit('payment-success', response.data.data)
 
     // Émettre un événement pour vider le panier dans le composant parent
     emit('clear-cart')

@@ -479,19 +479,27 @@ const closeInvoiceModal = () => {
   loadTableAndData(selectedTable.value?.id)
 }
 
-const onPaymentSuccess = async (data) => {
-  const sale = data.sale || data
-  currentInvoiceNumber.value = `TICKET #${sale.ticket_number || sale.id}`
-  invoiceItems.value = sale.order_lines?.map(l => ({ name: l.product?.name, quantity: l.quantity, price: l.price })) || []
-  invoiceTotal.value = Number(sale.final_amount)
-  invoicePayments.value = data.payments || []
+const onPaymentSuccess = async (formattedSaleData) => {
+  currentInvoiceNumber.value = `TICKET #${formattedSaleData.sale.ticket_number || formattedSaleData.sale.id}`;
+
+  const allItems = formattedSaleData.categories.flatMap(category =>
+    category.items.map(item => ({
+      name: item.product_name,
+      quantity: item.quantity,
+      price: item.unit_price
+    }))
+  );
+  invoiceItems.value = allItems;
   
-  isPaymentModalOpen.value = false
-  isInvoiceModalOpen.value = true
+  invoiceTotal.value = Number(formattedSaleData.totals.final_amount);
+  invoicePayments.value = formattedSaleData.payments || [];
+  
+  isPaymentModalOpen.value = false;
+  isInvoiceModalOpen.value = true;
 
   // Rafraîchir l'état de la table
   if (selectedTable.value?.id) {
-    await loadTableAndData(selectedTable.value.id)
+    await loadTableAndData(selectedTable.value.id);
   }
 }
 
