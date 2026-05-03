@@ -115,7 +115,7 @@
         <span class="text-sm font-semibold text-slate-900">IGP POS</span>
       </header>
 
-      <div class="py-6 px-0">
+      <div class="py-0 px-0">
         <section class="flex w-full flex-col gap-6">
       <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
         <div class="flex flex-wrap items-start justify-between gap-4">
@@ -330,7 +330,7 @@
               type="button"
               class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-200 disabled:opacity-60"
               @click="closeSession"
-              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !hasRecordedBilletage || !canEditBilletage"
+              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !hasRecordedBilletage || (!isAdmin && !hasRole('gerant'))"
             >
               Clôturer la session
             </button>
@@ -359,7 +359,7 @@
 
     <!-- Modal Détails des tickets -->
     <div v-if="showSalesLines" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-      <div class="flex h-full max-h-[90vh] w-full max-w-4xl flex-col rounded-3xl bg-white shadow-2xl">
+      <div class="flex h-full max-h-[90vh] w-full max-w-[95vw] flex-col rounded-3xl bg-white shadow-2xl">
         <header class="flex items-center justify-between border-b border-slate-100 p-6">
           <div>
             <h3 class="text-xl font-bold text-slate-900">Détails des tickets</h3>
@@ -369,17 +369,22 @@
             <FontAwesomeIcon :icon="faXmark" class="text-xl" />
           </button>
         </header>
-        <div class="flex-1 overflow-y-auto p-6">
-          <div class="space-y-4">
-            <div v-for="sale in sessionSales" :key="sale.id" class="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <div class="mb-3 flex items-center justify-between">
-                <span class="font-bold text-slate-900">Ticket #{{ sale.ticket_number || sale.id }}</span>
-                <span class="text-sm font-semibold text-indigo-600">{{ formatCurrency(sale.final_amount) }}</span>
+        <div class="flex-1 overflow-y-auto p-4">
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+            <div v-for="sale in sessionSales" :key="sale.id" class="flex flex-col rounded-xl border border-slate-100 bg-slate-50 p-3 shadow-sm transition hover:shadow-md">
+              <div class="mb-2 border-b border-slate-200 pb-1">
+                <p class="text-[10px] font-black uppercase tracking-tighter text-slate-400">Ticket #{{ sale.ticket_number || sale.id }}</p>
+                <p class="text-xs font-bold text-indigo-600">{{ formatCurrency(sale.final_amount) }}</p>
               </div>
-              <ul class="space-y-1">
-                <li v-for="line in sale.order_lines" :key="line.id" class="flex justify-between text-xs text-slate-600">
-                  <span>{{ line.product?.name || line.name }} x{{ line.quantity }}</span>
-                  <span>{{ formatCurrency(line.total) }}</span>
+              <ul class="flex-1 space-y-1">
+                <li v-for="line in sale.order_lines" :key="line.id" class="flex flex-col border-b border-slate-100 last:border-0 pb-1">
+                  <span class="truncate text-[9px] font-medium text-slate-700" :title="line.product?.name || line.name">
+                    {{ line.product?.name || line.name }}
+                  </span>
+                  <div class="flex items-center justify-between text-[8px] font-bold text-slate-500">
+                    <span>x{{ line.quantity }}</span>
+                    <span>{{ formatCurrency(line.total) }}</span>
+                  </div>
                 </li>
               </ul>
             </div>
@@ -387,7 +392,6 @@
         </div>
       </div>
     </div>
-
     <!-- Modal Détails Session -->
     <div v-if="showSessionDetails" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
       <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
