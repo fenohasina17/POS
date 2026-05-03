@@ -22,6 +22,7 @@ use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\QZSignatureController;
+use App\Http\Controllers\SessionDiscrepancyController;
 
 // Routes publiques (non authentifiées)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -152,6 +153,12 @@ Route::middleware('auth:sanctum')->group(function () {
             ->name('cash-transactions.by-type');
         Route::get('/date-range', [CashTransactionController::class, 'getByDateRange'])
             ->name('cash-transactions.by-date-range');
+    });
+
+    // ========== ÉCARTS DE CAISSE ==========
+    Route::prefix('session-discrepancies')->group(function () {
+        Route::get('/', [SessionDiscrepancyController::class, 'index']);
+        Route::patch('/{id}/check', [SessionDiscrepancyController::class, 'check']);
     });
 
     // ========== TABLES ==========

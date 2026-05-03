@@ -10,6 +10,7 @@ use App\Events\CashRegisterSessionOpened;
 use App\Events\CashRegisterSessionClosed;
 use Illuminate\Support\Facades\Auth;
 use App\Services\CashRegisterSessionSummaryService;
+use App\Services\SessionDiscrepancyService;
 use Illuminate\Support\Carbon;
 use App\Models\User;
 use Illuminate\Validation\Rule;
@@ -17,6 +18,17 @@ use Illuminate\Validation\Rule;
 
 class CashRegisterSessionController extends Controller
 {
+    protected $summaryService;
+    protected $discrepancyService;
+
+    public function __construct(
+        CashRegisterSessionSummaryService $summaryService, 
+        SessionDiscrepancyService $discrepancyService
+    ) {
+        $this->summaryService = $summaryService;
+        $this->discrepancyService = $discrepancyService;
+    }
+
     private function userIsManager(?User $user): bool
     {
         if (!$user) {
@@ -376,8 +388,8 @@ public function show($id, Request $request)
             return response()->json(['message' => 'Cash register session not found.'], Response::HTTP_NOT_FOUND);
         }
 
-        $user = auth()->guard('api')->user();
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('update.cash_register_sessions', 'api')) {
+        $user = auth()->user();
+        if (!$user->hasPermissionTo('update.cash_register_sessions', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
 
@@ -386,11 +398,11 @@ public function show($id, Request $request)
             'amount' => 'required|numeric',
         ]);
 
-        // On utilise les noms exacts des colonnes de ta base de données
-        $discrepancy = $session->discrepancies()->create([
-            'explanation' => $validated['description'],
-            'difference_amount' => $validated['amount'],
-        ]);
+        $discrepancy = $this->discrepancyService->recordDiscrepancy(
+            $session, 
+            $validated['amount'], 
+            $validated['description']
+        );
 
         return response()->json($discrepancy, Response::HTTP_CREATED);
     }
@@ -436,10 +448,7 @@ public function show($id, Request $request)
         }
 
         // 5. Utilisation du Service (qui gère déjà le masquage de l'écart de caisse pour le gérant)
-        $service = new CashRegisterSessionSummaryService();
-        $summary = $service->build($session);
-
-       
+        $summary = $this->summaryService->build($session);
 
         return response()->json($summary);
     }
