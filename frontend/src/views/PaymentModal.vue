@@ -242,7 +242,7 @@
 
           <button
             type="button"
-            class="btn-add-payment"
+            class="btn-add-payment"&
             :disabled="!canAddPayment"
             @click="addPayment"
           >
@@ -348,9 +348,9 @@ const isTpeComplete = computed(() => {
 const amountReceivedValue = computed(() => parseInt(amountReceived.value.replace(/\D/g, '')) || 0)
 
 const isKeypadDisabled = computed(() => {
-  return (selectedPayment.value === 'Espèce' && amountReceivedValue.value >= remainingToPay.value) || 
-         (isMobilePayment.value && isPhoneNumberComplete.value) || 
-         (isMobilePayment.value && phoneNumber.value.replace(/\D/g, '').length >= 3 && !phoneNumber.value.replace(/\D/g, '').startsWith(selectedPayment.value === 'Airtel Money' ? '033' : selectedPayment.value === 'MVola' ? '034' : '032')) || 
+  return (selectedPayment.value === 'Espèce' && amountReceivedValue.value >= remainingToPay.value) ||
+         (isMobilePayment.value && isPhoneNumberComplete.value) ||
+         (isMobilePayment.value && phoneNumber.value.replace(/\D/g, '').length >= 3 && !phoneNumber.value.replace(/\D/g, '').startsWith(selectedPayment.value === 'Airtel Money' ? '033' : selectedPayment.value === 'MVola' ? '034' : '032')) ||
          (selectedPayment.value === 'TPE' && isTpeComplete.value)
 })
 
@@ -372,7 +372,7 @@ const paymentProgress = computed(() =>
 const canAddPayment = computed(() => {
   // On autorise l'ajout tant qu'il reste à payer
   if (!selectedPayment.value || remainingToPay.value <= 0) return false
-  
+
   if (selectedPayment.value === 'Espèce') return amountReceivedValue.value > 0
   if (selectedPayment.value === 'TPE') {
     const cleaned = cardNumber.value.replace(/\s/g, '')
@@ -476,7 +476,7 @@ const addPayment = () => {
     // Pour TPE/Mobile, on prend le montant restant à payer
     // Si l'utilisateur saisit un montant spécifique, on pourrait l'ajouter ici
     // Pour l'instant, on prend le solde restant
-    amount = remainingToPay.value 
+    amount = remainingToPay.value
   }
 
   const found = paymentsListApi.value.find((p) => p.name === selectedPayment.value)
