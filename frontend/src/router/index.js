@@ -116,6 +116,7 @@ const router = createRouter({
           component: UserSales,
           props: { embedded: true },
         },
+
         {
           path: 'retour',
           name: 'dashboard-retour',
@@ -133,6 +134,13 @@ const router = createRouter({
           component: () => import('../views/CashRegisterSessions.vue'),
           meta: { requiresAdmin: true },
         },
+        // Nouvelle route pour l'exportation des ventes
+        {
+          path: '/dashboard/sales-export',
+          name: 'dashboard-sales-export',
+          component: () => import('../views/SalesExport.vue'),
+          meta: { requiresAdmin: true }, // Accès restreint aux administrateurs
+        },
         { path: 'printers', name: 'dashboard-printers', component: Printer },
 
         {
@@ -141,8 +149,7 @@ const router = createRouter({
           component: RoleList,
           meta: { requiresAdmin: true },
         },
-        // ... tes autres routes enfants (roles, users, etc.)
-        // --- GESTION DES RÔLES ---
+
         {
           path: 'roles',
           name: 'dashboard-roles',
