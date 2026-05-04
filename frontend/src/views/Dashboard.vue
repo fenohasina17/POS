@@ -345,8 +345,8 @@ const navigationSections = computed(() => {
         { label: 'Gestion des tables', name: 'dashboard-table-manage', icon: faListCheck },
       ],
     },
-    { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked },
-    { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup },
+    { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked, adminOnly: true },
+    { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup, adminOnly: true },
     { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, adminOnly: true },
     { label: 'Mes ventes', name: 'dashboard-user-sales', icon: faReceipt },
     { label: 'Remise à zéro', name: 'dashboard-retour', icon: faArrowRotateLeft, caissierOnly: true },
@@ -354,7 +354,7 @@ const navigationSections = computed(() => {
 
   const toolItems = filterAdminItems([
     { label: 'Point de vente', name: 'dashboard-point-of-sale', icon: faStore, adminOnly: true },
-    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList },
+    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList, adminOnly: true },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
     ...(isAdmin.value
       ? [

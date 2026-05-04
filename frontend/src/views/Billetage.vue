@@ -260,7 +260,7 @@
             </div>
 
             <!-- Résultat du contrôle (Affichage ergonomique) -->
-            <div v-if="validationAttempted || hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all" 
+            <div v-if="validationAttempted || hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all"
                  :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
 
               <div class="flex items-start justify-between">
@@ -269,8 +269,8 @@
                     {{ varianceStatusLabel }}
                   </h3>
                   <p class="text-sm opacity-80 mt-1">
-                    {{ varianceStatus === 'conforme' 
-                       ? 'La caisse est équilibrée.' 
+                    {{ varianceStatus === 'conforme'
+                       ? 'La caisse est équilibrée.'
                        : (varianceAmount > 0 ? 'Il y a un excédent de fonds.' : 'Il manque des fonds en caisse.') }}
                   </p>
                 </div>
@@ -933,7 +933,7 @@ const submit = async () => {
     await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: actualTotal.value
     }, { headers: authHeaders() })
-    
+
     // 2. Si un écart existe, on enregistre la justification
     if (varianceAmount.value !== 0 && discrepancyExplanation.value.trim()) {
       await axios.post(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}/discrepancies`, {
@@ -946,7 +946,7 @@ const submit = async () => {
     hasRecordedBilletage.value = true
     if (sessionData.value) sessionData.value.actual_cash_amount = actualTotal.value
     // Réinitialiser l'état après succès pour une nouvelle session potentielle
-    validationAttempted.value = false 
+    validationAttempted.value = false
     discrepancyExplanation.value = ''
 
   } catch (err) {
