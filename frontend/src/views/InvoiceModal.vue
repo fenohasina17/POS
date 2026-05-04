@@ -46,9 +46,9 @@
             <div class="space-y-3">
               <div v-for="(payment, index) in payments" :key="index" class="flex items-center justify-between text-xs border-b border-slate-50 pb-2 last:border-0 last:pb-0">
                 <div class="flex items-center gap-2">
-                  <FontAwesomeIcon :icon="getPaymentIcon(payment.payment_method_name)" class="text-slate-400" />
+                  <FontAwesomeIcon :icon="getPaymentIcon(payment.payment_name)" class="text-slate-400" />
                   <div>
-                    <p class="font-bold text-slate-700">{{ payment.payment_method_name }}</p>
+                    <p class="font-bold text-slate-700">{{ payment.method }}</p>
                     <p v-if="payment.reference" class="text-[9px] text-slate-400">Réf: {{ payment.reference }}</p>
                   </div>
                 </div>
@@ -58,7 +58,7 @@
           </div>
 
           <!-- Section Monnaie / Reste -->
-          <div v-if="totalPaymentsAmount !== finalTotal" 
+          <div v-if="totalPaymentsAmount !== finalTotal"
                class="rounded-2xl p-4 border shadow-sm"
                :class="totalPaymentsAmount > finalTotal ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'"
           >
