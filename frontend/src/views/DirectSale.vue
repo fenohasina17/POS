@@ -236,7 +236,6 @@ const handlePaymentSuccess = (data) => {
   isInvoiceModalOpen.value = true
 }
 
-// Correction: handlePaymentError function was missing
 const handlePaymentError = (error) => {
   console.warn('Erreur lors du paiement:', error); // Use warn for less critical logs
 }
