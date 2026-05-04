@@ -31,7 +31,7 @@ import { API_BASE_URL } from '@/utils/api'
 const ensureAdminAccess = async () => {
   const auth = storage.getAuth();
   if (!auth?.user) return false;
-  
+
   if (auth.user.roles?.includes('admin')) return true;
 
   try {
@@ -134,11 +134,7 @@ const router = createRouter({
           meta: { requiresAdmin: true },
         },
         { path: 'printers', name: 'dashboard-printers', component: Printer },
-        { 
-          path: 'printers/test', 
-          name: 'dashboard-printers-test', 
-          component: () => import('../views/PrinterTest.vue') 
-        },
+
         {
           path: 'roles',
           name: 'dashboard-roles',

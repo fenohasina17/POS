@@ -561,7 +561,7 @@ const navigationSections = computed(() => {
 
   const toolItems = filterAdminItems([
     { label: 'Point de vente', name: 'dashboard-point-of-sale', icon: faStore, adminOnly: true },
-    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList },
+    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList, adminOnly: true },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
     ...(isAdmin.value
       ? [
