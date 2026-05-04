@@ -2,7 +2,7 @@
   <div :class="embedded ? 'user-sales-embedded' : 'user-sales-view'">
     <Profile v-if="!embedded" />
 
-<div class="user-sales-layout grid gap-2 lg:grid-cols-[minmax(0,1fr)_260px]">
+<div class="user-sales-layout grid gap-2 lg:grid-cols-[minmax(0,1fr)_600px]">
       <!-- Tableau des ventes -->
       <section
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-400 bg-white p-2 shadow-sm"
@@ -341,7 +341,7 @@ const fetchSaleDetails = async (saleId) => {
 const selectSale = async (sale) => {
   selectedSale.value = null // Réinitialisation pour déclencher la réactivité
   const details = await fetchSaleDetails(sale.id)
-  
+
   if (details) {
     // Gestion robuste : on accepte order_lines ou orderlines
     const lines = details.order_lines || details.orderlines || []
