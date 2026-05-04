@@ -206,9 +206,10 @@ const router = createRouter({
     },
     { path: '/billetage', name: 'billetage', component: () => import('../views/Billetage.vue') },
     {
-      path: '/billetage/:sessionId/resume',
+      path: 'billetage/:sessionId/resume',
       name: 'billetage-summary',
       component: () => import('../views/BilletageSummary.vue'),
+      meta: { requiresAdmin: true },
     },
 
     // Redirections
