@@ -131,6 +131,7 @@ const router = createRouter({
           path: 'cash-register-sessions',
           name: 'dashboard-cash-register-sessions',
           component: () => import('../views/CashRegisterSessions.vue'),
+          meta: { requiresAdmin: true },
         },
         { path: 'printers', name: 'dashboard-printers', component: Printer },
         { 
