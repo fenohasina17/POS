@@ -103,14 +103,7 @@
       <header :class="['fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur', headerOffsetClass]">
         <div class="flex w-full flex-wrap items-center gap-3 px-3 py-1 sm:px-4 lg:px-6">
           <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
-              @click="toggleSidebar"
-              aria-label="Basculer le menu"
-            >
-              <FontAwesomeIcon :icon="faBars" class="text-sm" />
-            </button>
+
 
             <!-- Header loading indicator -->
             <transition name="fade">
@@ -144,39 +137,6 @@
                 <FontAwesomeIcon :icon="faChevronDown" class="hidden text-[10px] text-slate-400 sm:inline" />
               </button>
 
-              <transition name="fade">
-                <div
-                  v-if="userMenuOpen"
-                  class="absolute right-0 top-10 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
-                >
-                  <div class="border-b border-slate-100 px-3 py-2">
-                    <p class="text-sm font-semibold text-slate-800">{{ userDisplayName }}</p>
-                    <p class="text-[11px] text-slate-400">{{ userEmail }}</p>
-                  </div>
-                  <nav class="py-2 text-sm text-slate-600">
-                    <button
-                      type="button"
-                      class="flex w-full items-center px-3 py-1.5 text-xs transition hover:bg-slate-50"
-                      @click="navigateTo('dashboard-overview')"
-                    >
-                      Dashboard
-                    </button>
-                    <button type="button" class="flex w-full items-center px-3 py-1.5 text-xs text-slate-400" disabled>
-                      Paramètres
-                    </button>
-                    <button type="button" class="flex w-full items-center px-3 py-1.5 text-xs text-slate-400" disabled>
-                      Revenus
-                    </button>
-                    <button
-                      type="button"
-                      class="flex w-full items-center px-3 py-1.5 text-xs text-rose-600 transition hover:bg-rose-50"
-                      @click="logout"
-                    >
-                      Déconnexion
-                    </button>
-                  </nav>
-                </div>
-              </transition>
             </div>
           </div>
         </div>
