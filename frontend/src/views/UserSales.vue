@@ -84,6 +84,7 @@
                             class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
                             @click.stop="openEditModal(sale)"
                             aria-label="Modifier"
+                            v-if="isAdmin"
                           >
                             <FontAwesomeIcon icon="fa-solid fa-pen" class="text-xs" />
                           </button>
@@ -92,6 +93,7 @@
                             class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
                             @click.stop="confirmDeleteSale(sale)"
                             aria-label="Supprimer"
+                            v-if="isAdmin"
                           >
                             <FontAwesomeIcon icon="fa-solid fa-trash" class="text-xs" />
                           </button>
