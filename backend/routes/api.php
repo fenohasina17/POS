@@ -23,6 +23,7 @@ use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\QZSignatureController;
 use App\Http\Controllers\SessionDiscrepancyController;
+use App\Http\Controllers\SalesExportController;
 
 // Routes publiques (non authentifiées)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
@@ -76,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales/current-session', [SaleController::class, 'getSalesForCurrentSession'])->name('sales.current-session');
 
     // ========== VENTES ==========
+    Route::get('/sales/export', [SalesExportController::class, 'export'])->name('sales.export'); // Added sales export route
     Route::apiResource('sales', SaleController::class);
 
     // Routes pour les commandes en attente

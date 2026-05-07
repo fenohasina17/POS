@@ -51,9 +51,9 @@
 
     <nav class="navbar">
       <div class="navbar-start">
-        <!-- <button class="menu-toggle" @click="toggleMenu" aria-label="Ouvrir le menu">
+        <button class="menu-toggle" @click="toggleMenu" aria-label="Ouvrir le menu">
           <font-awesome-icon icon="fa-bars" />
-        </button> -->
+        </button>
       </div>
       <div class="navbar-end">
         <span class="icon avatar-icon">
@@ -187,7 +187,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const router = useRouter()
 const route = useRoute()
-const { isAdmin, loadUserData } = useAuth()
+const { isAdmin, loadUserData, logout: authLogout } = useAuth()
 const user = ref({ name: '', email: '', point_of_sale_name: '' })
 const isOpen = ref(false)
 
@@ -254,9 +254,9 @@ const fetchUserProfile = async () => {
 }
 
 const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  window.location.href = '/';
+  console.log('Logout button clicked');
+  authLogout()
+  router.push({ name: 'login' })
 }
 
 const toggleMenu = () => {
