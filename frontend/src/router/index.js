@@ -20,9 +20,13 @@ import RoleList from '@/views/roles/RoleList.vue'
 import RoleCreate from '@/views/roles/RoleCreate.vue'
 import RoleEdit from '@/views/roles/RoleEdit.vue'
 import PermissionList from '@/views/permissions/PermissionList.vue'
-import PermissionCreate from '@/views/permissions/PermissionCreate.vue'
+// Import PermissionCreate view
+import PermissionCreate from '@/views/permissions/PermissionCreate.vue' 
+
 import UserList from '@/views/users/UserList.vue'
-import UserRoleManagement from '@/views/users/UserRoleManagement.vue'
+import UserCreate from '@/views/users/UserCreate.vue' // Assuming UserCreate exists
+import UserEdit from '@/views/users/UserEdit.vue'
+
 import Printer from '../views/Printer.vue'
 import { API_BASE_URL } from '@/utils/api'
 
@@ -37,35 +41,32 @@ const ensureAdminAccess = async () => {
   try {
     const { data } = await axios.get(`${API_BASE_URL}/users/${auth.user.id}/roles`, {
       headers: { Authorization: `Bearer ${auth.token}` },
-    })
+    });
 
-    const roles = (data?.data || data || []).map((role) => role.name)
-    // Mettre à jour le stockage si les rôles ont changé
+    const roles = (data?.data || data || []).map((role) => role.name);
     storage.setAuth(auth.token, auth.user, roles, auth.user.permissions);
-    return roles.includes('admin')
+    return roles.includes('admin');
   } catch (error) {
-    console.error('Erreur chargement des rôles:', error.response?.data || error.message)
-    return false
+    console.error('Erreur chargement des rôles:', error.response?.data || error.message);
+    return false;
   }
-}
+};
 
 // === NOUVELLE FONCTION AJOUTÉE ===
 const isCashPrinterRoute = (to) => {
-  if (!to || !to.name) return false
+  if (!to || !to.name) return false;
 
   const printerRoutes = [
     'cash-printer',
     'cash-registers-machine-link',
     'cashier-dashboard', // si tu veux l'inclure
-    'printers-create',
-  ]
+    'printers-create', // Ajout basé sur les imports trouvés
+    'printers-edit', // Ajout basé sur les imports trouvés
+    'printers' // Ajout basé sur les imports trouvés
+  ];
 
-  return (
-    printerRoutes.includes(to.name) ||
-    to.path.includes('printer') ||
-    to.path.includes('cash-printer')
-  )
-}
+  return printerRoutes.includes(String(to.name)) || to.path.includes('printer') || to.path.includes('cash-printer');
+};
 
 // ==================== ROUTER ====================
 
@@ -139,33 +140,27 @@ const router = createRouter({
           path: '/dashboard/sales-export',
           name: 'dashboard-sales-export',
           component: () => import('../views/SalesExport.vue'),
-          meta: { requiresAdmin: true }, // Accès restreint aux administrateurs
+          meta: { requiresAdmin: true },
         },
         { path: 'printers', name: 'dashboard-printers', component: Printer },
 
+        // --- GESTION DES ROLES ---
         {
           path: 'roles',
           name: 'dashboard-roles',
           component: RoleList,
           meta: { requiresAdmin: true },
         },
-
-        {
-          path: 'roles',
-          name: 'dashboard-roles',
-          component: () => import('../views/roles/RoleList.vue'),
-          meta: { requiresAdmin: true },
-        },
         {
           path: 'roles/create',
           name: 'dashboard-roles-create',
-          component: () => import('../views/roles/RoleCreate.vue'),
+          component: RoleCreate,
           meta: { requiresAdmin: true },
         },
         {
           path: 'roles/:id/edit',
           name: 'dashboard-roles-edit',
-          component: () => import('../views/roles/RoleEdit.vue'),
+          component: RoleEdit,
           props: true,
           meta: { requiresAdmin: true },
         },
@@ -173,8 +168,14 @@ const router = createRouter({
         // --- GESTION DES PERMISSIONS (Optionnel/Consultation) ---
         {
           path: 'permissions',
-          name: 'dashboard-permissions',
-          component: () => import('../views/permissions/PermissionList.vue'),
+          name: 'dashboard-permissions', // <<< LA ROUTE MANQUANTE EST ICI
+          component: PermissionList,
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: 'permissions/create',
+          name: 'dashboard-permissions-create', // <<< ET LA ROUTE DE CREATION AUSSI EST ICI
+          component: PermissionCreate,
           meta: { requiresAdmin: true },
         },
 
@@ -182,19 +183,19 @@ const router = createRouter({
         {
           path: 'users',
           name: 'dashboard-users',
-          component: () => import('../views/users/UserList.vue'),
+          component: UserList,
           meta: { requiresAdmin: true },
         },
         {
           path: 'users/create',
           name: 'dashboard-users-create',
-          component: () => import('../views/users/UserCreate.vue'),
+          component: UserCreate,
           meta: { requiresAdmin: true },
         },
         {
           path: 'users/:id/edit',
           name: 'dashboard-users-edit',
-          component: () => import('../views/users/UserEdit.vue'),
+          component: UserEdit,
           props: true,
           meta: { requiresAdmin: true },
         },
@@ -232,8 +233,6 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
-  // Vérification expiration token
-  // Vérification expiration token via storage.getAuth() (gère l'expiration)
   const auth = storage.getAuth()
   if (!auth || !auth.token) {
     next('/')
@@ -266,13 +265,11 @@ router.beforeEach(async (to, from, next) => {
 
   // === CORRECTION PRINCIPALE ICI ===
   if (requiresCashRegister && !hasActiveSession) {
-    // Si c'est une route liée à l'imprimante/caisse, on autorise
     if (isCashPrinterRoute(to)) {
       next()
       return
     }
 
-    // Si c'est un admin avec bypass
     if (adminBypassSession) {
       const isAdmin = await verifyAdminAccess()
       if (isAdmin) {
@@ -281,7 +278,6 @@ router.beforeEach(async (to, from, next) => {
       }
     }
 
-    // Sinon → rediriger vers la connexion caisse
     next({ name: 'cash-printer' })
     return
   }

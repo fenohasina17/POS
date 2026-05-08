@@ -35,13 +35,31 @@
 
         <nav :class="['mt-12 h-12', isSidebarCollapsed ? 'px-1' : 'px-3']">
           <div v-for="section in navigationSections" :key="section.title" class="mb-6">
+            <!-- En-tête de section cliquable (seulement si non réduite) -->
+            <div
+              v-if="!isSidebarCollapsed"
+              class="mb-2 flex cursor-pointer items-center justify-between px-2"
+              @click="toggleSection(section.title)"
+            >
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                {{ section.title }}
+              </p>
+              <FontAwesomeIcon
+                :icon="faChevronDown"
+                class="text-[10px] text-slate-400 transition-transform"
+                :class="{ 'rotate-180': isSectionExpanded(section.title) }"
+              />
+            </div>
+            <!-- Version réduite : afficher uniquement le titre (non cliquable) -->
             <p
-              class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400"
-              :class="isSidebarCollapsed ? 'lg:hidden' : ''"
+              v-else
+              class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400 lg:hidden"
             >
               {{ section.title }}
             </p>
-            <ul class="space-y-1">
+
+            <!-- Contenu de la section (pliable) -->
+            <ul v-if="isSectionExpanded(section.title)" class="space-y-1">
               <li v-for="item in section.items" :key="item.label" class="space-y-1">
                 <button
                   type="button"
@@ -107,7 +125,6 @@
         <div class="flex w-full flex-wrap items-center gap-3 px-3 py-1 sm:px-4 lg:px-6">
           <!-- LEFT: Bouton toggle + loading indicator -->
           <div class="flex items-center gap-2">
-            <!-- Bouton hamburger (toggle sidebar) -->
             <button
               @click="toggleSidebar"
               class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
@@ -116,7 +133,6 @@
               <FontAwesomeIcon :icon="faBars" class="text-sm" />
             </button>
 
-            <!-- Indicateur de chargement global (optionnel) -->
             <transition name="fade">
               <div v-if="globalLoading" class="flex items-center gap-1.5 rounded-full bg-indigo-50/50 px-2 py-1">
                 <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500"></div>
@@ -149,7 +165,6 @@
                 <FontAwesomeIcon :icon="faChevronDown" class="hidden text-[10px] text-slate-400 sm:inline" />
               </button>
 
-              <!-- Menu déroulant utilisateur -->
               <div
                 v-if="userMenuOpen"
                 class="absolute right-0 top-full mt-2 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg z-50"
@@ -257,6 +272,9 @@ const expandedMenus = ref(new Set())
 const globalLoading = ref(true)
 const isDesktop = ref(false)
 
+// État pour les sections pliables (par défaut toutes ouvertes)
+const expandedSections = ref({})
+
 // Auth et données
 const { user, isAdmin, hasRole, loadUserData } = useAuth()
 const { loadCategories } = useCategories()
@@ -277,16 +295,23 @@ const contentPaddingClass = computed(() => {
 const userDisplayName = computed(() => user.value?.name || 'Utilisateur')
 const userEmail = computed(() => user.value?.email || 'user@example.com')
 
+// Gestion des sections pliables
+const toggleSection = (sectionTitle) => {
+  expandedSections.value[sectionTitle] = !(expandedSections.value[sectionTitle] ?? true)
+}
+
+const isSectionExpanded = (sectionTitle) => {
+  return expandedSections.value[sectionTitle] ?? true // par défaut ouvert
+}
+
 // Initialisation de la sidebar selon la taille de l'écran
 const setInitialSidebarState = () => {
   if (typeof window === 'undefined') return
   isDesktop.value = window.innerWidth >= 1024
   sidebarOpen.value = isDesktop.value
-  // Sur desktop, on peut initialiser la sidebar non rétractée par défaut
   sidebarCollapsed.value = false
 }
 
-// Toggle principal : sur mobile ouvre/ferme le drawer ; sur desktop rétracte / déplie
 const toggleSidebar = () => {
   if (!isDesktop.value) {
     sidebarOpen.value = !sidebarOpen.value
@@ -498,6 +523,14 @@ onMounted(async () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize)
   }
+
+  // Optionnel : sauvegarder l'état des sections pliées dans localStorage
+  const savedSections = localStorage.getItem('sidebar_sections')
+  if (savedSections) {
+    try {
+      expandedSections.value = JSON.parse(savedSections)
+    } catch (e) {}
+  }
 })
 
 onBeforeUnmount(() => {
@@ -513,6 +546,15 @@ watch(
     expandMenuForRoute()
   },
   { immediate: true }
+)
+
+// Sauvegarde automatique de l'état des sections pliées dans localStorage
+watch(
+  expandedSections,
+  (newVal) => {
+    localStorage.setItem('sidebar_sections', JSON.stringify(newVal))
+  },
+  { deep: true }
 )
 </script>
 

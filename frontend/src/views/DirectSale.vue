@@ -487,14 +487,16 @@ const handlePaymentSuccess = (data) => {
   isPaymentModalOpen.value = false
   isInvoiceModalOpen.value = true
 }
+
+
 const handlePaymentError = (error) => {
-  console.error('Erreur de paiement:', error)
-  alert(error?.message || "Une erreur est survenue lors du paiement.")
+  console.error('Erreur de paiement:', error);
+  alert(error?.message || error?.response?.data?.message || "Une erreur est survenue lors du paiement. Veuillez réessayer.");
 }
 
 const handleClearCart = () => {
-  cart.value = []
-  console.log('Cart cleared from DirectSale component after payment.')
+  cart.value = [];
+  console.log('Cart cleared from DirectSale component after payment.');
 }
 
 const closeInvoiceModal = () => {
