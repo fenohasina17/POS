@@ -480,8 +480,8 @@ const handlePaymentSuccess = (data) => {
   }))
 
   currentSaleId.value = saleId
-  const ticketNumber = data.ticket_number || data.sale?.ticket_number
-  currentInvoiceNumber.value = ticketNumber ? `Ticket #${ticketNumber}` : `INV-${saleId.toString().padStart(6, '0')}`
+  const ticketNumber = data.sale_number || data.sale?.sale_number || data.ticket_number || data.sale?.ticket_number
+  currentInvoiceNumber.value = ticketNumber ? `Vente #${ticketNumber}` : `INV-${saleId.toString().padStart(6, '0')}`
   currentPaymentMethod.value = paymentsList.value[0]?.payment_method_name || 'Espèces'
 
   isPaymentModalOpen.value = false

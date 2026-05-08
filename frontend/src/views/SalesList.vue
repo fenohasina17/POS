@@ -92,7 +92,7 @@
           >
             <header class="sale-card__header" @click="toggleSale(sale?.id)">
               <div class="info">
-                <h2>Ticket #{{ sale?.ticket_number || 'N/A' }}</h2>
+                <h2>Vente #{{ sale?.sale_number || sale?.ticket_number || 'N/A' }}</h2>
                 <p>
                   Créé le {{ formatDate(sale?.created_at) }} · Total {{ formatPrice(sale?.total_amount || 0) }}
                 </p>

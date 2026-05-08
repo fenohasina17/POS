@@ -9,7 +9,7 @@
             Modifier la vente
           </h2>
           <div class="modal-subtitle">
-            <span class="badge">Ticket #{{ sale?.ticket_number || 'N/A' }}</span>
+            <span class="badge">Vente #{{ sale?.sale_number || sale?.ticket_number || 'N/A' }}</span>
             <span class="date">{{ formatDate(sale?.created_at) }}</span>
           </div>
         </div>
@@ -332,7 +332,7 @@ const close = () => {
 
 .modal-header {
   position: sticky;
-  top: 0;
+  top: 10px;
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
   padding: 1rem 1.5rem;

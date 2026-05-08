@@ -15,6 +15,7 @@ class Sale extends Model
     protected $table = 'sales';
 
     protected $fillable = [
+        'sale_number',
         'user_id',
         'point_of_sale_id',
         'cash_register_session_id',
@@ -41,6 +42,20 @@ class Sale extends Model
         'change_amount' => 'decimal:2',
         'cancelled_at' => 'datetime',
     ];
+    protected static function booted()
+    {
+        static::creating(function ($sale) {
+            $pos = \App\Models\PointOfSale::find($sale->point_of_sale_id);
+            $prefix = strtoupper($pos->code ?? $pos->name); // ex: "CENTRE"
+
+            $lastSale = static::where('point_of_sale_id', $sale->point_of_sale_id)
+                ->orderBy('id', 'desc')
+                ->first();
+            $nextNumber = $lastSale ? (intval(substr($lastSale->sale_number, -6)) + 1) : 1;
+
+            $sale->sale_number = $prefix . '_V-' . date('Ymd') . '-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        });
+    }
 
     // Relations
     public function user()

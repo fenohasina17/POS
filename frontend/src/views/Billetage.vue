@@ -275,7 +275,7 @@
           <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
             <div v-for="sale in sessionSales" :key="sale.id" class="flex flex-col rounded-xl border border-slate-100 bg-slate-50 p-3 shadow-sm transition hover:shadow-md">
               <div class="mb-2 border-b border-slate-200 pb-1">
-                <p class="text-[10px] font-black uppercase tracking-tighter text-slate-400">Ticket #{{ sale.ticket_number || sale.id }}</p>
+                <p class="text-[10px] font-black uppercase tracking-tighter text-slate-400">Vente #{{ sale.sale_number || sale.ticket_number || sale.id }}</p>
                 <p class="text-xs font-bold text-indigo-600">{{ formatCurrency(sale.final_amount) }}</p>
               </div>
               <ul class="flex-1 space-y-1">

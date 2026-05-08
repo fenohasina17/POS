@@ -38,6 +38,10 @@ class DataCacheService {
         Authorization: `Bearer ${token}`
       }
     })
+    console.log('=== Réponse API complète ===', response);
+console.log('Status:', response.status);
+console.log('Headers:', response.headers);
+console.log('Données brutes:', response.data);
 
     const data = Array.isArray(response.data) ? response.data : response.data.data || []
     this._setCache(pointOfSaleId, data)
@@ -51,7 +55,7 @@ class DataCacheService {
     try {
       const cache = JSON.parse(raw)
       if (cache.pointOfSaleId !== pointOfSaleId) return null
-      
+
       const now = new Date().getTime()
       if (now > cache.expiry) {
         localStorage.removeItem(this.CACHE_KEY)

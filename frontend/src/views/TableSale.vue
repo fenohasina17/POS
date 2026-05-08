@@ -480,7 +480,7 @@ const closeInvoiceModal = () => {
 }
 
 const onPaymentSuccess = async (formattedSaleData) => {
-  currentInvoiceNumber.value = `TICKET #${formattedSaleData.sale.ticket_number || formattedSaleData.sale.id}`;
+  currentInvoiceNumber.value = `VENTE #${formattedSaleData.sale.sale_number || formattedSaleData.sale.ticket_number || formattedSaleData.sale.id}`;
 
   const allItems = formattedSaleData.categories.flatMap(category =>
     category.items.map(item => ({

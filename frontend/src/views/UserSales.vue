@@ -54,7 +54,7 @@
                       ]"
                     >
                       <td class="whitespace-nowrap px-2 py-1.5 text-slate-600">{{ formatDate(sale.created_at) }}</td>
-                      <td class="px-2 py-1.5 font-mono text-slate-600">{{ sale.ticket_number }}</td>
+                      <td class="px-2 py-1.5 font-mono text-slate-600">{{ sale.sale_number || sale.ticket_number }}</td>
                       <td class="px-2 py-1.5 font-semibold text-slate-800">
                         {{ formatPrice(sale.total_amount) }}
                       </td>
@@ -361,7 +361,7 @@ const closeEditModal = () => {
 }
 
 const confirmDeleteSale = (sale) => {
-  if (confirm(`Supprimer la vente n°${sale.ticket_number} ?`)) {
+  if (confirm(`Supprimer la vente n°${sale.sale_number || sale.ticket_number} ?`)) {
     deleteSale(sale)
   }
 }
@@ -377,7 +377,7 @@ const printDuplicateSale = async (sale) => {
   const invoiceData = {
     companyName: 'INTERNATIONAL GASTRONOMY PIZZA',
     address: 'Antananarivo, Madagascar',
-    number: saleToPrint.ticket_number || 'DUP-' + saleToPrint.id,
+    number: saleToPrint.sale_number || saleToPrint.ticket_number || 'DUP-' + saleToPrint.id,
     date: formatDate(saleToPrint.created_at),
     items: (saleToPrint.order_lines || []).map(line => ({
       name: line.product?.name || 'Article',
