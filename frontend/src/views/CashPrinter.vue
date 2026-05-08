@@ -128,10 +128,6 @@
         >
           <i class="fas fa-link"></i> {{ connectButtonText }}
         </button>
-
-        <!-- Boutons supplémentaires (uniquement si connecté) -->
-
-
         <!-- Message d'erreur -->
         <div v-if="errorMessage" class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
           {{ errorMessage }}
@@ -139,6 +135,12 @@
       </div>
     </div>
   </div>
+
+  <AmountModal
+    :is-open="isAmountModalOpen"
+    @close="closeAmountModal"
+    @send="handleAmountModalSend"
+  />
 </template>
 
 <script setup>
@@ -406,13 +408,6 @@ const openSummaryModal = async () => {
   summaryInfo.value = ''
   sessionSummary.value = null
   isSummaryModalOpen.value = true
-
-const isSessionOpen = (session) => {
-  // Une session valide doit avoir une propriété 'is_closed'
-  if (!session || typeof session !== 'object' || !('is_closed' in session)) return false
-  const value = session.is_closed
-  return value === false || value === null || value === undefined || value === 0 || value === '0'
-}
 
   summaryLoading.value = true
   try {

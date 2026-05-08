@@ -9,7 +9,6 @@
       @close-modal="handleClosePaymentModal"
       @payment-success="handlePaymentSuccess"
       @payment-error="handlePaymentError"
-      @clear-cart="handleClearCart"  />
       @clear-cart="handleClearCart"
     />
 
@@ -487,6 +486,10 @@ const handlePaymentSuccess = (data) => {
 
   isPaymentModalOpen.value = false
   isInvoiceModalOpen.value = true
+}
+const handlePaymentError = (error) => {
+  console.error('Erreur de paiement:', error)
+  alert(error?.message || "Une erreur est survenue lors du paiement.")
 }
 
 const handleClearCart = () => {
