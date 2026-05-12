@@ -38,28 +38,26 @@ class CategoryController extends Controller
             $query = Category::query();
 
             if ($withProducts) {
-                // Relation produits avec éventuellement filtrage par point de vente si on veut limiter
                 $productsRelation = function ($q) use ($pointOfSaleId, $withPricing) {
+                    // CORRECTION : Utiliser la relation 'pricing' pour filtrer les produits du POS
                     if ($pointOfSaleId) {
-                        $q->whereHas('pointsOfSale', function ($sq) use ($pointOfSaleId) {
-                            $sq->where('point_of_sale_id', $pointOfSaleId);
+                        $q->whereHas('pricing', function ($pq) use ($pointOfSaleId) {
+                            $pq->where('point_of_sale_id', $pointOfSaleId);
                         });
                     }
                     if ($withPricing && $pointOfSaleId) {
-                        $q->with([
-                            'pricing' => function ($pq) use ($pointOfSaleId) {
-                                $pq->where('point_of_sale_id', $pointOfSaleId);
-                            }
-                        ]);
+                        $q->with(['pricing' => function ($pq) use ($pointOfSaleId) {
+                            $pq->where('point_of_sale_id', $pointOfSaleId);
+                        }]);
                     }
                 };
                 $query->with(['products' => $productsRelation]);
             } elseif ($withPricing && $pointOfSaleId) {
-                // Si seulement with_pricing sans with_products, on peut charger les produits avec pricing
+                // Si seulement with_pricing sans with_products, on charge les produits avec pricing
                 $query->with([
                     'products' => function ($q) use ($pointOfSaleId) {
-                        $q->whereHas('pointsOfSale', fn($sq) => $sq->where('point_of_sale_id', $pointOfSaleId))
-                            ->with(['pricing' => fn($pq) => $pq->where('point_of_sale_id', $pointOfSaleId)]);
+                        $q->whereHas('pricing', fn($pq) => $pq->where('point_of_sale_id', $pointOfSaleId))
+                          ->with(['pricing' => fn($pq) => $pq->where('point_of_sale_id', $pointOfSaleId)]);
                     }
                 ]);
             }
@@ -88,12 +86,10 @@ class CategoryController extends Controller
         $relations = [];
         $pointOfSaleId = $request->input('point_of_sale_id');
 
-        // Option 1: Chargement simple des produits
         if ($request->boolean('with_products')) {
             $relations[] = 'products';
         }
 
-        // Option 2: Chargement des produits avec prix
         if ($request->boolean('with_pricing')) {
             $relations['products'] = function ($query) use ($pointOfSaleId) {
                 $query->with([
@@ -118,7 +114,6 @@ class CategoryController extends Controller
     public function getProducts($id)
     {
         try {
-            // Vérifier si la catégorie existe
             $category = Category::find($id);
 
             if (!$category) {
@@ -128,7 +123,6 @@ class CategoryController extends Controller
                 ], 404);
             }
 
-            // Récupérer les produits de la catégorie
             $products = Product::where('category_id', $id)->get();
 
             return response()->json([

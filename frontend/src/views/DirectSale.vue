@@ -9,6 +9,7 @@
       @close-modal="handleClosePaymentModal"
       @payment-success="handlePaymentSuccess"
       @payment-error="handlePaymentError"
+      @clear-cart="handleClearCart"
     />
 
     <InvoiceModal
@@ -34,7 +35,7 @@
               </h2>
               <p class="text-xs text-slate-400 font-medium">Sélectionnez les articles pour la vente</p>
             </div>
-            
+
             <div class="relative w-full sm:max-w-xs group">
               <FontAwesomeIcon
                 icon="fa-solid fa-search"
@@ -102,7 +103,7 @@
                 />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
               </div>
-              
+
               <div class="mt-3 w-full space-y-1">
                 <p class="truncate text-sm font-bold text-slate-800">{{ product.name }}</p>
                 <div class="flex items-center justify-center gap-1.5">
@@ -117,7 +118,7 @@
                   </span>
                 </div>
               </div>
-              
+
               <!-- Badge flottant "Plus" -->
               <div class="absolute right-2 top-2 scale-0 rounded-full bg-indigo-600 p-1.5 text-white shadow-lg transition-transform group-hover:scale-100">
                 <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[10px]" />
@@ -232,7 +233,7 @@
               <span class="text-2xl font-black text-slate-900 tracking-tight">{{ formatPrice(totalPrice) }}</span>
             </div>
           </div>
-          
+
           <button
             type="button"
             class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-slate-900 py-4 font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 active:scale-[0.98] disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none"
@@ -254,6 +255,7 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
+import { storage } from '@/utils/storage'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
@@ -395,15 +397,15 @@ const processData = (data) => {
 }
 
 const loadData = async (forceRefresh = false) => {
-  const token = localStorage.getItem('token')
-  if (!user.value?.point_of_sale_id || !token) return
+  const auth = storage.getAuth()
+  if (!user.value?.point_of_sale_id || !auth?.token) return
 
   try {
     isLoading.value = true
     // Utilisation du cache pour un affichage instantané
     const data = await dataCacheService.getCategories(
       user.value.point_of_sale_id,
-      token,
+      auth.token,
       forceRefresh
     )
     processData(data)
@@ -416,15 +418,15 @@ const loadData = async (forceRefresh = false) => {
 
 // ========== VÉRIFICATION SESSION ACTIVE ==========
 const checkActiveSessionAndRedirect = async () => {
-  const token = localStorage.getItem('token')
-  if (!token) {
+  const auth = storage.getAuth()
+  if (!auth?.token) {
     router.push({ name: 'login' })
     return false
   }
 
   try {
     const response = await axios.get(`${API_BASE_URL}/my-active-session`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: `Bearer ${auth.token}` }
     })
     const hasSession = response.data?.has_active_session === true
     if (!hasSession) {
@@ -444,18 +446,14 @@ onMounted(async () => {
   const sessionOk = await checkActiveSessionAndRedirect()
   if (!sessionOk) return
 
-  const userData = localStorage.getItem('user')
-  if (userData) {
-    try {
-      user.value = JSON.parse(userData)
-    } catch (e) {
-      console.error('Erreur parsing user:', e)
-    }
+  const auth = storage.getAuth()
+  if (auth?.user) {
+    user.value = auth.user
   }
 
   // Premier chargement (depuis cache si possible)
   await loadData(false)
-  
+
   // Mise à jour silencieuse en arrière-plan pour garantir la fraîcheur des données
   setTimeout(() => loadData(true), 1000)
 })
@@ -482,16 +480,23 @@ const handlePaymentSuccess = (data) => {
   }))
 
   currentSaleId.value = saleId
-  const ticketNumber = data.ticket_number || data.sale?.ticket_number
-  currentInvoiceNumber.value = ticketNumber ? `Ticket #${ticketNumber}` : `INV-${saleId.toString().padStart(6, '0')}`
+  const ticketNumber = data.sale_number || data.sale?.sale_number || data.ticket_number || data.sale?.ticket_number
+  currentInvoiceNumber.value = ticketNumber ? `Vente #${ticketNumber}` : `INV-${saleId.toString().padStart(6, '0')}`
   currentPaymentMethod.value = paymentsList.value[0]?.payment_method_name || 'Espèces'
 
   isPaymentModalOpen.value = false
   isInvoiceModalOpen.value = true
 }
 
+
 const handlePaymentError = (error) => {
-  console.error('Erreur paiement:', error)
+  console.error('Erreur de paiement:', error);
+  alert(error?.message || error?.response?.data?.message || "Une erreur est survenue lors du paiement. Veuillez réessayer.");
+}
+
+const handleClearCart = () => {
+  cart.value = [];
+  console.log('Cart cleared from DirectSale component after payment.');
 }
 
 const closeInvoiceModal = () => {

@@ -1,6 +1,6 @@
 <template>
 
-  <div>
+  <!-- <div>
 
     <div v-if="isOpen" class="menu-overlay" @click="closeMenu"></div>
 
@@ -172,7 +172,7 @@
         </div>
       </section>
     </div>
-  </div>
+  </div> -->
 
 </template>
 
@@ -187,7 +187,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const router = useRouter()
 const route = useRoute()
-const { isAdmin, loadUserData } = useAuth()
+const { isAdmin, loadUserData, logout: authLogout } = useAuth()
 const user = ref({ name: '', email: '', point_of_sale_name: '' })
 const isOpen = ref(false)
 
@@ -254,9 +254,9 @@ const fetchUserProfile = async () => {
 }
 
 const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  window.location.href = '/';
+  console.log('Logout button clicked');
+  authLogout()
+  router.push({ name: 'login' })
 }
 
 const toggleMenu = () => {

@@ -1,212 +1,366 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-100 px-4 py-6 md:px-6">
-    <Profile />
-
-    <section class="mx-auto flex w-full max-w-[1400px] flex-col gap-6">
-      <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">Sécurité caisse</p>
-            <h1 class="mt-2 text-3xl font-bold text-slate-900">Clôture de session</h1>
-            <p class="mt-2 max-w-3xl text-sm text-slate-500">
-              Comptez les espèces présentes dans la caisse. L’écart sera calculé automatiquement.
-            </p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
-              @click="resetForm"
-              :disabled="isSubmitting || isLoading"
-            >
-              <i class="fas fa-rotate-left text-xs"></i> Réinitialiser
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
-              @click="showCashCount = true"
-              :disabled="!hasAnySale"
-              :title="!hasAnySale ? 'Aucune vente dans cette session, billetage inutile' : 'Commencer le comptage'"
-            >
-              <i class="fas fa-coins text-xs"></i> Billetage
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <!-- Sélecteur de session (admin/manager) -->
-      <div v-if="canSelectSession" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <label class="block text-sm font-semibold text-slate-700">Session à traiter</label>
-        <select v-model="selectedSessionId" @change="onSessionChange" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
-          <option v-for="sess in openSessions" :key="sess.id" :value="sess.id">
-            {{ sess.cash_register?.name }} - ouverte le {{ formatDate(sess.opened_at) }} ({{ sess.user?.name }})
-          </option>
-        </select>
-        <p v-if="openSessions.length === 0" class="mt-2 text-sm text-amber-600">Aucune session ouverte pour ce point de vente.</p>
-      </div>
-
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_420px]">
-        <!-- Récapitulatif des ventes -->
-        <section class="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-md">
-          <div class="mb-3 border-b border-slate-100 pb-3">
-            <h2 class="text-lg font-semibold text-slate-900">Produits vendus</h2>
-            <p class="text-sm text-slate-500">Liste des articles écoulés pendant la session (hors montants).</p>
-          </div>
-
-          <!-- Indicateur de chargement des détails -->
-          <div v-if="loadingDetails" class="mb-3 rounded-xl bg-slate-100 p-2 text-center text-xs text-slate-600">
-            Chargement des détails des produits… {{ loadingProgress }}%
-            <div class="mt-1 h-1 w-full rounded-full bg-slate-200 overflow-hidden">
-              <div class="h-full bg-indigo-500 transition-all duration-300" :style="{ width: loadingProgress + '%' }"></div>
-            </div>
-          </div>
-
-          <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p class="text-xs font-semibold uppercase text-slate-400">Total tickets</p>
-              <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionSales.length }}</p>
-            </div>
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-              <p class="text-xs font-semibold uppercase text-slate-400">Articles vendus</p>
-              <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionProductsCount }}</p>
-            </div>
-            <div class="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-              <p class="text-xs font-semibold uppercase text-indigo-500">Produits distincts</p>
-              <p class="mt-2 text-2xl font-bold text-slate-800">{{ totalProductTypes }}</p>
-            </div>
-          </div>
-
-          <div v-if="categoryGroups.length" class="space-y-3">
-            <article v-for="category in categoryGroups" :key="category.label" class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-              <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
-                <div>
-                  <h3 class="text-base font-semibold text-slate-900">{{ category.label }}</h3>
-                  <p class="mt-1 text-xs text-slate-500">
-                    {{ category.productTypes }} produit(s) distinct(s) • {{ category.products }} article(s)
-                  </p>
-                </div>
-              </div>
-              <div class="mt-4">
-                <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Détail des ventes</p>
-                <ul class="space-y-2">
-                  <li v-for="item in category.items" :key="item.name" class="flex items-center justify-between rounded-xl border border-white bg-white px-3 py-2 text-sm text-slate-700">
-                    <span class="font-medium text-slate-900">{{ item.name }}</span>
-                    <span class="text-xs font-semibold text-slate-500">x{{ item.quantity }}</span>
-                  </li>
-                </ul>
-              </div>
-            </article>
-          </div>
-          <div v-else class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-            <i class="fas fa-receipt mb-2 text-2xl text-slate-300"></i>
-            <p>Aucune vente enregistrée pour cette session.</p>
-          </div>
-        </section>
-
-        <!-- Billetage -->
-        <form ref="formRef" class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
-          <div class="space-y-4">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 class="text-lg font-semibold text-slate-900">Comptage des espèces</h2>
-                <p class="text-sm text-slate-500">Saisissez le nombre de billets et pièces réellement présents dans la caisse.</p>
-              </div>
-              <span v-if="sessionClosed" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">Session clôturée</span>
-              <span v-else-if="hasRecordedBilletage" class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">Billetage validé</span>
-            </div>
-
-            <div v-if="!sessionId" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              <i class="fas fa-info-circle mr-2"></i> Aucune session active. Veuillez ouvrir une session depuis la page d’accueil.
-            </div>
-
-            <!-- Comptage avec gestion des permissions + condition hasAnySale -->
-            <div v-if="showCashCount && sessionId && !sessionClosed && hasAnySale" class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div v-for="denomination in denominations" :key="denomination.value" class="grid items-center gap-3 sm:grid-cols-[120px_minmax(0,1fr)_110px]">
-                <label :for="`denom-${denomination.value}`" class="text-sm font-semibold text-slate-700">{{ denomination.label }} Ar</label>
-                <input
-                  :id="`denom-${denomination.value}`"
-                  v-model="counts[denomination.value]"
-                  type="number"
-                  inputmode="numeric"
-                  min="0"
-                  step="1"
-                  :disabled="isSubmitting || isLoading || sessionClosed || hasRecordedBilletage || !canEditBilletage"
-                  @focus="showKeyboard({ type: 'denomination', value: denomination.value }, $event)"
-                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 disabled:opacity-60"
-                />
-                <span class="text-right text-sm font-semibold text-slate-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</span>
-              </div>
-            </div>
-            <div v-else-if="showCashCount && !hasAnySale" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-              <i class="fas fa-info-circle mr-2"></i> Aucune vente dans cette session. Le billetage n’est pas nécessaire.
-            </div>
-            <div v-else-if="!showCashCount" class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-              <i class="fas fa-calculator mb-2 text-2xl text-slate-300"></i>
-              <p>Cliquez sur <strong>« Billetage »</strong> pour commencer le comptage.</p>
-            </div>
-
-            <!-- Résultat du contrôle -->
-            <div v-if="hasRecordedBilletage" class="space-y-3 rounded-2xl border px-4 py-4" :class="canViewSensitiveInfo ? varianceCardClass : 'border-emerald-200 bg-emerald-50'">
-              <div class="flex items-center justify-between gap-3">
-                <h3 class="text-sm font-semibold">Résultat du contrôle</h3>
-                <span v-if="canViewSensitiveInfo" class="rounded-full px-3 py-1 text-xs font-semibold" :class="varianceBadgeClass">{{ varianceStatusLabel }}</span>
-                <span v-else class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Billetage enregistré</span>
-              </div>
-              <div class="grid gap-2 text-sm">
-                <p class="flex items-center justify-between"><span>Montant compté</span><strong>{{ formatCurrency(actualTotal) }}</strong></p>
-                <p class="flex items-center justify-between"><span>Fond de caisse</span><strong>{{ formatCurrency(startingAmount) }}</strong></p>
-                <template v-if="canViewSensitiveInfo">
-                  <p class="flex items-center justify-between"><span>Ventes espèces</span><strong>{{ formatCurrency(cashSalesAmount) }}</strong></p>
-                  <p class="flex items-center justify-between"><span>Montant attendu</span><strong>{{ formatCurrency(expectedCashAmount) }}</strong></p>
-                  <p class="flex items-center justify-between"><span>Écart</span><strong :class="varianceAmount === 0 ? 'text-emerald-600' : (varianceAmount > 0 ? 'text-amber-600' : 'text-rose-600')">{{ formatCurrency(varianceAmount) }}</strong></p>
-                </template>
-                <p v-else class="flex items-center justify-between text-slate-500 text-xs"><span>Contrôle effectué</span><span>✅</span></p>
-              </div>
-              <p class="text-xs text-slate-500 italic">
-                <span v-if="canViewSensitiveInfo">Détail complet réservé à l’administration.</span>
-                <span v-else>Le responsable vérifiera la conformité en interne.</span>
+  <div class="flex min-h-screen flex-1 flex-col">
+    <div class="py-0 px-0">
+      <section class="flex w-full flex-col gap-6">
+        <!-- En-tête de la page -->
+        <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
+          <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">Sécurité caisse</p>
+              <h1 class="mt-2 text-3xl font-bold text-slate-900">Clôture de session</h1>
+              <p class="mt-2 max-w-3xl text-sm text-slate-500">
+                Comptez les espèces présentes dans la caisse. L’écart sera calculé automatiquement.
               </p>
             </div>
-
-            <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">{{ errorMessage }}</p>
-            <p v-if="successMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-600">{{ successMessage }}</p>
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
+                @click="resetForm"
+                :disabled="isSubmitting || isLoading"
+              >
+                <i class="fas fa-rotate-left text-xs"></i> Réinitialiser
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
+                @click="showCashCount = true"
+                :disabled="!hasAnySale"
+                :title="!hasAnySale ? 'Aucune vente dans cette session, billetage inutile' : 'Commencer le comptage'"
+              >
+                <i class="fas fa-coins text-xs"></i> Billetage
+              </button>
+            </div>
           </div>
+        </header>
 
-          <div class="flex flex-wrap justify-end gap-3 pt-2">
-            <button
-              type="submit"
-              class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
-              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || hasRecordedBilletage || !showCashCount || !canEditBilletage || !hasAnySale"
-            >
-              <i v-if="isSubmitting" class="fas fa-circle-notch animate-spin"></i>
-              {{ isSubmitting ? 'Enregistrement...' : 'Valider le billetage' }}
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-200 disabled:opacity-60"
-              @click="closeSession"
-              :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !hasRecordedBilletage || !canEditBilletage"
-            >
-              Clôturer la session
-            </button>
+        <!-- Sélecteur de session (admin/manager) -->
+        <div v-if="canSelectSession" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <label class="block text-sm font-semibold text-slate-700">Session à traiter</label>
+          <select v-model="selectedSessionId" @change="onSessionChange" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
+            <option v-for="sess in openSessions" :key="sess.id" :value="sess.id">
+              {{ sess.cash_register?.name }} - ouverte le {{ formatDate(sess.opened_at) }} ({{ sess.user?.name }})
+            </option>
+          </select>
+          <p v-if="openSessions.length === 0" class="mt-2 text-sm text-amber-600">Aucune session ouverte pour ce point de vente.</p>
+        </div>
+
+        <!-- Grille principale : récapitulatif + billetage + clavier -->
+        <div class="grid gap-6 xl:grid-cols-[1fr_420px_auto]">
+          <!-- Colonne 1 : Récapitulatif des ventes -->
+          <section class="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-md">
+            <div class="mb-3 border-b border-slate-100 pb-3">
+              <h2 class="text-lg font-semibold text-slate-900">Produits vendus</h2>
+              <p class="text-sm text-slate-500">Liste des articles écoulés pendant la session (hors montants).</p>
+            </div>
+
+            <div v-if="loadingDetails" class="mb-3 rounded-xl bg-slate-100 p-2 text-center text-xs text-slate-600">
+              Chargement des détails des produits… {{ loadingProgress }}%
+              <div class="mt-1 h-1 w-full rounded-full bg-slate-200 overflow-hidden">
+                <div class="h-full bg-indigo-500 transition-all duration-300" :style="{ width: loadingProgress + '%' }"></div>
+              </div>
+            </div>
+
+            <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase text-slate-400">Total tickets</p>
+                <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionSales.length }}</p>
+              </div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase text-slate-400">Articles vendus</p>
+                <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionProductsCount }}</p>
+              </div>
+              <div class="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase text-indigo-500">Produits distincts</p>
+                <p class="mt-2 text-2xl font-bold text-slate-800">{{ totalProductTypes }}</p>
+              </div>
+            </div>
+
+            <div v-if="categoryGroups.length" class="space-y-3">
+              <article v-for="category in categoryGroups" :key="category.label" class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
+                  <div>
+                    <h3 class="text-base font-semibold text-slate-900">{{ category.label }}</h3>
+                    <p class="mt-1 text-xs text-slate-500">
+                      {{ category.productTypes }} produit(s) distinct(s) • {{ category.products }} article(s)
+                    </p>
+                  </div>
+                </div>
+                <div class="mt-4">
+                  <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Détail des ventes</p>
+                  <ul class="space-y-2">
+                    <li v-for="item in category.items" :key="item.name" class="flex items-center justify-between rounded-xl border border-white bg-white px-3 py-2 text-sm text-slate-700">
+                      <span class="font-medium text-slate-900">{{ item.name }}</span>
+                      <span class="text-xs font-semibold text-slate-500">x{{ item.quantity }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </article>
+            </div>
+            <div v-else class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
+              <i class="fas fa-receipt mb-2 text-2xl text-slate-300"></i>
+              <p>Aucune vente enregistrée pour cette session.</p>
+            </div>
+          </section>
+
+          <!-- Colonne 2 : Formulaire de comptage -->
+          <form ref="formRef" class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
+            <div class="space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-lg font-semibold text-slate-900">Comptage des espèces</h2>
+                  <p class="text-sm text-slate-500">Saisissez le nombre de billets et pièces réellement présents dans la caisse.</p>
+                </div>
+                <span v-if="sessionClosed" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">Session clôturée</span>
+                <span v-else-if="hasRecordedBilletage" class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">Billetage validé</span>
+              </div>
+
+              <div v-if="!sessionId" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                <i class="fas fa-info-circle mr-2"></i> Aucune session active. Veuillez ouvrir une session depuis la page d’accueil.
+              </div>
+
+              <div v-if="showCashCount && sessionId && !sessionClosed && hasAnySale" class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div v-for="denomination in denominations" :key="denomination.value" class="grid items-center gap-3 sm:grid-cols-[120px_minmax(0,1fr)_110px]">
+                  <label :for="`denom-${denomination.value}`" class="text-sm font-semibold text-slate-700">{{ denomination.label }} Ar</label>
+                  <input
+                    :id="`denom-${denomination.value}`"
+                    v-model="counts[denomination.value]"
+                    type="number"
+                    inputmode="numeric"
+                    min="0"
+                    step="1"
+                    :disabled="isSubmitting || isLoading || sessionClosed || hasRecordedBilletage || !canEditBilletage"
+                    @focus="showKeyboard({ type: 'denomination', value: denomination.value }, $event)"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 disabled:opacity-60"
+                  />
+                  <span class="text-right text-sm font-semibold text-slate-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</span>
+                </div>
+              </div>
+              <div v-else-if="showCashCount && !hasAnySale" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                <i class="fas fa-info-circle mr-2"></i> Aucune vente dans cette session. Le billetage n’est pas nécessaire.
+              </div>
+              <div v-else-if="!showCashCount" class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
+                <i class="fas fa-calculator mb-2 text-2xl text-slate-300"></i>
+                <p>Cliquez sur <strong>« Billetage »</strong> pour commencer le comptage.</p>
+              </div>
+
+              <!-- Résultat du contrôle -->
+              <div v-if="validationAttempted || hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm transition-all"
+                   :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h3 class="text-lg font-bold" :class="varianceStatus === 'conforme' ? 'text-emerald-800' : 'text-rose-800'">
+                      {{ varianceStatusLabel }}
+                    </h3>
+                    <p class="text-sm opacity-80 mt-1">
+                      {{ varianceStatus === 'conforme'
+                         ? 'La caisse est équilibrée.'
+                         : (varianceAmount > 0 ? 'Il y a un excédent de fonds.' : 'Il manque des fonds en caisse.') }}
+                    </p>
+                  </div>
+                  <div class="text-right">
+                    <p class="text-xs uppercase font-black opacity-60">Écart final</p>
+                    <p class="text-2xl font-black" :class="varianceStatus === 'conforme' ? 'text-emerald-700' : 'text-rose-700'">
+                      {{ varianceAmount > 0 ? '+' : '' }}{{ formatCurrency(varianceAmount) }}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-4 space-y-2 rounded-xl bg-white/60 p-3 border border-white/40">
+                  <p class="text-[10px] font-black uppercase text-slate-400 mb-2">Détails du calcul</p>
+                  <div class="flex justify-between text-xs">
+                    <span class="text-slate-500">Fond de caisse (A)</span>
+                    <span class="font-bold text-slate-700">{{ formatCurrency(sessionData?.starting_amount || 0) }}</span>
+                  </div>
+                  <div class="flex justify-between text-xs">
+                    <span class="text-slate-500">Ventes Espèces (B)</span>
+                    <span class="font-bold text-emerald-600">+ {{ formatCurrency(cashSalesAmount) }}</span>
+                  </div>
+                  <div class="flex justify-between text-xs border-b border-slate-200 pb-2">
+                    <span class="text-slate-500 text-[10px] italic">(Somme des tickets payés en espèce)</span>
+                  </div>
+                  <div class="flex justify-between text-xs pt-1">
+                    <span class="font-black text-slate-600 uppercase">Théorique attendu (A + B)</span>
+                    <span class="font-black text-slate-800">{{ formatCurrency(Number(sessionData?.starting_amount || 0) + cashSalesAmount) }}</span>
+                  </div>
+                  <div class="flex justify-between text-xs pt-1 border-t border-slate-200 mt-1">
+                    <span class="font-black text-indigo-600 uppercase tracking-tighter">Réel Compté (Billetage)</span>
+                    <span class="font-black text-indigo-700">{{ formatCurrency(actualTotal) }}</span>
+                  </div>
+                </div>
+
+                <div v-if="varianceAmount !== 0 && !hasRecordedBilletage" class="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <label class="block text-xs font-black uppercase text-rose-600 mb-1">Pourquoi y a-t-il un écart ? (Obligatoire)</label>
+                  <textarea
+                    v-model="discrepancyExplanation"
+                    rows="3"
+                    class="w-full rounded-xl border border-rose-300 bg-white p-3 text-sm text-slate-800 shadow-inner outline-none transition focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                    placeholder="Ex: Erreur rendu monnaie ticket #12, retrait pour achat fournitures non saisi..."
+                  ></textarea>
+                </div>
+
+                <div v-if="varianceAmount !== 0" class="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    @click="showSalesLines = true"
+                    class="flex-1 rounded-xl bg-white/80 border border-rose-200 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-100"
+                  >
+                    <i class="fas fa-list-ul mr-1"></i> Analyser tickets
+                  </button>
+                  <button
+                    type="button"
+                    @click="showSessionDetails = true"
+                    class="flex-1 rounded-xl bg-white/80 border border-rose-200 py-2 text-xs font-bold text-rose-700 shadow-sm transition hover:bg-rose-100"
+                  >
+                    <i class="fas fa-info-circle mr-1"></i> Détails session
+                  </button>
+                </div>
+              </div>
+
+              <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">{{ errorMessage }}</p>
+              <p v-if="successMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-600">{{ successMessage }}</p>
+            </div>
+
+            <div class="flex flex-wrap justify-end gap-3 pt-2">
+              <button
+                type="submit"
+                class="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
+                :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || hasRecordedBilletage || !showCashCount || !canEditBilletage || !hasAnySale"
+              >
+                <i v-if="isSubmitting" class="fas fa-circle-notch animate-spin"></i>
+                {{ isSubmitting ? 'Enregistrement...' : (validationAttempted && varianceAmount !== 0 ? 'Confirmer la justification' : 'Valider le billetage') }}
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-200 disabled:opacity-60"
+                @click="closeSession"
+                :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !hasRecordedBilletage || (!isAdmin && !hasRole('gerant'))"
+              >
+                Clôturer la session
+              </button>
+            </div>
+          </form>
+
+          <!-- Colonne 3 : Clavier numérique fixe (visible sur écran large) -->
+          <aside class="hidden xl:block">
+            <div class="sticky top-24 space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md">
+              <div class="mb-3 border-b border-slate-100 pb-3">
+                <h2 class="text-lg font-semibold text-slate-900">Clavier numérique</h2>
+                <p class="text-sm text-slate-500">Utilisez ce clavier pour saisir les quantités.</p>
+              </div>
+              <NumericKeypad
+                :disabled="isKeypadDisabled"
+                @press="handleKeyPress"
+                @delete="() => handleKeyPress('DEL')"
+              />
+            </div>
+          </aside>
+        </div>
+      </section>
+    </div>
+
+    <!-- Modal Détails des tickets -->
+    <div v-if="showSalesLines" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <div class="flex h-full max-h-[90vh] w-full max-w-[95vw] flex-col rounded-3xl bg-white shadow-2xl">
+        <header class="flex items-center justify-between border-b border-slate-100 p-6">
+          <div>
+            <h3 class="text-xl font-bold text-slate-900">Détails des tickets</h3>
+            <p class="text-sm text-slate-500">Liste complète des ventes de la session</p>
           </div>
-        </form>
+          <button @click="showSalesLines = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-rose-600 transition-colors">
+            <FontAwesomeIcon :icon="faXmark" class="text-xl" />
+          </button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4">
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+            <div v-for="sale in sessionSales" :key="sale.id" class="flex flex-col rounded-xl border border-slate-100 bg-slate-50 p-3 shadow-sm transition hover:shadow-md">
+              <div class="mb-2 border-b border-slate-200 pb-1">
+                <p class="text-[10px] font-black uppercase tracking-tighter text-slate-400">Vente #{{ sale.sale_number || sale.ticket_number || sale.id }}</p>
+                <p class="text-xs font-bold text-indigo-600">{{ formatCurrency(sale.final_amount) }}</p>
+              </div>
+              <ul class="flex-1 space-y-1">
+                <li v-for="line in sale.order_lines" :key="line.id" class="flex flex-col border-b border-slate-100 last:border-0 pb-1">
+                  <span class="truncate text-[9px] font-medium text-slate-700" :title="line.product?.name || line.name">
+                    {{ line.product?.name || line.name }}
+                  </span>
+                  <div class="flex items-center justify-between text-[8px] font-bold text-slate-500">
+                    <span>x{{ line.quantity }}</span>
+                    <span>{{ formatCurrency(line.total) }}</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
-    </section>
+    </div>
 
+    <!-- Modal Détails Session -->
+    <div v-if="showSessionDetails" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+      <div class="w-full max-w-lg rounded-3xl bg-white shadow-2xl">
+        <header class="flex items-center justify-between border-b border-slate-100 p-6">
+          <h3 class="text-xl font-bold text-slate-900">Détails de la session</h3>
+          <button @click="showSessionDetails = false" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-rose-600 transition-colors">
+            <FontAwesomeIcon :icon="faXmark" class="text-xl" />
+          </button>
+        </header>
+        <div class="p-6">
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4 text-sm">
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">ID Session</p>
+                <p class="font-semibold text-slate-700">#{{ sessionId }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">Caissier</p>
+                <p class="font-semibold text-slate-700">{{ sessionData?.user?.name }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">Caisse</p>
+                <p class="font-semibold text-slate-700">{{ sessionData?.cash_register?.name }}</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold uppercase text-slate-400">Ouverte le</p>
+                <p class="font-semibold text-slate-700">{{ formatDate(sessionData?.opened_at) }}</p>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <h4 class="text-xs font-bold uppercase text-slate-400">Mouvements de caisse</h4>
+              <div class="max-h-60 overflow-y-auto space-y-2">
+                <div v-for="trans in cashTransactions" :key="trans.id" class="flex items-center justify-between rounded-xl border border-slate-100 p-3 text-xs">
+                  <div>
+                    <p class="font-semibold text-slate-700">{{ trans.description || trans.type }}</p>
+                    <p class="text-[10px] text-slate-400">{{ formatDate(trans.created_at) }}</p>
+                  </div>
+                  <span :class="trans.amount >= 0 ? 'text-emerald-600' : 'text-rose-600'" class="font-bold">
+                    {{ trans.amount >= 0 ? '+' : '' }}{{ formatCurrency(trans.amount) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clavier virtuel flottant pour mobile/tablette -->
     <Keyboard v-if="keyboardVisible" :initial-position="keyboardPosition" @key-pressed="handleKeyPress" @close="hideKeyboard" />
   </div>
 </template>
 
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import Keyboard from '../components/tools/Keyboard.vue'
+import NumericKeypad from '@/components/NumericKeypad.vue'
 import { API_BASE_URL } from '@/utils/api'
-import Profile from './Profile.vue'
 import { useAuth } from '@/composables/useAuth'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
+// Liste des billets / pièces
 const denominations = [
   { value: 20000, label: '20 000' },
   { value: 10000, label: '10 000' },
@@ -219,22 +373,10 @@ const denominations = [
 ]
 
 const router = useRouter()
-const { isAdmin, currentUser, hasRole, loadUserData } = useAuth()
+const route = useRoute()
+const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
 
-// Permissions
-const canSelectSession = computed(() => {
-  return isAdmin.value || hasRole('gerant')
-})
-const canViewSensitiveInfo = computed(() => {
-  return isAdmin.value || hasRole('gerant')
-})
-// 🔧 MODIFICATION : autoriser également le caissier à faire le billetage
-const canEditBilletage = computed(() => {
-  // Autorise uniquement admin et caissier
-  return isAdmin.value || hasRole('caissier')
-})
-
-// États
+// États principaux
 const counts = reactive(Object.fromEntries(denominations.map(d => [d.value, 0])))
 const keyboardVisible = ref(false)
 const activeField = ref(null)
@@ -249,6 +391,8 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const showCashCount = ref(false)
+const discrepancyExplanation = ref('')
+const validationAttempted = ref(false)
 const sessionSales = ref([])
 const sessionData = ref(null)
 const cashTransactions = ref([])
@@ -256,6 +400,17 @@ const openSessions = ref([])
 const selectedSessionId = ref(null)
 const loadingDetails = ref(false)
 const loadingProgress = ref(0)
+
+const showSalesLines = ref(false)
+const showSessionDetails = ref(false)
+
+// Permissions
+const canSelectSession = computed(() => isAdmin.value || hasRole('gerant'))
+const canEditBilletage = computed(() => isAdmin.value || hasRole('caissier'))
+
+const isKeypadDisabled = computed(() => {
+  return isSubmitting.value || isLoading.value || sessionClosed.value || hasRecordedBilletage.value || !canEditBilletage.value || !hasAnySale.value
+})
 
 // ========== UTILITAIRES ==========
 const authHeaders = () => {
@@ -269,12 +424,17 @@ const formatCurrency = (amount) => {
   if (!Number.isFinite(num)) return '0 Ar'
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(num) + ' Ar'
 }
+
 const denominationTotal = (value) => value * (Number(counts[value]) || 0)
+
 const formatDate = (dateStr) => dateStr ? new Date(dateStr).toLocaleString('fr-FR') : ''
+
 const resetForm = () => {
   denominations.forEach(d => { counts[d.value] = 0 })
   errorMessage.value = ''
   successMessage.value = ''
+  validationAttempted.value = false
+  discrepancyExplanation.value = ''
 }
 
 // ========== CHARGEMENT OPTIMISÉ DES VENTES ==========
@@ -416,6 +576,7 @@ const fetchOpenSessions = async () => {
     errorMessage.value = 'Impossible de charger les sessions ouvertes.'
   }
 }
+
 const onSessionChange = () => {
   if (selectedSessionId.value) fetchSessionData(selectedSessionId.value)
 }
@@ -457,51 +618,68 @@ const categoryGroups = computed(() => {
 const sessionProductsCount = computed(() => {
   return sessionSales.value.reduce((sum, sale) => sum + getSaleLines(sale).reduce((s, l) => s + l.quantity, 0), 0)
 })
+
 const totalProductTypes = computed(() => categoryGroups.value.reduce((s, c) => s + c.productTypes, 0))
 
-// ========== CONDITION POUR BILLETAGE : au moins une vente ==========
-const hasAnySale = computed(() => {
-  return sessionSales.value.length > 0
-})
+const hasAnySale = computed(() => sessionSales.value.length > 0)
 
 // ========== BILLETAGE ==========
 const actualTotal = computed(() => {
   return denominations.reduce((sum, d) => sum + d.value * (Number(counts[d.value]) || 0), 0)
 })
-const startingAmount = computed(() => Number(sessionData.value?.starting_amount ?? 0))
+
 const cashSalesAmount = computed(() => {
   return cashTransactions.value.filter(t => t.type === 'sale').reduce((s, t) => s + (Number(t.amount) || 0), 0)
 })
-const expectedCashAmount = computed(() => startingAmount.value + cashSalesAmount.value)
-const varianceAmount = computed(() => actualTotal.value - expectedCashAmount.value)
-const varianceStatus = computed(() => {
-  if (Math.abs(varianceAmount.value) < 1) return 'conforme'
-  return varianceAmount.value > 0 ? 'positif' : 'negatif'
-})
-const varianceStatusLabel = computed(() => {
-  if (varianceStatus.value === 'conforme') return 'Caisse conforme'
-  return varianceStatus.value === 'positif' ? 'Excédent (alerte)' : 'Manquant (alerte)'
-})
-const varianceCardClass = computed(() => varianceStatus.value === 'conforme' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700')
-const varianceBadgeClass = computed(() => varianceStatus.value === 'conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700')
+
+const varianceAmount = computed(() => actualTotal.value - cashSalesAmount.value)
+const varianceStatus = computed(() => varianceAmount.value === 0 ? 'conforme' : 'erreur')
+const varianceStatusLabel = computed(() => varianceStatus.value === 'conforme' ? 'Caisse conforme' : (varianceAmount.value > 0 ? 'Excédent (Erreur)' : 'Manquant (Erreur)'))
 
 const submit = async () => {
+  errorMessage.value = ''
+
   if (!sessionId.value) { errorMessage.value = 'Session introuvable.'; return }
   if (sessionClosed.value) { errorMessage.value = 'Session déjà clôturée.'; return }
   if (hasRecordedBilletage.value) { errorMessage.value = 'Billetage déjà enregistré.'; return }
   if (!canEditBilletage.value) { errorMessage.value = 'Vous n’avez pas la permission de valider le billetage.'; return }
   if (!hasAnySale.value) { errorMessage.value = 'Aucune vente dans cette session. Le billetage n’est pas requis.'; return }
   if (actualTotal.value === 0) { errorMessage.value = 'Saisissez au moins un billet.'; return }
-  if (!confirm(`Valider le billetage à ${formatCurrency(actualTotal.value)} ?`)) return
+
+  if (!validationAttempted.value) {
+    validationAttempted.value = true
+    if (varianceAmount.value === 0) {
+      if (!confirm(`Confirmer le billetage de ${formatCurrency(actualTotal.value)} ?`)) return
+    } else {
+      return // attend la justification
+    }
+  }
+
+  if (varianceAmount.value !== 0 && !discrepancyExplanation.value.trim()) {
+    errorMessage.value = 'Veuillez saisir une explication pour l’écart de caisse.'
+    return
+  }
+
+  if (!confirm(`Confirmer l'enregistrement du billetage ?`)) return
 
   isSubmitting.value = true
   try {
     await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: actualTotal.value
     }, { headers: authHeaders() })
-    successMessage.value = 'Billetage enregistré avec succès.'
+
+    if (varianceAmount.value !== 0 && discrepancyExplanation.value.trim()) {
+      await axios.post(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}/discrepancies`, {
+        description: discrepancyExplanation.value,
+        amount: varianceAmount.value
+      }, { headers: authHeaders() })
+    }
+
+    successMessage.value = 'Billetage et justification enregistrés avec succès.'
     hasRecordedBilletage.value = true
     if (sessionData.value) sessionData.value.actual_cash_amount = actualTotal.value
+    validationAttempted.value = false
+    discrepancyExplanation.value = ''
   } catch (err) {
     errorMessage.value = err.response?.data?.message || 'Erreur d’enregistrement.'
   } finally {
@@ -531,13 +709,6 @@ const closeSession = async () => {
     sessionSales.value = []
     cashTransactions.value = []
     await fetchOpenSessions()
-    
-    // Redirection vers le résumé
-    console.log("DEBUG: Données pour le résumé de session :", {
-      sessionId: closedSessionId,
-      sessionData: sessionData.value,
-      // On peut aussi récupérer le résumé ici si besoin via axios
-    })
     router.push({ name: 'billetage-summary', params: { sessionId: closedSessionId } })
   } catch (err) {
     errorMessage.value = err.response?.data?.message || 'Erreur lors de la clôture.'
@@ -549,9 +720,11 @@ const closeSession = async () => {
 // ========== CLAVIER VIRTUEL ==========
 const showKeyboard = async (field, event) => {
   activeField.value = field
-  keyboardVisible.value = true
+  if (window.innerWidth < 1280) {
+    keyboardVisible.value = true
+  }
   await nextTick()
-  updateKeyboardPosition(event.target)
+  if (keyboardVisible.value) updateKeyboardPosition(event.target)
 }
 
 const handleKeyPress = (key) => {
@@ -559,7 +732,7 @@ const handleKeyPress = (key) => {
   const denom = activeField.value.value
   let val = counts[denom] === 0 || counts[denom] === '' ? 0 : counts[denom]
   let str = val === 0 ? '' : String(val)
-  if (key === 'BACKSPACE') {
+  if (key === 'BACKSPACE' || key === 'DEL') {
     str = str.slice(0, -1)
     counts[denom] = str === '' ? 0 : Number(str)
     return
@@ -570,24 +743,19 @@ const handleKeyPress = (key) => {
 const updateKeyboardPosition = (targetElement) => {
   const el = targetElement || document.activeElement
   if (!el || el.tagName !== 'INPUT') return
-
   const rect = el.getBoundingClientRect()
   const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
-  
   const KEYBOARD_WIDTH = 640
   const KEYBOARD_HEIGHT = 280
   const MARGIN = 16
-
   let top = rect.bottom + MARGIN
   let left = rect.left
-
   if (left + KEYBOARD_WIDTH > viewportWidth - MARGIN) left = viewportWidth - KEYBOARD_WIDTH - MARGIN
   if (top + KEYBOARD_HEIGHT > viewportHeight - MARGIN) top = rect.top - KEYBOARD_HEIGHT - MARGIN
-
-  keyboardPosition.value = { 
-    top: Math.max(MARGIN, top), 
-    left: Math.max(MARGIN, Math.max(0, left)) 
+  keyboardPosition.value = {
+    top: Math.max(MARGIN, top),
+    left: Math.max(MARGIN, Math.max(0, left))
   }
 }
 
@@ -611,6 +779,10 @@ onMounted(async () => {
   await fetchOpenSessions()
 })
 
+onBeforeUnmount(() => {
+  detachKeyboardListeners()
+})
+
 watch(keyboardVisible, (visible) => {
   if (visible) {
     nextTick(() => {
@@ -622,5 +794,6 @@ watch(keyboardVisible, (visible) => {
     detachKeyboardListeners()
   }
 })
-onBeforeUnmount(detachKeyboardListeners)
 </script>
+
+

@@ -36,12 +36,11 @@ class RolePermissionRelationSeeder extends Seeder
         if ($gerantRole) {
             $gerantPermissions = $allPermissions->filter(function ($permission) {
                 return in_array($permission->name, [
-                    'view cash register sessions',
-                    'create cash register sessions',
-                    'update cash register sessions',
-                    'close cash register sessions',
-                    'view discrepancies',
-                    'manage reports',
+                    'view.cash_register_sessions',
+                    'create.cash_register_sessions',
+                    'update.cash_register_sessions',
+                    'view.discrepancies',
+                    'view.sales',
                 ]);
             });
             $gerantRole->syncPermissions($gerantPermissions);
@@ -51,10 +50,9 @@ class RolePermissionRelationSeeder extends Seeder
         if ($caissierRole) {
             $caissierPermissions = $allPermissions->filter(function ($permission) {
                 return in_array($permission->name, [
-                    'view cash register sessions',
-                    'create cash register sessions',
-                    'update cash register sessions',
-                    'close cash register sessions',
+                    'view.cash_register_sessions',
+                    'create.cash_register_sessions',
+                    'update.cash_register_sessions',
                 ]);
             });
             $caissierRole->syncPermissions($caissierPermissions);

@@ -128,78 +128,19 @@
         >
           <i class="fas fa-link"></i> {{ connectButtonText }}
         </button>
-
-        <!-- Boutons supplémentaires (uniquement si connecté) -->
-        <div v-if="isSelfConnected && canAccessCashActions" class="mt-4 flex flex-wrap gap-3">
-          <button
-            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-2.5 text-sm font-semibold text-amber-600 transition hover:bg-amber-100"
-            @click="resetCashRegister"
-          >
-            <i class="fas fa-sync-alt"></i> Remise à zéro
-          </button>
-          <button
-            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-2.5 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100"
-            @click="performCashCount"
-          >
-            <i class="fas fa-money-bill-wave"></i> Billetage
-          </button>
-          <button
-            class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-2.5 text-sm font-semibold text-indigo-600 transition hover:bg-indigo-100"
-            @click="viewSales"
-          >
-            <i class="fas fa-chart-line"></i> Mes ventes
-          </button>
-        </div>
-
         <!-- Message d'erreur -->
         <div v-if="errorMessage" class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
           {{ errorMessage }}
         </div>
       </div>
-
-      <!-- Modals -->
-      <AmountModal :isOpen="isAmountModalOpen" @close="closeAmountModal" @send="handleAmountModalSend" />
-
-      <!-- Summary Modal -->
-      <div v-if="isSummaryModalOpen" class="modal is-active summary-overlay">
-        <div class="modal-background" @click="closeSummaryModal"></div>
-        <div class="modal-card summary-modal">
-          <header class="modal-card-head summary-modal-head">
-            <div>
-              <p class="summary-kicker">Connexion caisse</p>
-              <p class="modal-card-title summary-modal-title">Résumé de la session</p>
-            </div>
-            <button class="summary-close-button" type="button" aria-label="Fermer" @click="closeSummaryModal">
-              <i class="fas fa-xmark"></i> Fermer
-            </button>
-          </header>
-          <section class="modal-card-body summary-modal-body">
-            <div v-if="summaryLoading" class="py-4 text-center text-slate-500">Chargement du résumé...</div>
-            <p v-else-if="summaryError" class="text-center text-sm text-rose-600">{{ summaryError }}</p>
-            <div v-else class="summary-content">
-              <p v-if="summaryInfo" class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">{{ summaryInfo }}</p>
-              <div class="summary-grid">
-                <div class="summary-row"><span class="summary-label">Caisse</span><span class="summary-value">{{ activeSession?.cash_register?.name }}</span></div>
-                <div class="summary-row"><span class="summary-label">Ouverte par</span><span class="summary-value">{{ activeSession?.user?.name || 'Moi' }}</span></div>
-                <div class="summary-row"><span class="summary-label">Ouverte le</span><span class="summary-value">{{ formatDate(activeSession?.opened_at) }}</span></div>
-                <div class="summary-row"><span class="summary-label">Fond de caisse</span><span class="summary-value">{{ formatCurrency(activeSession?.starting_amount) }}</span></div>
-                <div v-if="sessionSummary" class="summary-row"><span class="summary-label">Total transactions</span><span class="summary-value">{{ formatCurrency(sessionSummary?.total_transactions) }}</span></div>
-                <div v-if="sessionSummary" class="summary-row"><span class="summary-label">Écarts signalés</span><span class="summary-value">{{ formatCurrency(sessionSummary?.total_discrepancies) }}</span></div>
-                <div class="summary-row" v-if="sessionSummary?.session?.expected_cash_amount !== undefined">
-                  <span class="summary-label">Montant attendu</span>
-                  <span class="summary-value">{{ formatCurrency(sessionSummary?.session?.expected_cash_amount) }}</span>
-                </div>
-              </div>
-            </div>
-          </section>
-          <footer class="modal-card-foot summary-modal-foot">
-            <button class="summary-action summary-action-primary" type="button" :disabled="summaryLoading" @click="continueAfterSummary">Continuer à vendre</button>
-            <button class="summary-action summary-action-secondary" type="button" :disabled="summaryLoading" @click="closeSummaryModal">Fermer</button>
-          </footer>
-        </div>
-      </div>
     </div>
   </div>
+
+  <AmountModal
+    :is-open="isAmountModalOpen"
+    @close="closeAmountModal"
+    @send="handleAmountModalSend"
+  />
 </template>
 
 <script setup>
@@ -211,7 +152,7 @@ import { useAuth } from '@/composables/useAuth'
 import { API_BASE_URL } from '@/utils/api'
 
 const router = useRouter()
-const { isAdmin, currentUser, hasRole, loadUserData } = useAuth()
+const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
 
 const canAccessCashActions = computed(() => {
   return isAdmin.value || hasRole('caissier')
@@ -468,13 +409,6 @@ const openSummaryModal = async () => {
   sessionSummary.value = null
   isSummaryModalOpen.value = true
 
-const isSessionOpen = (session) => {
-  // Une session valide doit avoir une propriété 'is_closed'
-  if (!session || typeof session !== 'object' || !('is_closed' in session)) return false
-  const value = session.is_closed
-  return value === false || value === null || value === undefined || value === 0 || value === '0'
-}
-
   summaryLoading.value = true
   try {
     sessionSummary.value = await fetchSessionSummary(activeSession.value.id)
@@ -570,7 +504,7 @@ const viewSales = () => router.push({ name: 'dashboard-user-sales' })
 const onConnectButtonClick = () => {
   if (isProcessing.value) return
   if (isSelfConnected.value) {
-    openSummaryModal();
+   router.push({ name: 'dashboard-direct' })
     return
   }
   if (!selectedCashRegister.value) {

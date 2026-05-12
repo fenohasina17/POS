@@ -160,8 +160,9 @@ import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { useAuth } from '@/composables/useAuth'
+import { storage } from '@/utils/storage'
 
-const { isAdmin, currentUser, loadUserData } = useAuth()
+const { isAdmin, user: currentUser, loadUserData } = useAuth()
 
 const machineName = ref('')
 const formName = ref('')
@@ -176,9 +177,9 @@ const errorMessage = ref('')
 const userPointOfSaleId = computed(() => currentUser.value?.point_of_sale_id ?? null)
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error("Token d'authentification manquant")
-  return { Authorization: `Bearer ${token}` }
+  const auth = storage.getAuth()
+  if (!auth?.token) throw new Error("Token d'authentification manquant")
+  return { Authorization: `Bearer ${auth.token}` }
 }
 
 const detectMachineName = () => {

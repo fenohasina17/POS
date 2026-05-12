@@ -45,7 +45,7 @@ class PricingSeeder extends Seeder
 
                 Pricing::updateOrCreate(
                     [
-                        'point_of_sale_id' => $pointOfSale->id,
+                        'point_of_sale_id' => 2,
                         'product_id' => $product->id,
                     ],
                     [

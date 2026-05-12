@@ -83,19 +83,28 @@ export function useCategories() {
     }
   }
 
-  const loadProducts = (category) => {
-    activeCategory.value = category
-    const fallbackPrinterTypeId = resolveCategoryPrinterTypeId(category)
-    const categoryProducts = category?.products || []
+  const loadProducts = (category = null) => {
+    activeCategory.value = category;
 
-    filteredProducts.value = categoryProducts.map(product => {
-      const categoryId = product.category_id ?? category?.id ?? null
-      const printerTypeId = product.printer_type_id ?? resolveProductPrinterTypeId(product, category) ?? fallbackPrinterTypeId
+    let productsToProcess = [];
+    if (category && category.id) {
+        productsToWeProcess = products.value.filter(p => p.category_id === category.id);
+    } else {
+        productsToProcess = products.value;
+    }
+    
+    const fallbackPrinterTypeId = resolveCategoryPrinterTypeId(category); 
+
+    filteredProducts.value = productsToProcess.map(product => {
+      const categoryId = product.category_id ?? category?.id ?? null; 
+      const printerTypeId = product.printer_type_id ?? resolveProductPrinterTypeId(product, category) ?? fallbackPrinterTypeId;
+      
       const price = Number(
         product.price ??
         (Array.isArray(product.pricing) && product.pricing.length ? parseFloat(product.pricing[0].price) : 0)
-      ) || 0
-      const stock = resolveProductStock(product)
+      ) || 0;
+      
+      const stock = resolveProductStock(product);
 
       const normalized = {
         ...product,
@@ -103,19 +112,19 @@ export function useCategories() {
         printer_type_id: printerTypeId,
         price,
         stock,
-      }
+      };
 
-      normalized.isAvailable = checkProductAvailability(normalized)
+      normalized.isAvailable = checkProductAvailability(normalized);
 
       registerProduct(normalized, {
         category,
         category_id: categoryId,
         printer_type_id: printerTypeId,
         price
-      })
+      });
 
-      return normalized
-    })
+      return normalized;
+    });
   }
 
   const resolveCategoryPrinterTypeId = (category) => {

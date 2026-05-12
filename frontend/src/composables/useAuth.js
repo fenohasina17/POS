@@ -27,7 +27,7 @@ export function useAuth() {
 
   const loadUserData = async () => {
     const currentAuth = storage.getAuth()
-    if (!currentAuth?.user?.id) return
+    if (!currentAuth?.user?.id || !currentAuth?.token) return
 
     try {
       // Recharger les rôles et permissions depuis l'API pour être à jour
@@ -36,8 +36,8 @@ export function useAuth() {
         userService.getPermissions(currentAuth.user.id)
       ])
 
-      const newRoles = rolesRes.data.map(r => r.name)
-      const newPerms = permsRes.data.map(p => p.name)
+      const newRoles = (Array.isArray(rolesRes.data) ? rolesRes.data : (rolesRes.data?.data || [])).map(r => r.name || r)
+      const newPerms = (Array.isArray(permsRes.data) ? permsRes.data : (permsRes.data?.data || [])).map(p => p.name || p)
 
       // Mettre à jour le stockage
       storage.setAuth(

@@ -2,7 +2,7 @@
   <div :class="embedded ? 'user-sales-embedded' : 'user-sales-view'">
     <Profile v-if="!embedded" />
 
-<div class="user-sales-layout grid gap-2 lg:grid-cols-[minmax(0,1fr)_260px]">
+<div class="user-sales-layout grid gap-2 lg:grid-cols-[minmax(0,1fr)_600px]">
       <!-- Tableau des ventes -->
       <section
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-400 bg-white p-2 shadow-sm"
@@ -54,7 +54,7 @@
                       ]"
                     >
                       <td class="whitespace-nowrap px-2 py-1.5 text-slate-600">{{ formatDate(sale.created_at) }}</td>
-                      <td class="px-2 py-1.5 font-mono text-slate-600">{{ sale.ticket_number }}</td>
+                      <td class="px-2 py-1.5 font-mono text-slate-600">{{ sale.sale_number || sale.ticket_number }}</td>
                       <td class="px-2 py-1.5 font-semibold text-slate-800">
                         {{ formatPrice(sale.total_amount) }}
                       </td>
@@ -84,6 +84,7 @@
                             class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
                             @click.stop="openEditModal(sale)"
                             aria-label="Modifier"
+                            v-if="isAdmin"
                           >
                             <FontAwesomeIcon icon="fa-solid fa-pen" class="text-xs" />
                           </button>
@@ -92,6 +93,7 @@
                             class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
                             @click.stop="confirmDeleteSale(sale)"
                             aria-label="Supprimer"
+                            v-if="isAdmin"
                           >
                             <FontAwesomeIcon icon="fa-solid fa-trash" class="text-xs" />
                           </button>
@@ -339,7 +341,7 @@ const fetchSaleDetails = async (saleId) => {
 const selectSale = async (sale) => {
   selectedSale.value = null // Réinitialisation pour déclencher la réactivité
   const details = await fetchSaleDetails(sale.id)
-  
+
   if (details) {
     // Gestion robuste : on accepte order_lines ou orderlines
     const lines = details.order_lines || details.orderlines || []
@@ -359,7 +361,7 @@ const closeEditModal = () => {
 }
 
 const confirmDeleteSale = (sale) => {
-  if (confirm(`Supprimer la vente n°${sale.ticket_number} ?`)) {
+  if (confirm(`Supprimer la vente n°${sale.sale_number || sale.ticket_number} ?`)) {
     deleteSale(sale)
   }
 }
@@ -375,7 +377,7 @@ const printDuplicateSale = async (sale) => {
   const invoiceData = {
     companyName: 'INTERNATIONAL GASTRONOMY PIZZA',
     address: 'Antananarivo, Madagascar',
-    number: saleToPrint.ticket_number || 'DUP-' + saleToPrint.id,
+    number: saleToPrint.sale_number || saleToPrint.ticket_number || 'DUP-' + saleToPrint.id,
     date: formatDate(saleToPrint.created_at),
     items: (saleToPrint.order_lines || []).map(line => ({
       name: line.product?.name || 'Article',

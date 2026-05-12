@@ -1,11 +1,13 @@
 <template>
   <div class="flex min-h-screen bg-slate-100 text-slate-900">
+    <!-- Overlay mobile -->
     <div
       class="fixed inset-0 z-30 bg-slate-900/40 transition-opacity duration-200 lg:hidden"
       :class="sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'"
       @click="closeSidebar"
     ></div>
 
+    <!-- Sidebar -->
     <aside
       :class="[
         'fixed inset-y-0 left-0 z-40 border-r border-slate-200 bg-white shadow-sm transition-all duration-200 ease-in-out',
@@ -33,13 +35,31 @@
 
         <nav :class="['mt-12 h-12', isSidebarCollapsed ? 'px-1' : 'px-3']">
           <div v-for="section in navigationSections" :key="section.title" class="mb-6">
+            <!-- En-tête de section cliquable (seulement si non réduite) -->
+            <div
+              v-if="!isSidebarCollapsed"
+              class="mb-2 flex cursor-pointer items-center justify-between px-2"
+              @click="toggleSection(section.title)"
+            >
+              <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                {{ section.title }}
+              </p>
+              <FontAwesomeIcon
+                :icon="faChevronDown"
+                class="text-[10px] text-slate-400 transition-transform"
+                :class="{ 'rotate-180': isSectionExpanded(section.title) }"
+              />
+            </div>
+            <!-- Version réduite : afficher uniquement le titre (non cliquable) -->
             <p
-              class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400"
-              :class="isSidebarCollapsed ? 'lg:hidden' : ''"
+              v-else
+              class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400 lg:hidden"
             >
               {{ section.title }}
             </p>
-            <ul class="space-y-1">
+
+            <!-- Contenu de la section (pliable) -->
+            <ul v-if="isSectionExpanded(section.title)" class="space-y-1">
               <li v-for="item in section.items" :key="item.label" class="space-y-1">
                 <button
                   type="button"
@@ -99,22 +119,22 @@
       </div>
     </aside>
 
+    <!-- Main content area -->
     <div :class="['flex min-h-screen flex-1 flex-col', contentPaddingClass]">
       <header :class="['fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur', headerOffsetClass]">
         <div class="flex w-full flex-wrap items-center gap-3 px-3 py-1 sm:px-4 lg:px-6">
+          <!-- LEFT: Bouton toggle + loading indicator -->
           <div class="flex items-center gap-2">
             <button
-              type="button"
-              class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
               @click="toggleSidebar"
-              aria-label="Basculer le menu"
+              class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+              aria-label="Menu principal"
             >
               <FontAwesomeIcon :icon="faBars" class="text-sm" />
             </button>
 
-            <!-- Header loading indicator -->
             <transition name="fade">
-              <div v-if="globalLoading" class="ml-2 flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-50/50">
+              <div v-if="globalLoading" class="flex items-center gap-1.5 rounded-full bg-indigo-50/50 px-2 py-1">
                 <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500"></div>
                 <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.15s]"></div>
                 <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.3s]"></div>
@@ -122,6 +142,7 @@
             </transition>
           </div>
 
+          <!-- RIGHT: Notifications + User menu -->
           <div class="flex flex-1 items-center justify-end gap-2">
             <button
               type="button"
@@ -144,45 +165,27 @@
                 <FontAwesomeIcon :icon="faChevronDown" class="hidden text-[10px] text-slate-400 sm:inline" />
               </button>
 
-              <transition name="fade">
-                <div
-                  v-if="userMenuOpen"
-                  class="absolute right-0 top-10 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg"
-                >
-                  <div class="border-b border-slate-100 px-3 py-2">
-                    <p class="text-sm font-semibold text-slate-800">{{ userDisplayName }}</p>
-                    <p class="text-[11px] text-slate-400">{{ userEmail }}</p>
-                  </div>
-                  <nav class="py-2 text-sm text-slate-600">
-                    <button
-                      type="button"
-                      class="flex w-full items-center px-3 py-1.5 text-xs transition hover:bg-slate-50"
-                      @click="navigateTo('dashboard-overview')"
-                    >
-                      Dashboard
-                    </button>
-                    <button type="button" class="flex w-full items-center px-3 py-1.5 text-xs text-slate-400" disabled>
-                      Paramètres
-                    </button>
-                    <button type="button" class="flex w-full items-center px-3 py-1.5 text-xs text-slate-400" disabled>
-                      Revenus
-                    </button>
-                    <button
-                      type="button"
-                      class="flex w-full items-center px-3 py-1.5 text-xs text-rose-600 transition hover:bg-rose-50"
-                      @click="logout"
-                    >
-                      Déconnexion
-                    </button>
-                  </nav>
+              <div
+                v-if="userMenuOpen"
+                class="absolute right-0 top-full mt-2 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg z-50"
+              >
+                <div class="border-b border-slate-100 px-4 py-2">
+                  <p class="text-xs font-medium text-slate-800">{{ userDisplayName }}</p>
+                  <p class="text-[10px] text-slate-500">{{ userEmail }}</p>
                 </div>
-              </transition>
+                <button
+                  @click="logout"
+                  class="w-full px-4 py-2 text-left text-xs text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
+                >
+                  Déconnexion
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main class="flex-1 px-3 pb-6 pt-[3.5rem] sm:px-4 lg:px-5 lg:pt-[4rem]">
+      <main class="flex-1  pb-6 pt-[3.5rem] sm:px-4 lg:px-5 lg:pt-[4rem]">
         <router-view v-slot="{ Component }">
           <transition name="page-fade" mode="out-in">
             <div v-if="globalLoading" class="flex h-[60vh] flex-col items-center justify-center space-y-6">
@@ -207,6 +210,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterView } from 'vue-router'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
 import {
   faArrowRotateLeft,
   faBars,
@@ -215,11 +219,8 @@ import {
   faCashRegister,
   faClipboardList,
   faChevronDown,
-  faGear,
   faGaugeHigh,
-  faMagnifyingGlass,
   faMoon,
-  faPrint,
   faReceipt,
   faStore,
   faTableCellsLarge,
@@ -232,12 +233,36 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '@/composables/useAuth'
 import { useCategories } from '@/composables/useCategories'
+import { storage } from '@/utils/storage'
+
+// Ajout des icônes à la bibliothèque FontAwesome
+library.add(
+  faArrowRotateLeft,
+  faBars,
+  faBell,
+  faBoxesStacked,
+  faCashRegister,
+  faClipboardList,
+  faChevronDown,
+  faGaugeHigh,
+  faMoon,
+  faReceipt,
+  faStore,
+  faTableCellsLarge,
+  faUsersGear,
+  faKey,
+  faUserGroup,
+  faChartLine,
+  faLayerGroup,
+  faListCheck
+)
 
 defineOptions({ name: 'DashboardLayout' })
 
 const router = useRouter()
 const route = useRoute()
 
+// États UI
 const sidebarOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const searchQuery = ref('')
@@ -245,12 +270,16 @@ const userMenuOpen = ref(false)
 const userMenuRef = ref(null)
 const expandedMenus = ref(new Set())
 const globalLoading = ref(true)
-
 const isDesktop = ref(false)
 
+// État pour les sections pliables (par défaut toutes ouvertes)
+const expandedSections = ref({})
+
+// Auth et données
 const { user, isAdmin, hasRole, loadUserData } = useAuth()
 const { loadCategories } = useCategories()
 
+// Computed
 const isSidebarCollapsed = computed(() => sidebarCollapsed.value && isDesktop.value)
 
 const headerOffsetClass = computed(() => {
@@ -263,53 +292,122 @@ const contentPaddingClass = computed(() => {
   return sidebarCollapsed.value ? 'lg:pl-16' : 'lg:pl-56'
 })
 
+const userDisplayName = computed(() => user.value?.name || 'Utilisateur')
+const userEmail = computed(() => user.value?.email || 'user@example.com')
+
+// Gestion des sections pliables
+const toggleSection = (sectionTitle) => {
+  expandedSections.value[sectionTitle] = !(expandedSections.value[sectionTitle] ?? true)
+}
+
+const isSectionExpanded = (sectionTitle) => {
+  return expandedSections.value[sectionTitle] ?? true // par défaut ouvert
+}
+
+// Initialisation de la sidebar selon la taille de l'écran
 const setInitialSidebarState = () => {
   if (typeof window === 'undefined') return
   isDesktop.value = window.innerWidth >= 1024
   sidebarOpen.value = isDesktop.value
+  sidebarCollapsed.value = false
 }
 
-const handleDocumentClick = (event) => {
-  if (!userMenuRef.value) return
-  if (userMenuRef.value.contains(event.target)) return
+const toggleSidebar = () => {
+  if (!isDesktop.value) {
+    sidebarOpen.value = !sidebarOpen.value
+    return
+  }
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+const closeSidebar = () => {
+  if (isDesktop.value) return
+  sidebarOpen.value = false
+}
+
+const closeUserMenu = () => {
   userMenuOpen.value = false
 }
 
-const handleResize = () => {
-  if (typeof window === 'undefined') return
-  const width = window.innerWidth
-  isDesktop.value = width >= 1024
-  sidebarOpen.value = isDesktop.value
+const toggleUserMenu = () => {
+  userMenuOpen.value = !userMenuOpen.value
 }
 
-onMounted(async () => {
-  setInitialSidebarState()
-
-  try {
-    // Parallelize initialization of user data and categories/products
-    await Promise.all([
-      loadUserData(),
-      loadCategories()
-    ])
-  } catch (error) {
-    console.error('Initialisation Dashboard échouée:', error)
-  } finally {
-    globalLoading.value = false
+// Gestion des sous-menus
+const toggleMenu = (item) => {
+  if (!item?.name) return
+  const updated = new Set(expandedMenus.value)
+  if (updated.has(item.name)) {
+    updated.delete(item.name)
+  } else {
+    updated.add(item.name)
   }
+  expandedMenus.value = updated
+}
 
-  document.addEventListener('click', handleDocumentClick)
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', handleResize)
+const isMenuExpanded = (item) => {
+  if (!item?.name) return false
+  return expandedMenus.value.has(item.name)
+}
+
+// Navigation
+const navigateTo = (name) => {
+  closeSidebar()
+  closeUserMenu()
+  router.push({ name })
+}
+
+const handleNavigation = (item) => {
+  if (item?.children?.length) {
+    toggleMenu(item)
+    return
   }
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('click', handleDocumentClick)
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', handleResize)
+  closeSidebar()
+  closeUserMenu()
+  if (item?.name) {
+    router.push({ name: item.name })
   }
-})
+}
 
+// Vérification de l'item actif dans le menu
+const isActive = (item) => {
+  const currentName = route.name ? route.name.toString() : ''
+  if (item.children?.length) {
+    return item.children.some((child) => isActive(child))
+  }
+  if (item.matchPrefix) {
+    return currentName.startsWith(item.matchPrefix)
+  }
+  if (Array.isArray(item.names)) {
+    return item.names.includes(currentName)
+  }
+  if (item.name) {
+    return currentName === item.name
+  }
+  return false
+}
+
+// Déplier automatiquement le menu correspondant à la route courante
+const expandMenuForRoute = () => {
+  const currentName = route.name ? route.name.toString() : ''
+  const updated = new Set(expandedMenus.value)
+
+  navigationSections.value.forEach((section) => {
+    section.items.forEach((item) => {
+      if (!item.children?.length || !item.name) return
+      const matches = item.children.some((child) => {
+        if (child.matchPrefix) return currentName.startsWith(child.matchPrefix)
+        if (Array.isArray(child.names)) return child.names.includes(currentName)
+        return child.name === currentName
+      })
+      if (matches) updated.add(item.name)
+    })
+  })
+
+  expandedMenus.value = updated
+}
+
+// Filtrage des éléments de menu selon les droits (admin, caissier)
 const filterAdminItems = (items) => {
   return items
     .filter((item) => {
@@ -331,6 +429,7 @@ const filterAdminItems = (items) => {
     )
 }
 
+// Définition des sections de navigation
 const navigationSections = computed(() => {
   const menuItems = filterAdminItems([
     { label: 'Dashboard', name: 'dashboard-overview', icon: faGaugeHigh },
@@ -344,8 +443,8 @@ const navigationSections = computed(() => {
         { label: 'Gestion des tables', name: 'dashboard-table-manage', icon: faListCheck },
       ],
     },
-    { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked },
-    { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup },
+    { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked, adminOnly: true },
+    { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup, adminOnly: true },
     { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, adminOnly: true },
     { label: 'Mes ventes', name: 'dashboard-user-sales', icon: faReceipt },
     { label: 'Remise à zéro', name: 'dashboard-retour', icon: faArrowRotateLeft, caissierOnly: true },
@@ -353,7 +452,7 @@ const navigationSections = computed(() => {
 
   const toolItems = filterAdminItems([
     { label: 'Point de vente', name: 'dashboard-point-of-sale', icon: faStore, adminOnly: true },
-    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList },
+    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList, adminOnly: true },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
     ...(isAdmin.value
       ? [
@@ -381,113 +480,65 @@ const navigationSections = computed(() => {
   return sections.filter((section) => section.items.length > 0)
 })
 
-const toggleSidebar = () => {
-  if (!isDesktop.value) {
-    sidebarOpen.value = !sidebarOpen.value
-    return
-  }
-  sidebarCollapsed.value = !sidebarCollapsed.value
-}
-
-const closeSidebar = () => {
-  if (isDesktop.value) return
-  sidebarOpen.value = false
-}
-
-const closeUserMenu = () => {
-  userMenuOpen.value = false
-}
-
-const toggleUserMenu = () => {
-  userMenuOpen.value = !userMenuOpen.value
-}
-
-const toggleMenu = (item) => {
-  if (!item?.name) return
-  const updated = new Set(expandedMenus.value)
-  if (updated.has(item.name)) {
-    updated.delete(item.name)
-  } else {
-    updated.add(item.name)
-  }
-  expandedMenus.value = updated
-}
-
-const isMenuExpanded = (item) => {
-  if (!item?.name) return false
-  return expandedMenus.value.has(item.name)
-}
-
-const navigateTo = (name) => {
-  closeSidebar()
-  closeUserMenu()
-  router.push({ name })
-}
-
-const handleNavigation = (item) => {
-  if (item?.children?.length) {
-    toggleMenu(item)
-    return
-  }
-
-  closeSidebar()
-  closeUserMenu()
-  if (item?.name) {
-    router.push({ name: item.name })
-  }
-}
-
+// Déconnexion
 const logout = () => {
   closeUserMenu()
-  localStorage.removeItem('token')
-  localStorage.removeItem('token_expiration')
-  localStorage.removeItem('user')
-  localStorage.removeItem('user_expiration')
-  localStorage.removeItem('cashRegisterSession')
+  storage.clearAuth()
+  storage.clearSession()
   router.push({ name: 'login' })
 }
 
-const isActive = (item) => {
-  const currentName = route.name ? route.name.toString() : ''
-  if (item.children?.length) {
-    return item.children.some((child) => isActive(child))
-  }
-  if (item.matchPrefix) {
-    return currentName.startsWith(item.matchPrefix)
-  }
-  if (Array.isArray(item.names)) {
-    return item.names.includes(currentName)
-  }
-  if (item.name) {
-    return currentName === item.name
-  }
-  return false
+// Gestion des clics en dehors du menu utilisateur
+const handleDocumentClick = (event) => {
+  if (!userMenuRef.value) return
+  if (userMenuRef.value.contains(event.target)) return
+  userMenuOpen.value = false
 }
 
-const expandMenuForRoute = () => {
-  const currentName = route.name ? route.name.toString() : ''
-  const updated = new Set(expandedMenus.value)
-
-  navigationSections.value.forEach((section) => {
-    section.items.forEach((item) => {
-      if (!item.children?.length || !item.name) return
-      const matches = item.children.some((child) => {
-        if (child.matchPrefix) {
-          return currentName.startsWith(child.matchPrefix)
-        }
-        if (Array.isArray(child.names)) {
-          return child.names.includes(currentName)
-        }
-        return child.name === currentName
-      })
-      if (matches) {
-        updated.add(item.name)
-      }
-    })
-  })
-
-  expandedMenus.value = updated
+// Gestion du redimensionnement de la fenêtre
+const handleResize = () => {
+  if (typeof window === 'undefined') return
+  const width = window.innerWidth
+  isDesktop.value = width >= 1024
+  if (isDesktop.value) {
+    sidebarOpen.value = true
+  } else {
+    sidebarOpen.value = false
+  }
 }
+
+// Cycle de vie
+onMounted(async () => {
+  setInitialSidebarState()
+
+  try {
+    await Promise.all([loadUserData(), loadCategories()])
+  } catch (error) {
+    console.error('Initialisation Dashboard échouée:', error)
+  } finally {
+    globalLoading.value = false
+  }
+
+  document.addEventListener('click', handleDocumentClick)
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', handleResize)
+  }
+
+  // Optionnel : sauvegarder l'état des sections pliées dans localStorage
+  const savedSections = localStorage.getItem('sidebar_sections')
+  if (savedSections) {
+    try {
+      expandedSections.value = JSON.parse(savedSections)
+    } catch (e) {}
+  }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', handleResize)
+  }
+})
 
 watch(
   () => route.name,
@@ -497,58 +548,33 @@ watch(
   { immediate: true }
 )
 
-const currentPageTitle = computed(() => {
-  const currentName = route.name ? route.name.toString() : ''
-  const titles = {
-    'dashboard-overview': 'Dashboard',
-    'dashboard-direct': 'Vente directe',
-    'dashboard-table': 'Salle',
-    'dashboard-table-manage': 'Gestion des tables',
-    'dashboard-product': 'Produits',
-    'dashboard-ventes': 'Ventes',
-    'dashboard-user-sales': 'Mes ventes',
-    'dashboard-retour': 'Remise à zéro',
-    'dashboard-printers': 'Imprimantes',
-    'dashboard-cash-register-sessions': 'Sessions caisse',
-    'dashboard-point-of-sale': 'Point de vente',
-    'dashboard-roles': 'Gestion des rôles',
-    'dashboard-roles-create': 'Créer un rôle',
-    'dashboard-roles-edit': 'Modifier un rôle',
-    'dashboard-permissions': 'Permissions',
-    'dashboard-permissions-create': 'Créer une permission',
-    'dashboard-users': 'Utilisateurs',
-    'dashboard-users-create': 'Créer un utilisateur',
-    'dashboard-users-edit': 'Modifier un utilisateur',
-    'dashboard-users-roles': 'Rôles utilisateur',
-  }
-  return titles[currentName] || 'Dashboard'
-})
-
-const userDisplayName = computed(() => user.value?.name || 'Utilisateur')
-const userEmail = computed(() => user.value?.email || 'user@example.com')
+// Sauvegarde automatique de l'état des sections pliées dans localStorage
+watch(
+  expandedSections,
+  (newVal) => {
+    localStorage.setItem('sidebar_sections', JSON.stringify(newVal))
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
 aside::-webkit-scrollbar {
   width: 4px;
 }
-
 aside::-webkit-scrollbar-thumb {
   border-radius: 9999px;
   background-color: rgba(148, 163, 184, 0.5);
 }
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
-
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
   transform: translateY(4px);
 }
-
 .page-fade-enter-active,
 .page-fade-leave-active {
   transition: opacity 0.4s ease;

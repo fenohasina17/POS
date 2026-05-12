@@ -15,8 +15,8 @@ class UserPermissionSeeder extends Seeder
     {
         // Fetch some permissions to assign directly to users
         $permissionsToAssign = [
-            'view cash register sessions',
-            'create cash register sessions',
+            'view.cash_register_sessions',
+            'create.cash_register_sessions',
         ];
 
         $permissions = Permission::whereIn('name', $permissionsToAssign)->get();

@@ -47,6 +47,14 @@
             <FontAwesomeIcon icon="fa-solid fa-table-list" />
             <span>Changer</span>
           </button>
+          <button
+            v-if="currentPendingOrder"
+            @click="printBill"
+            class="flex items-center gap-2 rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-indigo-600 active:scale-95"
+          >
+            <FontAwesomeIcon icon="fa-solid fa-receipt" />
+            <span>Imprimer l'Addition</span>
+          </button>
         </div>
       </div>
     </header>
@@ -262,7 +270,7 @@ import { tableService } from '@/services/tableService'
 import { printingService } from '@/services/printing/PrintingService'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { API_BASE_URL, API_URL } from '@/utils/api'
-import { faClock } from '@fortawesome/free-solid-svg-icons'
+import { faClock, faReceipt } from '@fortawesome/free-solid-svg-icons'
 
 const props = defineProps({
   tableId: { type: [Number, String], default: null },
@@ -471,23 +479,44 @@ const closeInvoiceModal = () => {
   loadTableAndData(selectedTable.value?.id)
 }
 
-const onPaymentSuccess = async (data) => {
-  const sale = data.sale || data
-  currentInvoiceNumber.value = `TICKET #${sale.ticket_number || sale.id}`
-  invoiceItems.value = sale.order_lines?.map(l => ({ name: l.product?.name, quantity: l.quantity, price: l.price })) || []
-  invoiceTotal.value = Number(sale.final_amount)
-  invoicePayments.value = data.payments || []
+const onPaymentSuccess = async (formattedSaleData) => {
+  currentInvoiceNumber.value = `VENTE #${formattedSaleData.sale.sale_number || formattedSaleData.sale.ticket_number || formattedSaleData.sale.id}`;
+
+  const allItems = formattedSaleData.categories.flatMap(category =>
+    category.items.map(item => ({
+      name: item.product_name,
+      quantity: item.quantity,
+      price: item.unit_price
+    }))
+  );
+  invoiceItems.value = allItems;
   
-  isPaymentModalOpen.value = false
-  isInvoiceModalOpen.value = true
+  invoiceTotal.value = Number(formattedSaleData.totals.final_amount);
+  invoicePayments.value = formattedSaleData.payments || [];
+  
+  isPaymentModalOpen.value = false;
+  isInvoiceModalOpen.value = true;
 
   // Rafraîchir l'état de la table
   if (selectedTable.value?.id) {
-    await loadTableAndData(selectedTable.value.id)
+    await loadTableAndData(selectedTable.value.id);
   }
 }
 
 const onPaymentError = (err) => console.error('Paiement error:', err)
+
+const printBill = async () => {
+  if (!currentPendingOrder.value || !selectedTable.value) return
+  isProcessing.value = true
+  try {
+    await printingService.printBill(currentPendingOrder.value, selectedTable.value)
+  } catch (error) {
+    console.error('Erreur impression addition:', error)
+    alert('Impossible d\'imprimer l\'addition. Veuillez vérifier l\'imprimante.')
+  } finally {
+    isProcessing.value = false
+  }
+}
 
 const paymentTotalAmount = computed(() => displayTotal.value)
 const paymentSaleData = computed(() => {

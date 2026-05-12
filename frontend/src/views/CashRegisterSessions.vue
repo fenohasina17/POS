@@ -278,7 +278,7 @@ export default {
         const profile = data?.data || data || null
         if (profile && typeof profile === 'object') {
           this.userProfile = {
-            ...(this.currentUser || {}),
+            ...this.currentUser,
             ...profile
           }
           localStorage.setItem('user', JSON.stringify(this.userProfile))

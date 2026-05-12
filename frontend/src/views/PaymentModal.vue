@@ -233,30 +233,16 @@
         <div class="payment-col col-3">
           <div class="panel">
             <div class="section-title">Clavier numérique</div>
-            <div class="keypad">
-              <div v-for="row in keypadRows" :key="row.join('')" class="keypad-row">
-                <button
-                  v-for="key in row"
-                  :key="key"
-                  type="button"
-                  class="keypad-btn"
-                  :class="{
-                    danger: key === 'DEL',
-                    disabled: (key !== 'DEL' && ((selectedPayment === 'Espèce' && amountReceivedValue >= remainingToPay) || (isMobilePayment && isPhoneNumberComplete) || (isMobilePayment && phoneNumber.replace(/\D/g, '').length >= 3 && !phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032')) || (selectedPayment === 'TPE' && isTpeComplete)))
-                  }"
-                  :disabled="(key !== 'DEL' && ((selectedPayment === 'Espèce' && amountReceivedValue >= remainingToPay) || (isMobilePayment && isPhoneNumberComplete) || (isMobilePayment && phoneNumber.replace(/\D/g, '').length >= 3 && !phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032')) || (selectedPayment === 'TPE' && isTpeComplete)))"
-                  @click="key === 'DEL' ? onKeypadDelete() : onKeypadPress(key)"
-                >
-                  <FontAwesomeIcon v-if="key === 'DEL'" icon="fa-delete-left" />
-                  <span v-else>{{ key }}</span>
-                </button>
-              </div>
-            </div>
+            <NumericKeypad
+              :disabled="isKeypadDisabled"
+              @press="onKeypadPress"
+              @delete="onKeypadDelete"
+            />
           </div>
 
           <button
             type="button"
-            class="btn-add-payment"
+            class="btn-add-payment"&
             :disabled="!canAddPayment"
             @click="addPayment"
           >
@@ -290,6 +276,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import axios from 'axios'
+import NumericKeypad from '@/components/NumericKeypad.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faDeleteLeft } from '@fortawesome/free-solid-svg-icons'
@@ -304,17 +291,11 @@ const props = defineProps({
   saleData: { type: Object, default: () => ({}) },
 })
 
-const emit = defineEmits(['close-modal', 'payment-success', 'payment-error'])
+const emit = defineEmits(['close-modal', 'payment-success', 'payment-error', 'clear-cart'])
 
 const token = localStorage.getItem('token')
 const mobilePayments = ['Orange Money', 'MVola', 'Airtel Money', 'Telma']
 const discountOptions = [0, 25,50, 75, 100]
-const keypadRows = [
-  ['7', '8', '9'],
-  ['4', '5', '6'],
-  ['1', '2', '3'],
-  ['0', '•', 'DEL'],
-]
 
 const paymentsListApi = ref([])
 const loadingPayments = ref(false)
@@ -366,6 +347,13 @@ const isTpeComplete = computed(() => {
 
 const amountReceivedValue = computed(() => parseInt(amountReceived.value.replace(/\D/g, '')) || 0)
 
+const isKeypadDisabled = computed(() => {
+  return (selectedPayment.value === 'Espèce' && amountReceivedValue.value >= remainingToPay.value) ||
+         (isMobilePayment.value && isPhoneNumberComplete.value) ||
+         (isMobilePayment.value && phoneNumber.value.replace(/\D/g, '').length >= 3 && !phoneNumber.value.replace(/\D/g, '').startsWith(selectedPayment.value === 'Airtel Money' ? '033' : selectedPayment.value === 'MVola' ? '034' : '032')) ||
+         (selectedPayment.value === 'TPE' && isTpeComplete.value)
+})
+
 const discountedTotal = computed(() => {
   const discount = (selectedDiscount.value / 100) * props.totalAmount
   return Math.max(0, props.totalAmount - discount)
@@ -384,7 +372,7 @@ const paymentProgress = computed(() =>
 const canAddPayment = computed(() => {
   // On autorise l'ajout tant qu'il reste à payer
   if (!selectedPayment.value || remainingToPay.value <= 0) return false
-  
+
   if (selectedPayment.value === 'Espèce') return amountReceivedValue.value > 0
   if (selectedPayment.value === 'TPE') {
     const cleaned = cardNumber.value.replace(/\s/g, '')
@@ -488,7 +476,7 @@ const addPayment = () => {
     // Pour TPE/Mobile, on prend le montant restant à payer
     // Si l'utilisateur saisit un montant spécifique, on pourrait l'ajouter ici
     // Pour l'instant, on prend le solde restant
-    amount = remainingToPay.value 
+    amount = remainingToPay.value
   }
 
   const found = paymentsListApi.value.find((p) => p.name === selectedPayment.value)
@@ -590,13 +578,8 @@ const confirmPayment = async () => {
     console.log('✅ Vente finalisée avec ID :', saleId)
     console.groupEnd()
 
-    emit('payment-success', {
-      sale_id: saleId,
-      sale: response.data?.data?.sale,
-      payments: response.data?.data?.payments || paymentsList.value,
-      discount_percentage: selectedDiscount.value,
-      final_total: discountedTotal.value,
-    })
+    // Émettre directement les données formatées du backend
+    emit('payment-success', response.data.data)
 
     // Émettre un événement pour vider le panier dans le composant parent
     emit('clear-cart')
@@ -1023,53 +1006,6 @@ watch(
   text-align: center;
   color: #94a3b8;
   font-size: 0.875rem;
-}
-
-/* ── Keypad ── */
-.keypad {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.keypad-row {
-  display: flex;
-  gap: 0.4rem;
-  justify-content: center;
-}
-
-.keypad-btn {
-  width: 76px;
-  height: 58px;
-  border-radius: 0.75rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1e293b;
-  cursor: pointer;
-  transition: all 0.12s;
-}
-
-.keypad-btn:hover:not(:disabled) {
-  background: #eef2ff;
-  border-color: #a5b4fc;
-  color: #4f46e5;
-}
-.keypad-btn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-.keypad-btn.danger {
-  color: #e11d48;
-}
-.keypad-btn.danger:hover {
-  background: #fff1f2;
-  border-color: #fda4af;
-}
-.keypad-btn.disabled,
-.keypad-btn:disabled {
-  opacity: 0.3;
-  cursor: default;
 }
 
 /* ── Add payment button ── */
