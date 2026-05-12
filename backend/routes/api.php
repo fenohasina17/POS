@@ -77,6 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales/current-session', [SaleController::class, 'getSalesForCurrentSession'])->name('sales.current-session');
 
     // ========== VENTES ==========
+    Route::put('/sales/{sale}/order-lines', [SaleController::class, 'replaceOrderLines']);
     Route::get('/sales/export', [SalesExportController::class, 'export'])->name('sales.export'); // Added sales export route
     Route::apiResource('sales', SaleController::class);
 

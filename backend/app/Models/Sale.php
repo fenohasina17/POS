@@ -1,21 +1,21 @@
 <?php
-// app/Models/Sale.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Sale extends Model
 {
-    use HasFactory;
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'sales';
 
     protected $fillable = [
         'sale_number',
+        'ticket_number',
         'user_id',
         'point_of_sale_id',
         'cash_register_session_id',
@@ -23,41 +23,51 @@ class Sale extends Model
         'total_amount',
         'discount_percentage',
         'final_amount',
-        'status',
-        'ticket_number',
         'amount_received',
         'change_amount',
+        'status',
         'notes',
         'cancelled_at',
         'cancellation_reason',
         'deleted_by',
-        'deletion_reason'
+        'deletion_reason',
     ];
 
     protected $casts = [
-        'total_amount' => 'decimal:2',
-        'discount_percentage' => 'decimal:2',
-        'final_amount' => 'decimal:2',
-        'amount_received' => 'decimal:2',
-        'change_amount' => 'decimal:2',
-        'cancelled_at' => 'datetime',
+        'total_amount'       => 'decimal:2',
+        'discount_percentage'=> 'decimal:2',
+        'final_amount'       => 'decimal:2',
+        'amount_received'    => 'decimal:2',
+        'change_amount'      => 'decimal:2',
+        'cancelled_at'       => 'datetime',
+        'created_at'         => 'datetime',
+        'updated_at'         => 'datetime',
     ];
+
+    // ======================== EVENTS ========================
+
     protected static function booted()
     {
         static::creating(function ($sale) {
-            $pos = \App\Models\PointOfSale::find($sale->point_of_sale_id);
-            $prefix = strtoupper($pos->code ?? $pos->name); // ex: "CENTRE"
+            if (empty($sale->sale_number)) {
+                $pos = PointOfSale::find($sale->point_of_sale_id);
+                $prefix = strtoupper($pos?->code ?? $pos?->name ?? 'POS');
 
-            $lastSale = static::where('point_of_sale_id', $sale->point_of_sale_id)
-                ->orderBy('id', 'desc')
-                ->first();
-            $nextNumber = $lastSale ? (intval(substr($lastSale->sale_number, -6)) + 1) : 1;
+                $lastSale = static::where('point_of_sale_id', $sale->point_of_sale_id)
+                    ->orderBy('id', 'desc')
+                    ->first();
 
-            $sale->sale_number = $prefix . '_V-' . date('Ymd') . '-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+                $nextNumber = $lastSale
+                    ? (int) substr($lastSale->sale_number, -6) + 1
+                    : 1;
+
+                $sale->sale_number = $prefix . '_V-' . now()->format('Ymd') . '-' . str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+            }
         });
     }
 
-    // Relations
+    // ======================== RELATIONS ========================
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -78,13 +88,16 @@ class Sale extends Model
         return $this->belongsTo(Table::class);
     }
 
+    /**
+     * Relation principale (nom correct dans la base de données)
+     */
     public function orderlines()
     {
-        return $this->hasMany(Orderline::class);
+        return $this->hasMany(OrderLine::class);   // Assure-toi que le modèle s'appelle OrderLine
     }
 
     /**
-     * Alias pour orderlines (utilisé par le frontend)
+     * Alias pour compatibilité avec le frontend (order_lines)
      */
     public function order_lines()
     {
@@ -101,12 +114,46 @@ class Sale extends Model
         return $this->hasOne(CashTransaction::class);
     }
 
+    // ======================== MÉTHODES UTILES ========================
+
     /**
-     * Récupère le premier paiement (pour compatibilité avec l'ancien code)
+     * Recalcule et met à jour les montants totaux
      */
-    public function getPaymentIdAttribute()
+    public function updateTotalAmount(): void
     {
-        $payment = $this->payments()->first();
-        return $payment ? $payment->payment_id : null;
+        $total = $this->orderlines()->sum('total');
+
+        $this->total_amount = $total;
+        $this->final_amount = $total * (1 - ($this->discount_percentage ?? 0) / 100);
+        $this->save();
+    }
+
+    /**
+     * Accesseur pour le nom du caissier
+     */
+    public function getCashierNameAttribute()
+    {
+        return $this->user?->name ?? 'Inconnu';
+    }
+
+    /**
+     * Accesseur pour le statut lisible
+     */
+    public function getStatusLabelAttribute()
+    {
+        return match ($this->status) {
+            'completed' => 'Terminée',
+            'pending'   => 'En attente',
+            'cancelled' => 'Annulée',
+            default     => ucfirst($this->status),
+        };
+    }
+
+    /**
+     * Vérifie si la vente peut être modifiée
+     */
+    public function canBeModified(): bool
+    {
+        return $this->status === 'pending' || auth()->user()?->hasRole('admin');
     }
 }

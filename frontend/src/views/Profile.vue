@@ -1,6 +1,6 @@
 <template>
 
-  <div>
+  <!-- <div>
 
     <div v-if="isOpen" class="menu-overlay" @click="closeMenu"></div>
 
@@ -172,7 +172,7 @@
         </div>
       </section>
     </div>
-  </div>
+  </div> -->
 
 </template>
 

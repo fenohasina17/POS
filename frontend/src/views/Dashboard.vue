@@ -185,7 +185,7 @@
         </div>
       </header>
 
-      <main class="flex-1 px-3 pb-6 pt-[3.5rem] sm:px-4 lg:px-5 lg:pt-[4rem]">
+      <main class="flex-1  pb-6 pt-[3.5rem] sm:px-4 lg:px-5 lg:pt-[4rem]">
         <router-view v-slot="{ Component }">
           <transition name="page-fade" mode="out-in">
             <div v-if="globalLoading" class="flex h-[60vh] flex-col items-center justify-center space-y-6">

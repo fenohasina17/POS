@@ -105,11 +105,11 @@ const exportSales = async () => {
 
   try {
     const token = localStorage.getItem('token')
-    const params = { 
+    const params = {
         pointOfSaleId: filters.value.pointOfSaleId,
-        productId: filters.value.productId 
+        productId: filters.value.productId
     }
-    
+
     // Ajout temporel
     if (periodType.value === 'range') {
         params.startDate = filters.value.startDate
@@ -117,7 +117,7 @@ const exportSales = async () => {
     } else if (periodValue.value) {
         params[periodType.value] = periodValue.value
     }
-    
+
     const response = await axios.get(`${API_BASE_URL}/sales/export`, {
       params,
       headers: { Authorization: `Bearer ${token}` },

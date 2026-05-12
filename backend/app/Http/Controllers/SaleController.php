@@ -42,7 +42,7 @@ class SaleController extends Controller
 
     /**
      * POST /api/sales/{saleId}/validate
-     * 
+     *
      * Valide une commande en attente (pending) et la transforme en vente complète
      *
      * @param Request $request Requête HTTP contenant :
@@ -108,7 +108,7 @@ class SaleController extends Controller
 
     /**
      * GET /api/sales
-     * 
+     *
      * Liste toutes les ventes avec filtres
      * - Admin : voit toutes les ventes
      * - Gérant : voit uniquement les ventes de son point de vente
@@ -209,7 +209,7 @@ class SaleController extends Controller
     }
     /**
      * GET /api/point-of-sales/{pointOfSale}/kpis
-     * 
+     *
      * Récupère les KPIs produits pour un point de vente (quantités vendues et chiffre d'affaires par produit)
      *
      * @param PointOfSale $pointOfSale Instance du point de vente (route model binding)
@@ -261,7 +261,7 @@ class SaleController extends Controller
 
     /**
      * GET /api/sales/monthly/{pointOfSaleId}
-     * 
+     *
      * Récupère les statistiques mensuelles et journalières des ventes pour un point de vente
      *
      * @param Request $request Requête HTTP avec paramètres query :
@@ -509,7 +509,7 @@ class SaleController extends Controller
 
     /**
      * POST /api/sales
-     * 
+     *
      * Crée une vente complète (payée immédiatement)
      * Supporte les paiements uniques ou multiples
      *
@@ -530,12 +530,12 @@ class SaleController extends Controller
      *                         - table_id (int|null) : ID de la table (existe dans tables, null = emporter)
      *                         - discount_percentage (float) : Remise en % (min:0, max:100)
      *                         - notes (string|null) : Notes optionnelles
-     *                         
+     *
      *                         FORMAT PAIEMENT UNIQUE :
      *                         - payment_id (int) : ID du mode de paiement (existe dans payments)
      *                         - amount_received (float) : Montant reçu (min:0)
      *                         - change_returned (float|null) : Monnaie rendue (min:0)
-     *                         
+     *
      *                         FORMAT PAIEMENTS MULTIPLES :
      *                         - payments (array) : Tableau des paiements (min:1)
      *                           - payments.*.payment_id (int) : ID du mode de paiement
@@ -543,7 +543,7 @@ class SaleController extends Controller
      *                           - payments.*.reference (string|null) : Référence (max:100)
      *                           - payments.*.notes (string|null) : Notes (max:255)
      *                         - change_amount (float|null) : Monnaie rendue (min:0)
-     * 
+     *
      * @return \Illuminate\Http\JsonResponse
      *         SUCCÈS (201) : {
      *             success: true,
@@ -677,7 +677,7 @@ class SaleController extends Controller
 
     /**
      * POST /api/sales/pending-orders
-     * 
+     *
      * Crée une commande en attente (non payée, pour commande en salle)
      *
      * @param Request $request Requête HTTP contenant :
@@ -736,7 +736,7 @@ class SaleController extends Controller
 
     /**
      * GET /api/sales/{id}
-     * 
+     *
      * Récupère les détails d'une vente spécifique
      *
      * @param int|string $id ID de la vente
@@ -790,143 +790,11 @@ class SaleController extends Controller
         }
     }
 
-    /**
-     * PUT/PATCH /api/sales/{id}
-     * 
-     * Met à jour une vente existante
-     * (Seuls les administrateurs peuvent modifier)
-     *
-     * @param Request $request Requête HTTP avec paramètres :
-     *                         OPTIONNELS :
-     *                         - total_amount (float|numeric) : Montant total (min:0)
-     *                         - discount_percentage (float) : Remise en % (min:0, max:100)
-     *                         - status (string) : Statut de la vente
-     *                         - ticket_number (int) : Numéro de ticket (unique par session)
-     *                         - amount_received (float|null) : Montant reçu (min:0)
-     *                         - change_amount (float|null) : Monnaie rendue (min:0)
-     * @param int|string $id ID de la vente à modifier
-     * @return \Illuminate\Http\JsonResponse
-     *         SUCCÈS (200) : Instance de Sale mise à jour
-     *         ERREURS :
-     *         - 401 : Utilisateur non authentifié
-     *         - 403 : Permission refusée (seuls admins)
-     *         - 404 : Vente non trouvée
-     *         - 422 : Erreur de validation
-     */
-    public function update(Request $request, $id)
-    {
-        try {
-            $user = auth()->guard('api')->user();
-            if (!$user) {
-                return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
-            }
 
-            if (!$user->hasPermissionTo('update.sales', 'api') && !$user->hasRole('admin', 'api')) {
-                return response()->json(['message' => 'Vous n\'avez pas la permission de modifier une vente.'], 403);
-            }
-
-            if (!$user->hasRole('admin', 'api') && $this->userIsManager($user)) {
-                return response()->json(['message' => 'Les gérants ne peuvent pas modifier une vente.'], 403);
-            }
-
-            $sale = Sale::findOrFail($id);
-
-            $validatedData = $request->validate([
-                'total_amount' => 'sometimes|numeric|min:0',
-                'discount_percentage' => 'nullable|numeric|min:0|max:100',
-                'status' => 'sometimes|string',
-                'ticket_number' => [
-                    'sometimes',
-                    'integer',
-                    Rule::unique('sales', 'ticket_number')
-                        ->where(fn($query) => $query->where('cash_register_session_id', $sale->cash_register_session_id))
-                        ->ignore($sale->id),
-                ],
-                'amount_received' => 'sometimes|nullable|numeric|min:0',
-                'change_amount' => 'sometimes|nullable|numeric|min:0',
-                'items' => 'sometimes|array',
-                'items.*.product_id' => 'required|exists:products,id',
-                'items.*.quantity' => 'required|numeric|min:0.001',
-                'items.*.price' => 'required|numeric|min:0',      // ← utilise price
-                'payments' => 'sometimes|array',
-                'payments.*.payment_id' => 'required|exists:payments,id',
-                'payments.*.amount' => 'required|numeric|min:0',
-                'payments.*.reference' => 'nullable|string',
-                'payments.*.notes' => 'nullable|string',
-            ]);
-
-            // Mise à jour des champs simples
-            $totalAmount = isset($validatedData['total_amount']) ? (int) round($validatedData['total_amount']) : (int) $sale->total_amount;
-            $discount = isset($validatedData['discount_percentage']) ? (int) round($validatedData['discount_percentage']) : (int) $sale->discount_percentage;
-            $finalAmount = (int) round($totalAmount * (100 - $discount) / 100);
-
-            $amountReceived = array_key_exists('amount_received', $validatedData) ? (int) round($validatedData['amount_received']) : ($sale->amount_received !== null ? (int) $sale->amount_received : null);
-            $changeAmount = array_key_exists('change_amount', $validatedData) ? (int) round($validatedData['change_amount']) : ($sale->change_amount !== null ? (int) $sale->change_amount : null);
-
-            $oldStatus = $sale->status;
-            
-            $sale->update(array_merge($validatedData, [
-                'total_amount' => $totalAmount,
-                'discount_percentage' => $discount,
-                'final_amount' => $finalAmount,
-                'amount_received' => $amountReceived,
-                'change_amount' => $changeAmount,
-            ]));
-
-            // Si le statut passe à completed, libérer la table
-            if ($oldStatus !== 'completed' && $sale->status === 'completed' && $sale->table) {
-                $sale->table->update(['status' => 'available']);
-            }
-
-            // Gestion des items (order_lines)
-            if ($request->has('items')) {
-                $sale->orderLines()->delete();
-                foreach ($request->input('items') as $item) {
-                    $sale->orderLines()->create([
-                        'product_id' => $item['product_id'],
-                        'quantity' => $item['quantity'],
-                        'price' => $item['price'],          // ← utilise price
-                        'total' => $item['price'] * $item['quantity'],
-                    ]);
-                }
-            }
-
-            // Gestion des paiements
-            if ($request->has('payments')) {
-                $sale->payments()->delete();
-                foreach ($request->input('payments') as $payment) {
-                    $sale->payments()->create([
-                        'payment_id' => $payment['payment_id'],
-                        'amount' => $payment['amount'],
-                        'reference' => $payment['reference'],
-                        'notes' => $payment['notes'],
-                    ]);
-                }
-            }
-
-            $sale->load('orderLines', 'payments');
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Vente mise à jour avec succès',
-                'data' => [
-                    'sale' => $sale,
-                    'payments' => $sale->payments,
-                ]
-            ]);
-        } catch (ModelNotFoundException $e) {
-            return response()->json(['error' => 'Vente non trouvée.'], 404);
-        } catch (ValidationException $e) {
-            return response()->json(['error' => 'Erreur de validation', 'details' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            \Log::error('Erreur update sale: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['message' => 'Server Error', 'error' => $e->getMessage()], 500);
-        }
-    }
 
     /**
      * DELETE /api/sales/{id}
-     * 
+     *
      * Supprime une vente (soft delete)
      * (Seuls les administrateurs peuvent supprimer)
      *
@@ -965,7 +833,7 @@ class SaleController extends Controller
 
     /**
      * GET /api/sales/current-session
-     * 
+     *
      * Récupère toutes les ventes de la session de caisse actuellement ouverte pour l'utilisateur
      *
      * @param Request $request Requête HTTP
@@ -1030,7 +898,7 @@ class SaleController extends Controller
 
     /**
      * POST /api/sales/{saleId}/add-products
-     * 
+     *
      * Ajoute des produits à une commande en attente
      *
      * @param Request $request Requête HTTP contenant :
@@ -1079,7 +947,7 @@ class SaleController extends Controller
 
     /**
      * POST /api/sales/{saleId}/remove-products
-     * 
+     *
      * Supprime des lignes de commande d'une commande en attente
      *
      * @param Request $request Requête HTTP contenant :
@@ -1118,7 +986,7 @@ class SaleController extends Controller
 
     /**
      * POST /api/sales/{saleId}/cancel
-     * 
+     *
      * Annule une vente (rembourse si déjà payée)
      *
      * @param Request $request Requête HTTP contenant :
@@ -1161,7 +1029,7 @@ class SaleController extends Controller
 
     /**
      * GET /api/sales/{saleId}/formatted
-     * 
+     *
      * Récupère les données d'une vente formatées par catégorie
      * (Version complète avec toutes les informations)
      *
@@ -1213,7 +1081,7 @@ class SaleController extends Controller
 
     /**
      * GET /api/sales/{saleId}/categories
-     * 
+     *
      * Récupère uniquement les articles d'une vente regroupés par catégorie
      * (Version simplifiée sans les détails de paiement)
      *
@@ -1275,7 +1143,7 @@ class SaleController extends Controller
 
     /**
      * GET /api/sales/tables/{tableId}/pending-orders
-     * 
+     *
      * Récupère toutes les commandes en attente (pending) pour une table spécifique
      *
      * @param int|string $tableId ID de la table
@@ -1313,71 +1181,128 @@ class SaleController extends Controller
             return false;
         return $user->hasAnyRole(['gerant', 'gérant'], 'api');
     }
+       /**
+     * PUT /api/sales/{sale}/order-lines
+     * Remplace complètement les lignes de commande (utilisé par EditSaleModal)
+     */
     public function replaceOrderLines(Request $request, Sale $sale)
     {
         try {
             $request->validate([
-                'order_lines' => 'required|array',
-                'order_lines.*.product_id' => 'required|exists:products,id',
-                'order_lines.*.quantity' => 'required|integer|min:0',
-                'order_lines.*.price' => 'required|integer|min:0',
-                'order_lines.*.total' => 'required|integer|min:0',
+                'orderlines' => 'required|array',
+                'orderlines.*.product_id' => 'required|exists:products,id',
+                'orderlines.*.quantity'   => 'required|integer|min:1',
+                'orderlines.*.price'      => 'required|numeric|min:0',
             ]);
 
-            // Vérifier que la vente est en attente (status 'pending' ou non finalisée)
-            if ($sale->status !== 'pending') {
-                return response()->json(['error' => 'Seules les commandes en attente peuvent être modifiées'], 422);
+            // Optionnel : Restreindre la modification aux ventes "pending" ou aux admins
+            if ($sale->status === 'completed' && !auth()->user()->hasRole('admin')) {
+                return response()->json(['error' => 'Les ventes terminées ne peuvent pas être modifiées.'], 422);
             }
 
             DB::beginTransaction();
 
-            // Supprimer toutes les anciennes lignes
-            $sale->orderLines()->delete();
+            // Supprimer les anciennes lignes
+            $sale->orderlines()->delete();
 
-            // Créer les nouvelles lignes
-            foreach ($request->order_lines as $line) {
-                if ($line['quantity'] > 0) {
-                    $sale->orderLines()->create([
+            // Ajouter les nouvelles lignes
+            foreach ($request->orderlines as $line) {
+                $sale->orderlines()->create([
+                    'product_id' => $line['product_id'],
+                    'quantity'   => $line['quantity'],
+                    'price'      => $line['price'],
+                    'total'      => $line['quantity'] * $line['price'],
+                ]);
+            }
+
+            // Recalculer les totaux
+            $totalAmount = $sale->orderlines()->sum('total');
+            $sale->update([
+                'total_amount' => $totalAmount,
+                'final_amount' => $totalAmount * (1 - ($sale->discount_percentage ?? 0) / 100),
+            ]);
+
+            DB::commit();
+
+            $sale->load(['orderlines.product', 'payments']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Lignes de commande mises à jour avec succès',
+                'sale' => $sale
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('replaceOrderLines Error: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Erreur lors de la mise à jour des lignes',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * PUT /api/sales/{id}
+     * Mise à jour générale d'une vente
+     */
+    public function update(Request $request, $id)
+    {
+        try {
+            $user = auth()->user();
+            if (!$user->hasRole('admin')) {
+                return response()->json(['message' => 'Seuls les administrateurs peuvent modifier une vente.'], 403);
+            }
+
+            $sale = Sale::findOrFail($id);
+
+            $validated = $request->validate([
+                'discount_percentage' => 'nullable|numeric|min:0|max:100',
+                'status' => 'sometimes|in:pending,completed,cancelled',
+                'notes' => 'nullable|string',
+                'orderlines' => 'sometimes|array',
+                'orderlines.*.product_id' => 'required|exists:products,id',
+                'orderlines.*.quantity' => 'required|integer|min:1',
+                'orderlines.*.price' => 'required|numeric|min:0',
+            ]);
+
+            DB::beginTransaction();
+
+            // Mise à jour des champs simples
+            $sale->update(Arr::except($validated, ['orderlines']));
+
+            // Mise à jour des orderlines si envoyées
+            if (isset($validated['orderlines'])) {
+                $sale->orderlines()->delete();
+
+                foreach ($validated['orderlines'] as $line) {
+                    $sale->orderlines()->create([
                         'product_id' => $line['product_id'],
-                        'quantity' => $line['quantity'],
-                        'price' => $line['price'],
-                        'total' => $line['total'],
+                        'quantity'   => $line['quantity'],
+                        'price'      => $line['price'],
+                        'total'      => $line['quantity'] * $line['price'],
                     ]);
                 }
             }
 
-            // Recharger la relation et calculer les totaux
             $sale->refresh();
-            $totalAmount = (float) $sale->orderLines()->sum('total');
-            $sale->total_amount = (float) $totalAmount; // Conversion explicite
-
-            $discount = (float) ($sale->discount_percentage ?? 0);
-            $finalAmount = $totalAmount * (1 - $discount / 100);
-            $sale->final_amount = (float) $finalAmount; // Conversion explicite
-
-            $sale->save();
+            $sale->updateTotalAmount();
 
             DB::commit();
 
-            $sale->load('orderLines.product');
+            $sale->load('orderlines.product');
 
             return response()->json([
-                'message' => 'Lignes mises à jour avec succès',
-                'sale' => $sale
-            ], 200);
+                'success' => true,
+                'message' => 'Vente mise à jour avec succès',
+                'data' => $sale
+            ]);
 
-        } catch (ValidationException $e) {
-            DB::rollBack();
-            \Log::error('Validation error replaceOrderLines: ', $e->errors());
-            return response()->json(['error' => 'Données invalides', 'details' => $e->errors()], 422);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Vente non trouvée'], 404);
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Erreur replaceOrderLines: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString(),
-                'sale_id' => $sale->id ?? null,
-                'request_data' => $request->all()
-            ]);
-            return response()->json(['error' => 'Erreur serveur: ' . $e->getMessage()], 500);
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }
