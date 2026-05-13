@@ -463,7 +463,7 @@ const handleClosePaymentModal = () => {
 }
 
 const handlePaymentSuccess = (data) => {
-  const saleId = data.sale_id || data.id
+  const saleId = data.sale?.id || data.id
   if (!saleId) return
 
   let receivedPayments = []

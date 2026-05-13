@@ -291,7 +291,7 @@ const props = defineProps({
   saleData: { type: Object, default: () => ({}) },
 })
 
-const emit = defineEmits(['close-modal', 'payment-success', 'payment-error', 'clear-cart'])
+const emit = defineEmits(['close-modal', 'payment-success', 'payment-error'])
 
 const token = localStorage.getItem('token')
 const mobilePayments = ['Orange Money', 'MVola', 'Airtel Money', 'Telma']
@@ -580,9 +580,6 @@ const confirmPayment = async () => {
 
     // Émettre directement les données formatées du backend
     emit('payment-success', response.data.data)
-
-    // Émettre un événement pour vider le panier dans le composant parent
-    emit('clear-cart')
 
     closeModal()
   } catch (error) {
