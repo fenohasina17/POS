@@ -13,6 +13,17 @@ services:
     networks:
       - pos_network
 
+  # --- Cache Redis ---
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pos_network
+
   # --- Backend Laravel (PHP-FPM) ---
   backend:
     build:
@@ -21,6 +32,7 @@ services:
     restart: always
     depends_on:
       - db
+      - redis
     env_file: .env
     networks:
       - pos_network
@@ -75,4 +87,5 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:
   jenkins_data:

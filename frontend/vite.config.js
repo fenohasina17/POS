@@ -10,6 +10,21 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'ui-vendor': ['@fortawesome/vue-fontawesome', 'flowbite'],
+          'utils': ['axios', 'lodash'],
+        }
+      }
+    },
+    target: 'esnext',
+    minify: 'terser',
+    reportCompressedSize: false,
+    sourcemap: false,
+  },
   server: {
     proxy: {
       '/api': {
@@ -17,7 +32,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       }
-    }
+    },
+    compress: true,
   },
   resolve: {
     alias: {
