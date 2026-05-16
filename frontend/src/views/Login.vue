@@ -105,13 +105,13 @@
 </template>
 
 <script setup>
-import { storage } from '@/utils/storage';
-defineOptions({ name: 'LoginPage' })
-import { ref, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { storage } from '@/utils/storage'
 import Keyboard from '../components/tools/Keyboard.vue'
 import axios from 'axios'
-import { onMounted } from 'vue'
 import { API_BASE_URL } from '@/utils/api'
+
+defineOptions({ name: 'LoginPage' })
 
 const email = ref('')
 const password = ref('')
@@ -138,14 +138,9 @@ const login = async () => {
       password: password.value
     });
 
-
     if (response.data.token && response.data.user) {
-      // Durée de vie des cookies : 60 minutes (en millisecondes)
-      const expirationTime = 24 * 60 * 60 * 1000; // 60 minutes
-      const expirationDate = new Date().getTime() + expirationTime;
-
-      // Stockage des informations avec expiration en utilisant l'utilitaire storage
-      storage.setAuth(response.data.token, response.data.user, [], [], 24);
+      // Stockage des informations avec l'utilitaire storage
+      storage.setAuth(response.data.token, response.data.user);
 
       // Mise à jour du state
       user.value = response.data.user;
@@ -166,19 +161,16 @@ const login = async () => {
 
 // Fonction pour récupérer l'utilisateur au chargement de l'app
 const initUser = () => {
-  const storedUser = localStorage.getItem('user');
-  if (storedUser) {
-    user.value = JSON.parse(storedUser);
+  const auth = storage.getAuth();
+  if (auth.user) {
+    user.value = auth.user;
   }
 };
-
-// Appeler initUser au démarrage de l'application
-initUser();
 
 function showKeyboard(field) {
   activeField.value = field
   keyboardVisible.value = true
-  }
+}
 
 function handleKeyPress(key) {
   if (key === 'BACKSPACE') {
@@ -233,13 +225,12 @@ const handleResize = () => {
 }
 
 onMounted(() => {
+  initUser();
   window.addEventListener('resize', handleResize, { passive: true })
 
   // Vérifier si une session auth valide existe
-  const authData = storage.getAuth(); // Use storage utility
-
-  if (authData) {
-    // Redirige vers le dashboard si déjà connecté
+  const auth = storage.getAuth();
+  if (auth.token) {
     window.location.href = '/dashboard'
   }
 })
@@ -251,4 +242,3 @@ onBeforeUnmount(() => {
 
 <style scoped>
 </style>
-

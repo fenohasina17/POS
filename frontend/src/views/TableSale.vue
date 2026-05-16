@@ -509,7 +509,20 @@ const printBill = async () => {
   if (!currentPendingOrder.value || !selectedTable.value) return
   isProcessing.value = true
   try {
-    await printingService.printBill(currentPendingOrder.value, selectedTable.value)
+    const billData = {
+      companyName: 'INTERNATIONAL GASTRONOMY PIZZA',
+      address: 'Antananarivo, Madagascar',
+      number: 'ADD-' + (currentPendingOrder.value.ticket_number || currentPendingOrder.value.id),
+      date: new Date().toLocaleString('fr-FR'),
+      items: currentPendingOrder.value.order_lines.map(l => ({
+        name: l.product?.name || l.name || 'Produit',
+        quantity: l.quantity,
+        price: l.price
+      })),
+      total: currentPendingOrder.value.final_amount,
+      client: `Table ${selectedTable.value.table_number || selectedTable.value.name}`
+    }
+    await printingService.printInvoice(billData)
   } catch (error) {
     console.error('Erreur impression addition:', error)
     alert('Impossible d\'imprimer l\'addition. Veuillez vérifier l\'imprimante.')

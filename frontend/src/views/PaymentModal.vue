@@ -275,14 +275,15 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import axios from 'axios'
 import NumericKeypad from '@/components/NumericKeypad.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faDeleteLeft } from '@fortawesome/free-solid-svg-icons'
-import { API_BASE_URL } from '@/utils/api'
+import { faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { saleService } from '@/services/saleService'
+import { storage } from '@/utils/storage'
+import apiClient from '@/services/apiClient'
 
-library.add(faDeleteLeft)
+library.add(faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck)
 
 const props = defineProps({
   saleId: { type: [Number, String], default: null },
@@ -293,9 +294,8 @@ const props = defineProps({
 
 const emit = defineEmits(['close-modal', 'payment-success', 'payment-error'])
 
-const token = localStorage.getItem('token')
 const mobilePayments = ['Orange Money', 'MVola', 'Airtel Money', 'Telma']
-const discountOptions = [0, 25,50, 75, 100]
+const discountOptions = [0, 25, 50, 75, 100]
 
 const paymentsListApi = ref([])
 const loadingPayments = ref(false)
@@ -308,6 +308,8 @@ const selectedDiscount = ref(0)
 const paymentsList = ref([])
 const activeInput = ref('amountReceived')
 const isProcessing = ref(false)
+
+// ... rest of computed properties ...
 
 const groupedItems = computed(() => {
   const map = new Map()
@@ -412,9 +414,7 @@ const getPaymentIcon = (name) => {
 const fetchPayments = async () => {
   loadingPayments.value = true
   try {
-    const res = await axios.get(`${API_BASE_URL}/payments`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const res = await apiClient.get('/payments')
     paymentsListApi.value = res.data?.data || res.data || []
   } catch (err) {
     console.error('Erreur chargement moyens de paiement:', err)
@@ -504,32 +504,31 @@ const removePayment = (idx) => {
   paymentsList.value.splice(idx, 1)
 }
 
+
 const confirmPayment = async () => {
   if (!canConfirmPayment.value || isProcessing.value) return
   isProcessing.value = true
 
   try {
-    console.group('💳 confirmPayment')
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const session = JSON.parse(localStorage.getItem('cash_register_session') || '{}')
+    const auth = storage.getAuth()
+    const session = storage.getSession()
 
     const items = (props.saleData?.items || []).map((item) => {
       const unitPrice = item.unit_price ?? item.price ?? 0
-      const quantity = Number(item.quantity) || 0
       return {
         product_id: item.product_id || item.id,
-        quantity,
+        quantity: Number(item.quantity) || 0,
         unit_price: Number(unitPrice),
         price: Number(unitPrice),
-        total: Number(unitPrice) * quantity,
+        total: Number(unitPrice) * (Number(item.quantity) || 0),
       }
     })
 
     const payload = {
-      point_of_sale_id: props.saleData?.point_of_sale_id || user.point_of_sale_id,
+      point_of_sale_id: props.saleData?.point_of_sale_id || auth.user?.point_of_sale_id,
       cash_register_session_id: session?.id || null,
       table_id: props.saleData?.table_id || null,
-      user_id: user.id,
+      user_id: auth.user?.id,
       total_amount: props.totalAmount,
       discount_percentage: selectedDiscount.value,
       final_amount: discountedTotal.value,
@@ -544,46 +543,24 @@ const confirmPayment = async () => {
     }
 
     const existingSaleId = props.saleId || props.saleData?.id
-    console.log('existingSaleId utilisé :', existingSaleId)
-
     let response
+
     if (existingSaleId) {
-      console.log(`🟢 Validation POST /sales/${existingSaleId}/validate`)
-      // On envoie la liste des paiements pour supporter le multiple payment
       const validatePayload = {
-        payment_id: paymentsList.value[0]?.payment_id, // Maintenu pour rétrocompatibilité backend
+        payment_id: paymentsList.value[0]?.payment_id,
         discount_percentage: selectedDiscount.value,
         amount_received: totalPaymentsAmount.value,
         change_amount: Math.max(0, totalPaymentsAmount.value - discountedTotal.value),
-        payments: paymentsList.value.map((p) => ({
-          payment_id: p.payment_id,
-          amount: Number(p.amount),
-          reference: p.reference || null,
-          notes: p.notes || null,
-        }))
+        payments: payload.payments
       }
-
-      response = await axios.post(`${API_BASE_URL}/sales/${existingSaleId}/validate`, validatePayload, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      })
-    } else {      console.log('🔴 Création POST /sales')
-      response = await axios.post(`${API_BASE_URL}/sales`, payload, {
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      })
+      response = await saleService.validatePending(existingSaleId, validatePayload)
+    } else {
+      response = await saleService.create(payload)
     }
 
-    console.log('📡 Réponse serveur :', response.data)
-    const saleId = response.data?.data?.sale?.id
-    if (!saleId) throw new Error('ID de vente non reçu du serveur')
-    console.log('✅ Vente finalisée avec ID :', saleId)
-    console.groupEnd()
-
-    // Émettre directement les données formatées du backend
     emit('payment-success', response.data.data)
-
     closeModal()
   } catch (error) {
-    console.error('Erreur confirmPayment:', error)
     const message = error.response?.data?.message || error.message || 'Erreur lors de la vente'
     emit('payment-error', message)
     alert(message)
