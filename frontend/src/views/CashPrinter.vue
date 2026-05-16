@@ -258,7 +258,9 @@ const selectCashRegister = (registerId) => {
   selectedCashRegister.value = registerId
 }
 
-const goToMachineManagement = () => router.push({ name: 'cash-registers-machine-link' })
+const goToMachineManagement = () => {
+  router.push({ name: 'dashboard-cash-register-sessions' })
+}
 
 const fetchCashRegisters = async () => {
   loadingRegisters.value = true

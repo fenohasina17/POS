@@ -95,24 +95,22 @@ class PointOfSaleController extends Controller
         return response()->json(['message' => 'Point de vente supprimé']);
     }
     /* Détacher un utilisateur d'un point de vente.
-     * Met à jour l'utilisateur en définissant point_of_sale_id = null.
+     * Utilise la table pivot point_of_sale_user.
      */
     public function detachUser(PointOfSale $pointOfSale, User $user)
     {
-        // Vérifier que l'utilisateur appartient bien à ce point de vente (optionnel)
-        if ($user->point_of_sale_id !== $pointOfSale->id) {
-            return response()->json([
-                'message' => 'Cet utilisateur n\'est pas associé à ce point de vente.'
-            ], 422);
-        }
+        // Dissocier l'utilisateur via la table pivot
+        $pointOfSale->assignedUsers()->detach($user->id);
 
-        // Dissocier l'utilisateur
-        $user->point_of_sale_id = null;
-        $user->save();
+        // Si l'utilisateur avait ce POS comme POS par défaut, on le met à null
+        if ($user->point_of_sale_id === $pointOfSale->id) {
+            $user->point_of_sale_id = $user->pointsOfSale()->first()?->id;
+            $user->save();
+        }
 
         return response()->json([
             'message' => 'Utilisateur retiré du point de vente avec succès.',
-            'user' => $user
+            'user' => $user->load('pointsOfSale')
         ]);
     }
     /**
@@ -120,20 +118,18 @@ class PointOfSaleController extends Controller
      */
     public function attachUser(PointOfSale $pointOfSale, User $user)
     {
-        // Vérifier que l'utilisateur n'est pas déjà associé à un autre point de vente (optionnel)
-        if ($user->point_of_sale_id !== null && $user->point_of_sale_id !== $pointOfSale->id) {
-            return response()->json([
-                'message' => 'Cet utilisateur est déjà associé à un autre point de vente.'
-            ], 422);
-        }
+        // Associer l'utilisateur au point de vente via la table pivot
+        $pointOfSale->assignedUsers()->syncWithoutDetaching([$user->id]);
 
-        // Associer l'utilisateur au point de vente
-        $user->point_of_sale_id = $pointOfSale->id;
-        $user->save();
+        // Si l'utilisateur n'avait pas de POS par défaut, on lui assigne celui-ci
+        if ($user->point_of_sale_id === null) {
+            $user->point_of_sale_id = $pointOfSale->id;
+            $user->save();
+        }
 
         return response()->json([
             'message' => 'Utilisateur associé au point de vente avec succès.',
-            'user' => $user
+            'user' => $user->load('pointsOfSale')
         ]);
     }
 }

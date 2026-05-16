@@ -8,7 +8,7 @@
           Créer un utilisateur
         </h1>
         <p class="mt-2 text-sm text-slate-500">
-          Ajoutez un nouveau compte et rattachez-le au point de vente approprié.
+          Ajoutez un nouveau compte et rattachez-le aux points de vente appropriés.
         </p>
       </div>
       <router-link
@@ -85,7 +85,6 @@
               class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
               :class="{ 'border-rose-300': errors.password }"
             />
-            <p class="text-xs text-slate-400">Le mot de passe doit contenir au moins 8 caracteres.</p>
             <p v-if="errors.password" class="text-xs font-semibold text-rose-500">{{ errors.password }}</p>
           </div>
 
@@ -99,27 +98,56 @@
               class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
               :class="{ 'border-rose-300': errors.password_confirmation }"
             />
-            <p class="text-xs text-slate-400">Utilisez la meme valeur pour confirmer le mot de passe.</p>
             <p v-if="errors.password_confirmation" class="text-xs font-semibold text-rose-500">
               {{ errors.password_confirmation }}
             </p>
           </div>
 
-          <div class="space-y-2 sm:col-span-2">
-            <label class="text-sm font-medium text-slate-600">Point de vente</label>
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-slate-600">Rôle</label>
             <select
-              v-model="user.point_of_sale_id"
+              v-model="user.role"
               required
-              :disabled="loadingPointsOfSale"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-slate-50"
-              :class="{ 'border-rose-300': errors.point_of_sale_id }"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              :class="{ 'border-rose-300': errors.role }"
             >
-              <option value="">Selectionner un point de vente</option>
-              <option v-for="pos in pointsOfSale" :key="pos.id" :value="pos.id">
-                {{ pos.name }}
+              <option value="">Sélectionner un rôle</option>
+              <option v-for="role in roles" :key="role.id" :value="role.name">
+                {{ role.name }}
               </option>
             </select>
-            <p v-if="loadingPointsOfSale" class="text-xs text-slate-400">Chargement des points de vente...</p>
+            <p v-if="errors.role" class="text-xs font-semibold text-rose-500">{{ errors.role }}</p>
+          </div>
+
+          <!-- Section Points de Vente (Multi-sélection) -->
+          <div class="space-y-3 sm:col-span-2">
+            <label class="text-sm font-medium text-slate-600 flex items-center justify-between">
+              <span>Points de vente autorisés</span>
+              <span class="text-[10px] uppercase font-black text-indigo-400">
+                {{ user.point_of_sale_ids.length }} sélectionné(s)
+              </span>
+            </label>
+            
+            <div v-if="loadingPointsOfSale" class="py-4 text-center">
+              <span class="h-6 w-6 animate-spin inline-block rounded-full border-2 border-slate-200 border-t-indigo-500"></span>
+            </div>
+            
+            <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+              <label 
+                v-for="pos in pointsOfSale" 
+                :key="pos.id"
+                class="flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer bg-white"
+                :class="user.point_of_sale_ids.includes(pos.id) ? 'border-indigo-200 bg-indigo-50/50 ring-2 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'"
+              >
+                <input 
+                  type="checkbox" 
+                  :value="pos.id" 
+                  v-model="user.point_of_sale_ids"
+                  class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                />
+                <span class="text-xs font-bold text-slate-700">{{ pos.name }}</span>
+              </label>
+            </div>
             <p v-if="errors.point_of_sale_id" class="text-xs font-semibold text-rose-500">
               {{ errors.point_of_sale_id }}
             </p>
@@ -148,98 +176,88 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import userService from '@/services/userService'
+import roleService from '@/services/roleService'
 import pointOfSaleService from '@/services/pointOfSaleService'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-export default {
-  name: 'UserCreate',
-  components: {
-    FontAwesomeIcon
-  },
-  data() {
-    return {
-      user: {
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-        point_of_sale_id: null
-      },
-      errors: {},
-      isCreating: false,
-      pointsOfSale: [],
-      loadingPointsOfSale: false
-    }
-  },
-  computed: {
-    isFormValid() {
-      return this.user.email.trim() &&
-        this.user.password.length >= 8 &&
-        this.user.password === this.user.password_confirmation &&
-        this.user.point_of_sale_id !== null
-    }
-  },
-  async mounted() {
-    await this.fetchPointsOfSale()
-  },
-  methods: {
-    async fetchPointsOfSale() {
-      this.loadingPointsOfSale = true
-      try {
-        const response = await pointOfSaleService.getAll()
-        this.pointsOfSale = response.data || response
-      } catch (error) {
-        console.error('Erreur lors du chargement des points de vente:', error)
-        this.errors.point_of_sale_id = 'Impossible de charger les points de vente'
-      } finally {
-        this.loadingPointsOfSale = false
-      }
-    },
-    async createUser() {
-      this.errors = {}
+defineOptions({ name: 'UserCreate' })
 
-      // Validation name
-      if (!this.user.name || this.user.name.trim().length === 0) {
-        this.errors.name = 'Le nom est requis'
-        return
-      }
+const router = useRouter()
 
-      // Validation email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(this.user.email)) {
-        this.errors.email = 'Veuillez entrer une adresse email valide'
-        return
-      }
+const user = ref({
+  name: '',
+  email: '',
+  password: '',
+  password_confirmation: '',
+  role: '',
+  point_of_sale_ids: []
+})
 
-      // Validation mot de passe
-      if (this.user.password.length < 8) {
-        this.errors.password = 'Le mot de passe doit contenir au moins 8 caractères'
-        return
-      }
+const errors = ref({})
+const isCreating = ref(false)
+const pointsOfSale = ref([])
+const roles = ref([])
+const loadingPointsOfSale = ref(false)
 
-      // Validation confirmation
-      if (this.user.password !== this.user.password_confirmation) {
-        this.errors.password_confirmation = 'Les mots de passe ne correspondent pas'
-        return
-      }
+const isFormValid = computed(() => {
+  return user.value.name.trim() &&
+    user.value.email.trim() &&
+    user.value.password.length >= 8 &&
+    user.value.password === user.value.password_confirmation &&
+    user.value.role &&
+    user.value.point_of_sale_ids.length > 0
+})
 
-      try {
-        this.isCreating = true
-        await userService.create(this.user)
-        this.$router.push('/users')
-      } catch (error) {
-        console.error('Erreur lors de la création de l\'utilisateur:', error)
-        if (error.response?.data?.errors) {
-          this.errors = error.response.data.errors
-        } else {
-          this.errors.general = 'Erreur lors de la création de l\'utilisateur. Veuillez réessayer.'
-        }
-      } finally {
-        this.isCreating = false
-      }
-    }
+const fetchData = async () => {
+  loadingPointsOfSale.value = true
+  try {
+    const [posRes, rolesRes] = await Promise.all([
+      pointOfSaleService.getAll(),
+      roleService.getAll()
+    ])
+    pointsOfSale.value = posRes.data?.data || posRes.data || posRes
+    roles.value = rolesRes.data?.data || rolesRes.data || []
+  } catch (error) {
+    console.error('Erreur lors du chargement des données:', error)
+  } finally {
+    loadingPointsOfSale.value = false
   }
 }
+
+const createUser = async () => {
+  errors.value = {}
+
+  if (user.value.password.length < 8) {
+    errors.value.password = 'Le mot de passe doit contenir au moins 8 caractères'
+    return
+  }
+
+  try {
+    isCreating.value = true
+    const response = await userService.create(user.value)
+    const newUser = response.data?.data || response.data
+    
+    // Assigner le rôle si sélectionné
+    if (user.value.role && newUser.id) {
+      await userService.assignRole(newUser.id, user.value.role)
+    }
+
+    router.push({ name: 'dashboard-users' })
+  } catch (error) {
+    console.error('Erreur lors de la création de l\'utilisateur:', error)
+    if (error.response?.data?.errors) {
+      errors.value = error.response.data.errors
+    } else {
+      errors.value.general = 'Erreur lors de la création de l\'utilisateur. Veuillez réessayer.'
+    }
+  } finally {
+    isCreating.value = false
+  }
+}
+
+onMounted(fetchData)
 </script>

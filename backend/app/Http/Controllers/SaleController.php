@@ -152,20 +152,21 @@ class SaleController extends Controller
 
             $isAdmin = $user->hasRole('admin', 'api');
             $isManager = $user->hasAnyRole(['gerant', 'gérant'], 'api');
-            $pointOfSaleId = $user->point_of_sale_id;
+            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+            if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
 
             // ========== RESTRICTIONS ==========
             if (!$isAdmin) {
-                if ($isManager && $pointOfSaleId) {
-                    $sales->where('point_of_sale_id', $pointOfSaleId);
+                if ($isManager && !empty($assignedPosIds)) {
+                    $sales->whereIn('point_of_sale_id', $assignedPosIds);
                 } else {
                     $sales->where('user_id', $user->id);
                 }
 
                 if ($sessionId) {
                     $sessionQuery = CashRegisterSession::where('id', $sessionId);
-                    if ($isManager && $pointOfSaleId) {
-                        $sessionQuery->where('point_of_sale_id', $pointOfSaleId);
+                    if ($isManager && !empty($assignedPosIds)) {
+                        $sessionQuery->whereIn('point_of_sale_id', $assignedPosIds);
                     } else {
                         $sessionQuery->where('user_id', $user->id);
                     }
@@ -175,16 +176,23 @@ class SaleController extends Controller
                 }
 
                 if ($userId) {
-                    if ($isManager && $pointOfSaleId) {
+                    if ($isManager && !empty($assignedPosIds)) {
                         $targetUser = User::find($userId);
-                        if (!$targetUser || $targetUser->point_of_sale_id != $pointOfSaleId) {
-                            return response()->json(['message' => 'Utilisateur non autorisé.'], 403);
+                        // Check if target user belongs to one of the manager's assigned POS
+                        $targetPosId = $targetUser->point_of_sale_id;
+                        if (!$targetUser || !in_array($targetPosId, $assignedPosIds)) {
+                             // Check pivot table for target user too
+                             $targetAssignedPosIds = $targetUser->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+                             if (empty(array_intersect($assignedPosIds, $targetAssignedPosIds))) {
+                                return response()->json(['message' => 'Utilisateur non autorisé.'], 403);
+                             }
                         }
                     } elseif ((int) $userId !== (int) $user->id) {
                         return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
                     }
                 }
-            } else {
+            }
+ else {
                 if ($sessionId && !CashRegisterSession::where('id', $sessionId)->exists()) {
                     return response()->json(['message' => 'Session non trouvée.'], 404);
                 }
@@ -231,7 +239,10 @@ class SaleController extends Controller
         }
 
         if ($user->hasRole('gerant', 'api')) {
-            if ($user->point_of_sale_id !== $pointOfSale->id) {
+            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+            if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+
+            if (!in_array($pointOfSale->id, $assignedPosIds)) {
                 return response()->json(['message' => 'Vous n\'avez pas accès aux KPIs de ce point de vente.'], 403);
             }
         }
@@ -323,9 +334,11 @@ class SaleController extends Controller
 
         if (!$isAdmin) {
             if ($isManager) {
-                $managerPointOfSaleId = $user->point_of_sale_id;
-                if ($managerPointOfSaleId && (int) $managerPointOfSaleId !== (int) $pointOfSaleId) {
-                    return response()->json(['message' => 'Vous ne pouvez consulter que les statistiques de votre point de vente.'], 403);
+                $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+                if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+
+                if (!in_array((int)$pointOfSaleId, $assignedPosIds)) {
+                    return response()->json(['message' => 'Vous ne pouvez consulter que les statistiques de vos points de vente.'], 403);
                 }
             } else {
                 return response()->json(['message' => 'Seuls les administrateurs ou gérants peuvent consulter ces statistiques.'], 403);
@@ -610,8 +623,11 @@ class SaleController extends Controller
 
             $isAdmin = $user->hasRole('admin', 'api');
             if (!$isAdmin) {
-                if ((int) $user->point_of_sale_id !== (int) $validated['point_of_sale_id']) {
-                    return response()->json(['message' => 'Vous ne pouvez créer des ventes que sur votre point de vente.'], 403);
+                $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+                if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+
+                if (!in_array((int)$validated['point_of_sale_id'], $assignedPosIds)) {
+                    return response()->json(['message' => 'Vous ne pouvez créer des ventes que sur vos points de vente assignés.'], 403);
                 }
 
                 $session = CashRegisterSession::find($validated['cash_register_session_id']);
@@ -770,11 +786,13 @@ class SaleController extends Controller
 
             if (!$isAdmin) {
                 if ($isManager) {
-                    $pointOfSaleId = $user->point_of_sale_id;
-                    if ($pointOfSaleId && (int) $sale->point_of_sale_id !== (int) $pointOfSaleId) {
-                        return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente.'], 403);
+                    $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+                    if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+
+                    if (!empty($assignedPosIds) && !in_array((int)$sale->point_of_sale_id, $assignedPosIds)) {
+                        return response()->json(['message' => 'Cette vente n\'appartient pas à vos points de vente.'], 403);
                     }
-                    if (!$pointOfSaleId && (int) $sale->user_id !== (int) $user->id) {
+                    if (empty($assignedPosIds) && (int) $sale->user_id !== (int) $user->id) {
                         return response()->json(['message' => 'Action non autorisée.'], 403);
                     }
                 } else {

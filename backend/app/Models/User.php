@@ -57,6 +57,10 @@ class User extends Authenticatable
     {
         return $this->belongsTo(PointOfSale::class);
     }
+    public function pointsOfSale()
+    {
+        return $this->belongsToMany(PointOfSale::class, 'point_of_sale_user', 'user_id', 'point_of_sale_id')->withTimestamps();
+    }
     public function sales()
     {
         return $this->hasMany(Sale::class);

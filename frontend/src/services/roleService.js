@@ -1,46 +1,27 @@
-import axios from 'axios'
-import { API_BASE_URL } from '@/utils/api'
+import apiClient from './apiClient'
 
-const API_URL = `${API_BASE_URL}/roles`
-const token = localStorage.getItem('token')
+const API_URL = '/roles'
+
 export default {
   getById(id) {
-    return axios.get(`${API_URL}/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    return apiClient.get(`${API_URL}/${id}`)
   },
   getAll() {
-    return axios.get(API_URL, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    return apiClient.get(API_URL)
   },
   create(role) {
-    return axios.post(API_URL, role, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    return apiClient.post(API_URL, role)
   },
   update(id, role) {
-    return axios.put(`${API_URL}/${id}`, role, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    return apiClient.put(`${API_URL}/${id}`, role)
   },
   delete(id) {
-    return axios.delete(`${API_URL}/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    return apiClient.delete(`${API_URL}/${id}`)
   },
   assignPermission(roleId, permission) {
-    return axios.post(
-      `${API_URL}/${roleId}/permissions`,
-      { permission },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    )
+    return apiClient.post(`${API_URL}/${roleId}/permissions`, { permission })
   },
   revokePermission(roleId, permissionId) {
-    return axios.delete(`${API_URL}/${roleId}/permissions/${permissionId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    return apiClient.delete(`${API_URL}/${roleId}/permissions/${permissionId}`)
   },
 }

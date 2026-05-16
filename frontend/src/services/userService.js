@@ -1,78 +1,41 @@
-import axios from 'axios'
-import { API_BASE_URL } from '@/utils/api'
-import { storage } from '@/utils/storage'
+import apiClient from './apiClient'
 
-const API_URL = `${API_BASE_URL}/users`
-
-const getAuthHeaders = () => {
-  const auth = storage.getAuth()
-  return { Authorization: `Bearer ${auth?.token}` }
-}
+const API_URL = '/users'
 
 export default {
   getAll() {
-    return axios.get(API_URL, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.get(API_URL)
   },
 
   getRoles(userId) {
-    return axios.get(`${API_URL}/${userId}/roles`, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.get(`${API_URL}/${userId}/roles`)
   },
 
   assignRole(userId, role) {
-    console.log(role)
-    return axios.post(
-      `${API_URL}/${userId}/roles`,
-      { role },
-      {
-        headers: getAuthHeaders(),
-      },
-    )
+    return apiClient.post(`${API_URL}/${userId}/roles`, { role })
   },
 
   removeRole(userId, roleId) {
-    return axios.delete(`${API_URL}/${userId}/roles/${roleId}`, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.delete(`${API_URL}/${userId}/roles/${roleId}`)
   },
 
   getPermissions(userId) {
-    return axios.get(`${API_URL}/${userId}/permissions`, {
-      headers: getAuthHeaders(),
-    })
-  },
-
-  hasRole(userId, _roleName) {
-    return axios.get(`${API_URL}/${userId}/roles`, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.get(`${API_URL}/${userId}/permissions`)
   },
 
   create(userData) {
-    return axios.post(API_URL, userData, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.post(API_URL, userData)
   },
 
   delete(userId) {
-    return axios.delete(`${API_URL}/${userId}`, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.delete(`${API_URL}/${userId}`)
   },
 
   getUser(userId) {
-    return axios.get(`${API_URL}/${userId}`, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.get(`${API_URL}/${userId}`)
   },
 
   update(userData) {
-    console.log(userData)
-    return axios.put(`${API_URL}/${userData.id}`, userData, {
-      headers: getAuthHeaders(),
-    })
+    return apiClient.put(`${API_URL}/${userData.id}`, userData)
   },
 }
