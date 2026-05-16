@@ -5,17 +5,17 @@
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Caisse</p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
           <font-awesome-icon icon="fa-solid fa-cash-register" class="text-indigo-500" />
-          Sessions caisse
+          Gestion des Caisses
         </h1>
         <p class="mt-2 text-sm text-slate-500">
-          Gérez les caisses rattachées au point de vente de l'utilisateur connecté.
+          Gérez et configurez les caisses enregistreuses par point de vente.
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <button
           type="button"
           class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
-          @click="refreshData"
+          @click="fetchRegisters"
           :disabled="loading"
         >
           <font-awesome-icon icon="fa-solid fa-rotate" :class="{ 'animate-spin': loading }" />
@@ -23,9 +23,8 @@
         </button>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
           @click="showCreateForm = !showCreateForm"
-          :disabled="!userPointOfSaleId"
         >
           <font-awesome-icon icon="fa-solid fa-plus" />
           {{ showCreateForm ? 'Fermer' : 'Nouvelle caisse' }}
@@ -33,363 +32,346 @@
       </div>
     </header>
 
-    <div
-      v-if="errorMessage"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
-    >
+    <!-- Filtre Point de Vente (Admin uniquement) -->
+    <section v-if="isAdmin" class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
+          <font-awesome-icon icon="fa-solid fa-filter" class="text-indigo-500" />
+          Filtrer par site :
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            @click="selectedPosFilter = null"
+            class="rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all"
+            :class="selectedPosFilter === null ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'"
+          >
+            Tous les sites
+          </button>
+          <button
+            v-for="pos in pointsOfSale"
+            :key="pos.id"
+            @click="selectedPosFilter = pos.id"
+            class="rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all"
+            :class="selectedPosFilter === pos.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'"
+          >
+            {{ pos.name }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Alertes -->
+    <div v-if="errorMessage" class="flex items-center justify-between gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600">
       <div class="flex items-center gap-2">
         <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
         <span>{{ errorMessage }}</span>
       </div>
-      <button
-        type="button"
-        class="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-100"
-        @click="errorMessage = ''"
-      >
-        Fermer
-      </button>
+      <button @click="errorMessage = ''" class="text-xs font-bold uppercase tracking-widest">Fermer</button>
     </div>
 
-    <div
-      v-if="successMessage"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600"
-    >
+    <div v-if="successMessage" class="flex items-center justify-between gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600">
       <div class="flex items-center gap-2">
         <font-awesome-icon icon="fa-solid fa-circle-check" />
         <span>{{ successMessage }}</span>
       </div>
-      <button
-        type="button"
-        class="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 transition hover:bg-emerald-100"
-        @click="successMessage = ''"
-      >
-        Fermer
-      </button>
+      <button @click="successMessage = ''" class="text-xs font-bold uppercase tracking-widest">Fermer</button>
     </div>
 
-    <section
-      v-if="showCreateForm"
-      class="rounded-3xl border border-slate-200 bg-white shadow-sm"
-    >
-      <div class="border-b border-slate-100 px-6 py-4">
-        <h2 class="text-base font-semibold text-slate-800">Ajouter une caisse</h2>
-        <p class="mt-1 text-sm text-slate-500">
-          La caisse sera automatiquement rattachée au point de vente {{ userPointOfSaleName }}.
-        </p>
+    <!-- Formulaire de Création -->
+    <section v-if="showCreateForm" class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
+        <h2 class="text-base font-bold text-slate-800">Ajouter une caisse</h2>
+        <p class="text-xs text-slate-500 font-medium">Configurez une nouvelle unité de vente sur un site.</p>
       </div>
 
-      <form class="grid gap-6 px-6 py-6 sm:grid-cols-[minmax(0,1fr)_auto]" @submit.prevent="createRegister">
-        <div class="space-y-2">
-          <label class="text-sm font-medium text-slate-600">Nom de la caisse</label>
-          <input
-            v-model.trim="form.name"
-            type="text"
-            class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-            :class="{ 'border-rose-300': formError }"
-            placeholder="Ex. Caisse principale"
-            required
-          />
-          <p v-if="formError" class="text-xs font-semibold text-rose-500">{{ formError }}</p>
+      <form class="p-6 space-y-6" @submit.prevent="createRegister">
+        <div class="grid gap-6 sm:grid-cols-2">
+          <div class="space-y-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Nom de la caisse</label>
+            <input
+              v-model.trim="form.name"
+              type="text"
+              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none"
+              placeholder="Ex. Caisse 01"
+              required
+            />
+          </div>
+
+          <div v-if="isAdmin" class="space-y-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Point de Vente</label>
+            <select
+              v-model="form.point_of_sale_id"
+              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none"
+              required
+            >
+              <option :value="null">Choisir un point de vente...</option>
+              <option v-for="pos in pointsOfSale" :key="pos.id" :value="pos.id">
+                {{ pos.name }}
+              </option>
+            </select>
+          </div>
+          <div v-else class="space-y-2">
+            <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Point de Vente</label>
+            <div class="px-4 py-3 text-sm font-bold text-slate-400 italic">
+              {{ userPointOfSaleName }}
+            </div>
+          </div>
         </div>
 
-        <div class="flex items-end justify-end gap-2">
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
-            @click="resetForm"
-          >
-            <font-awesome-icon icon="fa-solid fa-xmark" />
+        <div class="flex justify-end gap-3 pt-2">
+          <button type="button" @click="resetForm" class="rounded-xl px-6 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all">
             Annuler
           </button>
-          <button
-            type="submit"
-            class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
-            :disabled="saving || !form.name || !userPointOfSaleId"
-          >
-            <font-awesome-icon icon="fa-solid fa-plus" :class="{ 'animate-spin': saving }" />
-            {{ saving ? 'Ajout...' : 'Ajouter' }}
+          <button type="submit" :disabled="saving" class="rounded-xl bg-slate-900 px-8 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-slate-200 hover:bg-indigo-600 transition-all disabled:opacity-50">
+            {{ saving ? 'Création...' : 'Créer la caisse' }}
           </button>
         </div>
       </form>
     </section>
 
-    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div class="border-b border-slate-100 px-6 py-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="text-base font-semibold text-slate-800">Caisses du point de vente</h2>
-            <p class="mt-1 text-sm text-slate-500">{{ userPointOfSaleName }}</p>
-          </div>
-          <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
-            {{ registers.length }} caisse{{ registers.length > 1 ? 's' : '' }}
+    <!-- Liste des Caisses -->
+    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div class="border-b border-slate-100 bg-slate-50/30 px-6 py-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-bold text-slate-800">Unités de vente enregistrées</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+            {{ filteredRegisters.length }} caisse{{ filteredRegisters.length > 1 ? 's' : '' }}
           </span>
         </div>
       </div>
 
-      <div
-        v-if="loading"
-        class="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-sm text-slate-500"
-      >
-        <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
-        <div>
-          <p class="font-semibold text-slate-700">Chargement des caisses…</p>
-          <p class="text-xs text-slate-400">Veuillez patienter pendant la récupération des données.</p>
+      <div v-if="loading" class="flex flex-col items-center justify-center py-16 text-slate-400">
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
+        <p class="mt-4 text-xs font-bold uppercase tracking-widest">Récupération des données...</p>
+      </div>
+
+      <div v-else-if="filteredRegisters.length === 0" class="py-16 text-center">
+        <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-50 text-slate-300">
+          <font-awesome-icon icon="fa-solid fa-cash-register" class="text-2xl" />
         </div>
+        <p class="mt-4 text-sm font-bold text-slate-400 uppercase tracking-widest">Aucune caisse trouvée</p>
       </div>
 
-      <div
-        v-else-if="!userPointOfSaleId"
-        class="px-6 py-16 text-center text-sm text-slate-500"
-      >
-        Aucun point de vente n'est rattaché à cet utilisateur.
-      </div>
-
-      <div
-        v-else-if="registers.length === 0"
-        class="px-6 py-16 text-center text-sm text-slate-500"
-      >
-        Aucune caisse enregistrée pour ce point de vente.
-      </div>
-
-      <ul v-else class="divide-y divide-slate-100">
-        <li
-          v-for="register in registers"
+      <div v-else class="grid divide-y divide-slate-50">
+        <div
+          v-for="register in filteredRegisters"
           :key="register.id"
-          class="flex flex-wrap items-center justify-between gap-4 px-6 py-4"
+          class="group flex flex-wrap items-center justify-between gap-4 px-6 py-5 transition-all hover:bg-slate-50/50"
         >
-          <div class="flex items-center gap-3">
-            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+          <div class="flex items-center gap-4">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-indigo-500 shadow-sm border border-slate-100 group-hover:border-indigo-100 transition-all">
               <font-awesome-icon icon="fa-solid fa-cash-register" />
             </div>
             <div>
-              <p class="font-semibold text-slate-900">{{ register.name }}</p>
-              <p class="text-xs text-slate-400">ID caisse : {{ register.id }}</p>
+              <div class="flex items-center gap-2">
+                <p class="font-black text-slate-700 uppercase tracking-tight">{{ register.name }}</p>
+                <!-- Badge Statut -->
+                <span 
+                  v-if="register.current_session" 
+                  class="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-emerald-600 border border-emerald-100"
+                >
+                  Ouverte
+                </span>
+                <span 
+                  v-else 
+                  class="rounded-full bg-slate-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-slate-400 border border-slate-100"
+                >
+                  Fermée
+                </span>
+              </div>
+              <div class="flex flex-wrap items-center gap-3 mt-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Site :</span>
+                  <span class="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                    {{ register.point_of_sale?.name || 'Inconnu' }}
+                  </span>
+                </div>
+                <div v-if="register.current_session" class="flex items-center gap-1.5">
+                  <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Caissier :</span>
+                  <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                    {{ register.current_session.user?.name || 'Inconnu' }}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-2xl border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
-            @click="deleteRegister(register)"
-            :disabled="saving"
-          >
-            <font-awesome-icon icon="fa-solid fa-trash" />
-            Supprimer
-          </button>
-        </li>
-      </ul>
+          <div class="flex items-center gap-2">
+            <button
+              @click="openEditModal(register)"
+              class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-md transition-all active:scale-95 shadow-sm"
+              title="Modifier"
+            >
+              <font-awesome-icon icon="fa-solid fa-pen" class="text-xs" />
+            </button>
+            <button
+              @click="deleteRegister(register)"
+              class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-600 hover:border-rose-100 hover:shadow-md transition-all active:scale-95 shadow-sm"
+              title="Supprimer"
+            >
+              <font-awesome-icon icon="fa-solid fa-trash" class="text-xs" />
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
+
+    <!-- Modal d'Édition -->
+    <CashRegisterEditModal
+      :is-open="showEditModal"
+      :register="selectedRegister"
+      :points-of-sale="pointsOfSale"
+      @close="closeEditModal"
+      @submit="handleEditSubmit"
+    />
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faCashRegister, faPlus, faRotate, faTrash, faPen, faXmark, faFilter, faTriangleExclamation, faCircleCheck } from '@fortawesome/free-solid-svg-icons'
+import { useAuth } from '@/composables/useAuth'
+import CashRegisterEditModal from './CashRegisterEditModal.vue'
 
-export default {
-  name: 'CashRegisterSessions',
-  components: {
-    FontAwesomeIcon
-  },
-  data() {
-    return {
-      loading: false,
-      saving: false,
-      showCreateForm: false,
-      registers: [],
-      userProfile: null,
-      form: {
-        name: ''
-      },
-      formError: '',
-      errorMessage: '',
-      successMessage: ''
-    }
-  },
-  computed: {
-    currentUser() {
-      if (this.userProfile && typeof this.userProfile === 'object') {
-        return this.userProfile
-      }
+library.add(faCashRegister, faPlus, faRotate, faTrash, faPen, faXmark, faFilter, faTriangleExclamation, faCircleCheck)
 
-      try {
-        return JSON.parse(localStorage.getItem('user') || '{}')
-      } catch (error) {
-        return {}
-      }
-    },
+const { isAdmin, user: currentUser } = useAuth()
 
-    userPointOfSaleId() {
-      const pointOfSaleId = Number(this.currentUser?.point_of_sale_id)
-      return Number.isFinite(pointOfSaleId) && pointOfSaleId > 0 ? pointOfSaleId : null
-    },
+const loading = ref(false)
+const saving = ref(false)
+const showCreateForm = ref(false)
+const showEditModal = ref(false)
+const registers = ref([])
+const pointsOfSale = ref([])
+const selectedPosFilter = ref(null)
+const selectedRegister = ref(null)
 
-    userPointOfSaleName() {
-      return this.currentUser?.point_of_sale_name || 'Point de vente non défini'
-    }
-  },
-  async mounted() {
-    await this.loadCurrentUserProfile()
-    await this.fetchRegisters()
-  },
-  methods: {
-    getAuthHeaders() {
-      const token = localStorage.getItem('token')
-      return {
-        Authorization: `Bearer ${token}`
-      }
-    },
+const form = ref({
+  name: '',
+  point_of_sale_id: null
+})
 
-    resolveRegisterPointOfSaleId(register) {
-      const pointOfSaleId = Number(
-        register?.point_of_sale_id ??
-        register?.pointOfSaleId ??
-        register?.point_of_sale?.id ??
-        register?.pointOfSale?.id ??
-        null
-      )
+const errorMessage = ref('')
+const successMessage = ref('')
 
-      return Number.isFinite(pointOfSaleId) && pointOfSaleId > 0 ? pointOfSaleId : null
-    },
+const userPointOfSaleId = computed(() => currentUser.value?.point_of_sale_id)
+const userPointOfSaleName = computed(() => currentUser.value?.point_of_sale?.name || 'Point de vente non défini')
 
-    getFirstValidationError(error) {
-      const responseData = error?.response?.data || {}
-      const errorBag = responseData.errors || responseData.details || {}
+const filteredRegisters = computed(() => {
+  if (selectedPosFilter.value === null) return registers.value
+  return registers.value.filter(r => (r.point_of_sale_id || r.point_of_sale?.id) === selectedPosFilter.value)
+})
 
-      for (const value of Object.values(errorBag)) {
-        if (Array.isArray(value) && value.length > 0) {
-          return value[0]
-        }
-        if (typeof value === 'string' && value.trim()) {
-          return value
-        }
-      }
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token')
+  return { Authorization: `Bearer ${token}` }
+}
 
-      return responseData.message || ''
-    },
-
-    async loadCurrentUserProfile() {
-      try {
-        const { data } = await axios.get(`${API_BASE_URL}/me`, {
-          headers: this.getAuthHeaders()
-        })
-
-        const profile = data?.data || data || null
-        if (profile && typeof profile === 'object') {
-          this.userProfile = {
-            ...this.currentUser,
-            ...profile
-          }
-          localStorage.setItem('user', JSON.stringify(this.userProfile))
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement du profil utilisateur:', error.response?.data || error.message)
-      }
-    },
-
-    async fetchRegisters() {
-      this.loading = true
-      this.errorMessage = ''
-
-      try {
-        const { data } = await axios.get(`${API_BASE_URL}/cash-registers`, {
-          headers: this.getAuthHeaders()
-        })
-
-        const allRegisters = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
-        this.registers = this.userPointOfSaleId
-          ? allRegisters.filter((register) => this.resolveRegisterPointOfSaleId(register) === this.userPointOfSaleId)
-          : []
-      } catch (error) {
-        console.error('Erreur lors du chargement des caisses:', error)
-        this.errorMessage = error.response?.data?.message || 'Impossible de charger les caisses.'
-        this.registers = []
-      } finally {
-        this.loading = false
-      }
-    },
-
-    resetForm() {
-      this.showCreateForm = false
-      this.form.name = ''
-      this.formError = ''
-    },
-
-    async createRegister() {
-      this.formError = ''
-      this.errorMessage = ''
-      this.successMessage = ''
-
-      if (!this.userPointOfSaleId) {
-        this.formError = 'Aucun point de vente associe a cet utilisateur.'
-        return
-      }
-
-      if (!this.form.name.trim()) {
-        this.formError = 'Le nom de la caisse est requis.'
-        return
-      }
-
-      this.saving = true
-
-      try {
-        const payload = {
-          name: this.form.name.trim()
-        }
-
-        if (this.userPointOfSaleId) {
-          payload.point_of_sale_id = this.userPointOfSaleId
-        }
-
-        const { data } = await axios.post(`${API_BASE_URL}/cash-registers`, payload, {
-          headers: this.getAuthHeaders()
-        })
-
-        const createdRegister = data?.data || data
-        if (createdRegister) {
-          this.registers.unshift(createdRegister)
-        }
-
-        this.successMessage = 'Caisse ajoutee avec succes.'
-        this.resetForm()
-        await this.fetchRegisters()
-      } catch (error) {
-        console.error('Erreur lors de la creation de la caisse:', error)
-        this.formError = this.getFirstValidationError(error) || 'Impossible d ajouter la caisse.'
-      } finally {
-        this.saving = false
-      }
-    },
-
-    async deleteRegister(register) {
-      if (!register) return
-
-      const confirmed = window.confirm(`Supprimer la caisse "${register.name}" ?`)
-      if (!confirmed) return
-
-      this.saving = true
-      this.errorMessage = ''
-      this.successMessage = ''
-
-      try {
-        await axios.delete(`${API_BASE_URL}/cash-registers/${register.id}`, {
-          headers: this.getAuthHeaders()
-        })
-
-        this.registers = this.registers.filter((item) => item.id !== register.id)
-        this.successMessage = 'Caisse supprimee avec succes.'
-      } catch (error) {
-        console.error('Erreur lors de la suppression de la caisse:', error)
-        this.errorMessage = error.response?.data?.message || 'Impossible de supprimer la caisse.'
-      } finally {
-        this.saving = false
-      }
-    },
-
-    async refreshData() {
-      await this.fetchRegisters()
-    }
+const fetchPointsOfSale = async () => {
+  if (!isAdmin.value) return
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/point-of-sales`, { headers: getAuthHeaders() })
+    pointsOfSale.value = data?.data || data || []
+  } catch (err) {
+    console.error('Erreur sites:', err)
   }
 }
+
+const fetchRegisters = async () => {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/cash-registers`, { headers: getAuthHeaders() })
+    registers.value = data?.data || data || []
+  } catch (err) {
+    console.error('Erreur caisses:', err)
+    errorMessage.value = 'Impossible de charger les caisses.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const createRegister = async () => {
+  if (!form.value.name.trim()) return
+  
+  const posId = isAdmin.value ? form.value.point_of_sale_id : userPointOfSaleId.value
+  if (!posId) {
+    errorMessage.value = 'Veuillez sélectionner un point de vente.'
+    return
+  }
+
+  saving.value = true
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  try {
+    const payload = {
+      name: form.value.name.trim(),
+      point_of_sale_id: posId
+    }
+
+    await axios.post(`${API_BASE_URL}/cash-registers`, payload, { headers: getAuthHeaders() })
+    successMessage.value = 'Caisse ajoutée avec succès.'
+    resetForm()
+    await fetchRegisters()
+  } catch (error) {
+    console.error('Erreur création:', error)
+    errorMessage.value = error.response?.data?.message || 'Erreur lors de la création.'
+  } finally {
+    saving.value = false
+  }
+}
+
+const deleteRegister = async (register) => {
+  if (!confirm(`Supprimer la caisse "${register.name}" ?`)) return
+
+  loading.value = true
+  try {
+    await axios.delete(`${API_BASE_URL}/cash-registers/${register.id}`, { headers: getAuthHeaders() })
+    successMessage.value = 'Caisse supprimée.'
+    await fetchRegisters()
+  } catch (err) {
+    errorMessage.value = 'Suppression impossible.'
+  } finally {
+    loading.value = false
+  }
+}
+
+const openEditModal = (register) => {
+  selectedRegister.value = { ...register }
+  showEditModal.value = true
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+  selectedRegister.value = null
+}
+
+const handleEditSubmit = async (formData) => {
+  try {
+    await axios.put(`${API_BASE_URL}/cash-registers/${formData.id}`, formData, { headers: getAuthHeaders() })
+    successMessage.value = 'Caisse mise à jour avec succès.'
+    closeEditModal()
+    await fetchRegisters()
+  } catch (err) {
+    errorMessage.value = err.response?.data?.message || 'Mise à jour impossible.'
+  }
+}
+
+const resetForm = () => {
+  showCreateForm.value = false
+  form.value = { name: '', point_of_sale_id: isAdmin.value ? null : userPointOfSaleId.value }
+}
+
+onMounted(() => {
+  fetchPointsOfSale()
+  fetchRegisters()
+  if (!isAdmin.value) {
+    form.value.point_of_sale_id = userPointOfSaleId.value
+  }
+})
 </script>
