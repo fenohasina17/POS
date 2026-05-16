@@ -29,14 +29,18 @@
             />
           </div>
 
-          <div v-if="printerTypes.length" class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700">Type d'imprimante</label>
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700">Imprimante associée</label>
             <select
-              v-model="category.printer_type_id"
+              v-model="category.printer"
               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
             >
-              <option v-for="type in printerTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+              <option value="receipt">receipt</option>
+              <option value="kitchen">kitchen</option>
+              <option value="cook">cook</option>
+              <option value="bar">bar</option>
             </select>
+            <p class="text-[10px] text-slate-400">Si l'imprimante n'est pas branchée, le ticket sera imprimé sur la caisse.</p>
           </div>
         </section>
 
@@ -64,7 +68,6 @@
 
 <script setup>
 import { ref, watch, defineEmits, defineProps } from 'vue'
-import { usePrinterTypes } from '../composables/usePrinterTypes.js'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -72,28 +75,13 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'added'])
 
-const { printerTypes, fetchPrinterTypes } = usePrinterTypes()
-
-const category = ref({ name: '', description: '', printer_type_id: '', printer_type: '' })
+const category = ref({ name: '', description: '', printer: 'cash' })
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    category.value = { name: '', description: '', printer_type_id: '', printer_type: '' }
-    fetchPrinterTypes().then(() => {
-      if (!category.value.printer_type_id && printerTypes.value.length > 0) {
-        category.value.printer_type_id = printerTypes.value[0].id
-        category.value.printer_type = printerTypes.value[0].id
-      }
-    })
+    category.value = { name: '', description: '', printer: 'cash' }
   }
 })
-
-watch(
-  () => category.value.printer_type_id,
-  (value) => {
-    category.value.printer_type = value
-  }
-)
 
 const close = () => {
   emit('close')
@@ -101,11 +89,7 @@ const close = () => {
 
 const submit = () => {
   if (!category.value.name.trim()) return
-  const payload = {
-    ...category.value,
-    printer_type: category.value.printer_type_id || category.value.printer_type,
-  }
-  emit('added', payload)
+  emit('added', { ...category.value })
   close()
 }
 </script>

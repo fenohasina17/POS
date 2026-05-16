@@ -37,8 +37,7 @@ class PrintingService {
    * Helper to get the designated cash printer name
    */
   getCashPrinter() {
-    // Priority: localStorage > 'cash' (user's request) > 'POS-80' (industry default)
-    return localStorage.getItem('cashPrinterName') || 'cash' || 'POS-80'
+    return localStorage.getItem('cashPrinterName') || 'receipt'
   }
 
   /**

@@ -256,7 +256,14 @@ const handleAdded = async (newCategory) => {
         'Content-Type': 'application/json'
       }
     })
-    categories.value.push(response.data)
+    
+    // Normalisation des données reçues pour correspondre au format attendu par le template
+    const addedCat = response.data?.data || response.data
+    categories.value.push({
+      ...addedCat,
+      products_count: 0 // Une nouvelle catégorie a 0 produit
+    })
+    
     closeCreateModal()
   } catch (e) {
     console.error('Erreur lors de l\'ajout:', e)

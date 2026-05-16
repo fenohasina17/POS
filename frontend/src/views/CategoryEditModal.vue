@@ -35,10 +35,10 @@
               v-model="category.printer"
               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
             >
-              <option value="kitchen">Cuisine (kitchen)</option>
-              <option value="bar">Bar (bar)</option>
-              <option value="receipt">Caisse (receipt)</option>
-              <option value="pizza">Pizza (pizza)</option>
+              <option value="receipt">receipt</option>
+              <option value="kitchen">kitchen</option>
+              <option value="cook">cook</option>
+              <option value="bar">bar</option>
             </select>
           </div>
         </section>

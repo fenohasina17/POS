@@ -199,7 +199,21 @@ const activeRegisterId = computed(() => hasActiveSession.value ? activeSession.v
 const isSelfConnected = computed(() => hasActiveSession.value && activeSession.value.user_id === currentUserId.value)
 
 const connectButtonText = computed(() => {
-  return isSelfConnected.value ? 'Résumé & Continuer' : 'Connecter'
+  const currentSel = String(selectedCashRegister.value)
+  const myReg = String(activeRegisterId.value)
+  
+  if (isSelfConnected.value && currentSel === myReg) {
+    return 'Continuer ma session'
+  }
+  
+  const status = registerStatuses.value[selectedCashRegister.value]
+  console.log('DEBUG Button: Selected ID:', selectedCashRegister.value, 'Status:', status);
+  
+  if (status === 'connected') {
+    return 'Voir le résumé'
+  }
+  
+  return 'Connecter'
 })
 
 const connectButtonDisabled = computed(() => {
@@ -396,7 +410,11 @@ const fetchSessionSummary = async (sessionId) => {
     const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${sessionId}/summary`, { headers: getAuthHeaders() })
     return data?.data || data || null
   } catch (error) {
-    if (error.response?.status === 409) throw new Error(error.response?.data?.message || "Le résumé n'est pas disponible tant que la session n'est pas clôturée.")
+    if (error.response?.status === 409) {
+      console.warn('Session non clôturée (409). Tentative de récupération depuis response.data:', error.response?.data);
+      // Le backend renvoie souvent les données dans data, même en cas d'erreur 409
+      return error.response?.data?.data || error.response?.data || null;
+    }
     throw error
   }
 }
@@ -503,17 +521,69 @@ const resetCashRegister = async () => {
 const performCashCount = () => router.push({ name: 'billetage' })
 const viewSales = () => router.push({ name: 'dashboard-user-sales' })
 
-const onConnectButtonClick = () => {
+const onConnectButtonClick = async () => {
   if (isProcessing.value) return
-  if (isSelfConnected.value) {
-   router.push({ name: 'dashboard-direct' })
-    return
-  }
+  
   if (!selectedCashRegister.value) {
-    alert('Sélectionnez une caisse');
+    alert('Sélectionnez une caisse')
     return
   }
-  openAmountModal()
+
+  const registerId = selectedCashRegister.value
+  const status = registerStatuses.value[registerId]
+  const isSelf = isSelfConnected.value && registerId === activeRegisterId.value
+
+  console.log('--- ACTION DEBUG ---')
+  console.log('Register ID:', registerId, 'Status:', status, 'IsSelf:', isSelf)
+
+  // 1. Si c'est ma caisse, ou si c'est un admin, on entre
+  if (isSelf || isAdmin.value) {
+    console.log('Action: Redirection vers dashboard-direct.');
+    router.push({ name: 'dashboard-direct' })
+    return
+  }
+
+  // 2. Si la caisse est connectée (par quelqu'un d'autre), on montre le résumé
+  if (status === 'connected') {
+    try {
+      // On cherche la session active de cette caisse
+      const { data } = await axios.get(`${API_BASE_URL}/cash-registers/${registerId}/current-session`, { headers: getAuthHeaders() })
+      const session = data?.data
+      console.log('DEBUG: Session récupérée via current-session:', session)
+      if (session && session.id) {
+        await openSummaryModalForSession(session.id)
+      } else {
+        alert('Impossible de récupérer la session active.')
+      }
+    } catch (error) {
+      console.error('Erreur accès session:', error)
+      alert('Impossible d\'accéder à la session de cette caisse.')
+    }
+  } else {
+    // 3. Caisse disponible
+    openAmountModal()
+  }
+}
+
+const openSummaryModalForSession = async (sessionId) => {
+  summaryError.value = ''
+  summaryInfo.value = ''
+  sessionSummary.value = null
+  isSummaryModalOpen.value = true
+
+  summaryLoading.value = true
+  try {
+    const summary = await fetchSessionSummary(sessionId)
+    if (!summary) {
+        throw new Error("Aucune donnée disponible pour cette session.")
+    }
+    sessionSummary.value = summary
+  } catch (error) {
+    summaryError.value = error.message || 'Impossible de récupérer le résumé.'
+    console.error('Erreur modal résumé:', error)
+  } finally {
+    summaryLoading.value = false
+  }
 }
 
 const formatCurrency = (value) => {
@@ -532,8 +602,10 @@ const formatDate = (date) => {
 onMounted(async () => {
   try { await loadUserData() } catch (error) { console.error('Erreur chargement utilisateur:', error) }
   resolveMachineIdentifier()
-  await fetchMyActiveSession()
+  
+  // Ordre critique : fetch registers, puis session active, puis initialisation
   await fetchCashRegisters()
+  await fetchMyActiveSession()
   await initializeSessions()
 })
 </script>
