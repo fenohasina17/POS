@@ -114,7 +114,13 @@
       </div>
 
       <!-- Actions Footer -->
-      <div class="p-6 grid grid-cols-2 gap-3 border-t border-slate-50 bg-white rounded-b-[2rem]">
+      <div class="p-6 grid grid-cols-3 gap-3 border-t border-slate-50 bg-white rounded-b-[2rem]">
+        <button
+          @click="runLayoutTest"
+          class="flex items-center justify-center gap-2 rounded-xl bg-amber-50 border border-amber-200 py-3 text-[10px] font-black text-amber-600 transition-all hover:bg-amber-100 active:scale-95"
+        >
+          TEST CSS
+        </button>
         <button
           @click="printInvoice"
           class="flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 py-3 text-[10px] font-black text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
@@ -227,6 +233,11 @@ const printInvoice = async () => {
     const orderItems = props.items.map(item => ({ ...item, name: item.name || item.product?.name || 'Article', quantity: Number(item.quantity) || 1 }))
     await printingService.printOrder(tableInfo, orderItems)
   } catch (error) { console.error('Échec de l\'impression:', error) }
+}
+
+const runLayoutTest = async () => {
+  await printingService.runLayoutTest()
+  alert('Fichier test_receipt.html généré dans le dossier frontend/')
 }
 </script>
 

@@ -77,27 +77,41 @@ class PrintingService {
       { type: 'text', value: '--------------------------------', style: { textAlign: 'center' } }
     ];
 
-    // Table header for items
+    // Table header
     items.push({
-      type: 'text',
-      value: 'Qte  Désignation         Total',
-      style: { textAlign: 'left', fontSize: '12px', fontWeight: 'bold' }
+      type: 'table-header',
+      value: { qte: 'Qte', name: 'Désignation', total: 'Total' },
+      style: { fontWeight: 'bold', fontSize: '12px' }
     });
 
     // Items
     data.items.forEach(item => {
-      const qte = item.quantity.toString().padEnd(4);
-      const name = item.name.substring(0, 18).padEnd(19);
-      const total = (item.price * item.quantity).toLocaleString().padStart(7);
       items.push({
-        type: 'text',
-        value: `${qte}${name}${total}`,
-        style: { textAlign: 'left', fontSize: '12px' }
+        type: 'table-row',
+        value: {
+          qte: item.quantity.toString(),
+          name: item.name.substring(0, 18),
+          total: (item.price * item.quantity).toLocaleString()
+        },
+        style: { fontSize: '12px' }
       });
+
+      // Ligne optionnelle pour les notes ou détails
+      if (item.quantity > 1) {
+        items.push({
+          type: 'table-row',
+          value: {
+            qte: '',
+            name: `  (× ${item.price.toLocaleString()} Ar)`,
+            total: ''
+          },
+          style: { fontSize: '10px', fontStyle: 'italic' }
+        });
+      }
     });
 
     items.push({ type: 'text', value: '--------------------------------', style: { textAlign: 'center' } });
-    
+
     items.push({
       type: 'text',
       value: `TOTAL: ${data.total.toLocaleString()} Ar`,
@@ -121,12 +135,17 @@ class PrintingService {
     return items;
   }
 
-  formatOrderForElectron(tableInfo, items) {
+  formatOrderForElectron(printerName, tableInfo, items) {
     const printData = [
       {
         type: 'text',
-        value: `TABLE: ${tableInfo.name}`,
+        value: `${printerName.toUpperCase()}`,
         style: { fontWeight: 'bold', textAlign: 'center', fontSize: '20px' }
+      },
+      {
+        type: 'text',
+        value: `TABLE: ${tableInfo.name}`,
+        style: { textAlign: 'center', fontSize: '14px' }
       },
       {
         type: 'text',
@@ -143,17 +162,14 @@ class PrintingService {
 
     items.forEach(item => {
       printData.push({
-        type: 'text',
-        value: `${item.quantity} x ${item.name}`,
-        style: { textAlign: 'left', fontSize: '16px', fontWeight: 'bold' }
+        type: 'table-row',
+        value: { 
+          qte: item.quantity.toString(), 
+          name: item.name, 
+          total: '' 
+        },
+        style: { fontSize: '16px', fontWeight: 'bold' }
       });
-      if (item.notes) {
-        printData.push({
-          type: 'text',
-          value: `  * NOTE: ${item.notes}`,
-          style: { textAlign: 'left', fontSize: '12px', fontStyle: 'italic' }
-        });
-      }
     });
 
     printData.push({ type: 'text', value: '================================', style: { textAlign: 'center' } });
@@ -177,7 +193,7 @@ class PrintingService {
     console.log('User Agent:', navigator.userAgent);
     console.log('Is Electron API present?', !!window.electronAPI);
     console.log('Window keys:', Object.keys(window).filter(k => k.toLowerCase().includes('electron')));
-    
+
     if (typeof window === 'undefined' || !window.electronAPI) {
       if (navigator.userAgent.includes('Electron')) {
         console.error('CRITICAL: You ARE in Electron, but preload.cjs FAILED to inject the API!');
@@ -190,9 +206,9 @@ class PrintingService {
     try {
       const printerName = this.getCashPrinter()
       const formattedData = this.formatInvoiceForElectron(invoiceData)
-      
+
       console.log(`Attempting to print invoice to ${printerName} via IPC...`);
-      
+
       const result = await window.electronAPI.printReceipt({
         data: formattedData,
         options: {
@@ -221,7 +237,7 @@ class PrintingService {
     const printerGroups = {}
 
     items.forEach(item => {
-      let printerName = (item.printer?.name || item.printer) || 
+      let printerName = (item.printer?.name || item.printer) ||
                         (item.category?.printer?.name || item.category?.printer);
 
       if (!printerName) {
@@ -236,11 +252,11 @@ class PrintingService {
 
     const printPromises = Object.entries(printerGroups).map(async ([printerName, groupItems]) => {
       try {
-        const formattedItems = this.formatOrderForElectron(tableInfo, groupItems);
+        const formattedItems = this.formatOrderForElectron(printerName, tableInfo, groupItems);
         const result = await window.electronAPI.printOrder({
           items: formattedItems,
           printerName: printerName
-        }); 
+        });
 
         return result;
       } catch (err) {
@@ -300,7 +316,7 @@ class PrintingService {
       });
 
       printData.push({ type: 'text', value: '--------------------------------', style: { textAlign: 'center' } });
-      
+
       // Payments
       printData.push({ type: 'text', value: 'PAIEMENTS:', style: { fontWeight: 'bold', fontSize: '12px' } });
       summaryData.payments?.forEach(pay => {
@@ -330,6 +346,21 @@ class PrintingService {
       console.error('Error printing session summary:', err);
       return { success: false, message: err.message };
     }
+  }
+
+  async runLayoutTest() {
+    const testData = {
+      companyName: "TEST MISE EN PAGE",
+      number: "000-TEST",
+      date: new Date().toLocaleString('fr-FR'),
+      items: [
+        { name: "Pizza Margherita", quantity: 1, price: 15000 },
+        { name: "Coca-Cola 33cl", quantity: 2, price: 3000 }
+      ],
+      total: 21000,
+      client: "Client Test"
+    };
+    return await this.printInvoice(testData);
   }
 
   /**
