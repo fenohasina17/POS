@@ -426,8 +426,11 @@ const holdOrder = async () => {
     })
 
     currentPendingOrder.value = data.data || data
+    
+    // 🔥 FIX: Send full cart items (with names) for printing, not just the IDs from orderData
+    await printingService.printOrder(selectedTable.value, [...cart.value])
+    
     clearCart()
-    await printingService.printOrder(selectedTable.value, orderData.order_lines)
   } catch (e) {
     console.error('Erreur hold order:', e)
   }
@@ -452,8 +455,10 @@ const confirmAddToPending = async () => {
       headers: { Authorization: `Bearer ${token}` }
     })
 
+    // 🔥 FIX: Send full cart items (with names) for printing BEFORE clearing the cart
+    await printingService.printOrder(selectedTable.value, [...cart.value])
+
     await loadTableAndData(selectedTable.value.id)
-    await printingService.printOrder(selectedTable.value, orderLines)
     clearCart()
     isAddingToPending.value = false
   } catch (e) {
