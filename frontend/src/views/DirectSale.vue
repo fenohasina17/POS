@@ -251,7 +251,7 @@
 
 <script setup>
 import { ref, shallowRef, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router' // 👈 AJOUTER useRoute
 import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
@@ -280,7 +280,7 @@ const paymentsList = ref([])
 
 const cart = ref([])
 const categories = ref([])
-const products = shallowRef([]) // Optimisation : pas de réactivité profonde sur les objets produits
+const products = shallowRef([])
 const activeCategoryId = ref(null)
 const searchQuery = ref('')
 const user = ref(null)
@@ -289,13 +289,13 @@ const isLoading = ref(false)
 
 // Router pour redirection
 const router = useRouter()
+const route = useRoute() // 👈 AJOUTER ceci
 
 // ========== COMPUTED ==========
 const totalPrice = computed(() => {
   return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
 
-// Filtrage ultra-rapide via computed
 const filteredProducts = computed(() => {
   let base = products.value
   if (activeCategoryId.value !== null) {
@@ -308,18 +308,90 @@ const filteredProducts = computed(() => {
   return base
 })
 
-const saleDataForModal = computed(() => ({
-  items: cart.value.map(item => ({
-    product_id: item.id,
-    quantity: item.quantity,
-    unit_price: Math.round(item.price),
-    total: Math.round(item.price * item.quantity),
-    name: item.name
-  })),
-  total_amount: Math.round(totalPrice.value),
-  customer_id: null,
-  point_of_sale_id: user.value?.point_of_sale_id || null
-}))
+// ========== COMPUTED ==========
+const saleDataForModal = computed(() => {
+  // Récupérer la session depuis localStorage
+  const cashSession = localStorage.getItem('cashRegisterSession')
+  let cashRegisterSessionId = null
+  let originalUserId = null
+  let isSupervisionMode = false
+
+  if (cashSession) {
+    try {
+      const parsed = JSON.parse(cashSession)
+
+      console.log('📋 Session parsée:', {
+        id: parsed.id,
+        is_supervision_mode: parsed.is_supervision_mode,
+        original_user_id: parsed.original_user_id,
+        admin_user_id: parsed.admin_user_id
+      })
+
+      // Mode supervision: utiliser l'ID de la session réelle
+      if (parsed.is_supervision_mode && parsed.id) {
+        cashRegisterSessionId = parsed.id  // 🔥 ID de la session réelle (ex: 1)
+        originalUserId = parsed.original_user_id  // ID du caissier (ex: 2)
+        isSupervisionMode = true
+        console.log('🏷️ Mode supervision:')
+        console.log('  - cash_register_session_id:', cashRegisterSessionId)
+        console.log('  - user_id (caissier):', originalUserId)
+      }
+      // Mode normal
+      else if (parsed.id && !isNaN(parseInt(parsed.id))) {
+        cashRegisterSessionId = parseInt(parsed.id)
+        console.log('🏷️ Mode normal - cash_register_session_id:', cashRegisterSessionId)
+      }
+    } catch(e) {
+      console.error('Erreur parsing session:', e)
+    }
+  }
+
+  // 🔥 Déterminer le user_id à associer à la vente
+  // En supervision: c'est l'ID du caissier occupant
+  // En mode normal: c'est l'ID de l'utilisateur connecté
+  let saleUserId = user.value?.id
+
+  if (isSupervisionMode && originalUserId) {
+    saleUserId = originalUserId  // Utiliser l'ID du caissier (ex: 2)
+    console.log('👥 Vente associée au caissier occupant ID:', saleUserId)
+  }
+
+  const saleData = {
+    items: cart.value.map(item => ({
+      product_id: item.id,
+      quantity: item.quantity,
+      unit_price: Math.round(item.price),
+      total: Math.round(item.price * item.quantity),
+      name: item.name
+    })),
+    total_amount: Math.round(totalPrice.value),
+    customer_id: null,
+    point_of_sale_id: user.value?.point_of_sale_id || null,
+    cash_register_session_id: cashRegisterSessionId,  // 🔥 ID session réelle (1)
+    user_id: saleUserId  // 🔥 ID caissier (2)
+  }
+
+  console.log('📤 Payload final:', {
+    cash_register_session_id: saleData.cash_register_session_id,
+    user_id: saleData.user_id,
+    point_of_sale_id: saleData.point_of_sale_id,
+    total_amount: saleData.total_amount
+  })
+
+  return saleData
+})
+
+// ========== VÉRIFICATION ADMIN ==========
+const isAdmin = computed(() => {
+  const auth = storage.getAuth()
+  const userRole = auth?.user?.role || auth?.user?.is_admin
+  return userRole === 'admin' || userRole === true
+})
+
+// Vérifier si on peut bypasser la session (admin + route dashboard-direct)
+const shouldBypassSession = computed(() => {
+  return route.name === 'dashboard-direct' && isAdmin.value
+})
 
 // ========== MÉTHODES ==========
 const formatPrice = (price) => {
@@ -402,7 +474,6 @@ const loadData = async (forceRefresh = false) => {
 
   try {
     isLoading.value = true
-    // Utilisation du cache pour un affichage instantané
     const data = await dataCacheService.getCategories(
       user.value.point_of_sale_id,
       auth.token,
@@ -416,7 +487,7 @@ const loadData = async (forceRefresh = false) => {
   }
 }
 
-// ========== VÉRIFICATION SESSION ACTIVE ==========
+// ========== VÉRIFICATION SESSION ACTIVE (MODIFIÉE POUR ADMIN) ==========
 const checkActiveSessionAndRedirect = async () => {
   const auth = storage.getAuth()
   if (!auth?.token) {
@@ -424,18 +495,86 @@ const checkActiveSessionAndRedirect = async () => {
     return false
   }
 
+  // 🔓 ADMIN : bypass la vérification de session
+  if (shouldBypassSession.value) {
+    console.log('👑 Admin détecté - bypass de la vérification de session caisse')
+
+    // Récupérer la session virtuelle admin ou définir un point de vente par défaut
+    const localSession = localStorage.getItem('cashRegisterSession')
+    if (localSession) {
+      try {
+        const parsed = JSON.parse(localSession)
+        if (parsed.is_admin_session === true && parsed.cash_register_id) {
+          if (auth.user) {
+            auth.user.point_of_sale_id = parsed.cash_register_id
+            user.value = auth.user
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Si toujours pas de point_of_sale_id, essayer d'en charger un
+    if (!user.value?.point_of_sale_id && auth.user) {
+      const savedPos = localStorage.getItem('lastUsedPointOfSale')
+      if (savedPos) {
+        auth.user.point_of_sale_id = parseInt(savedPos)
+        user.value = auth.user
+      } else if (auth.user.point_of_sale_id) {
+        user.value = auth.user
+      } else {
+        // Optionnel: définir un point de vente par défaut
+        console.warn('Admin: Aucun point de vente configuré')
+      }
+    }
+
+    return true
+  }
+
+  // 👤 Caissier normal : vérifier la session active
   try {
     const response = await axios.get(`${API_BASE_URL}/my-active-session`, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
-    const hasSession = response.data?.has_active_session === true
+
+    const localSession = localStorage.getItem('cashRegisterSession')
+    let isAdminVirtualSession = false
+    if (localSession) {
+      try {
+        const parsed = JSON.parse(localSession)
+        isAdminVirtualSession = parsed.is_admin_session === true
+      } catch (e) {}
+    }
+
+    const hasSession = response.data?.has_active_session === true || isAdminVirtualSession
+
     if (!hasSession) {
       router.push({ name: 'cash-registers-machine-link' })
       return false
     }
+
+    // Récupérer les infos utilisateur
+    if (auth?.user) {
+      user.value = auth.user
+    }
+
     return true
   } catch (error) {
     console.error('Erreur vérification session:', error)
+
+    const localSession = localStorage.getItem('cashRegisterSession')
+    if (localSession) {
+      try {
+        const parsed = JSON.parse(localSession)
+        if (parsed.is_admin_session === true) {
+          console.log('👑 Session virtuelle admin trouvée')
+          if (auth?.user) {
+            user.value = auth.user
+          }
+          return true
+        }
+      } catch (e) {}
+    }
+
     router.push({ name: 'cash-registers-machine-link' })
     return false
   }
@@ -443,19 +582,18 @@ const checkActiveSessionAndRedirect = async () => {
 
 // ========== INITIALISATION ==========
 onMounted(async () => {
+  console.log('DirectSale - Route:', route.name, 'IsAdmin:', isAdmin.value)
+
   const sessionOk = await checkActiveSessionAndRedirect()
   if (!sessionOk) return
 
-  const auth = storage.getAuth()
-  if (auth?.user) {
-    user.value = auth.user
+  // Chargement des données si point_of_sale_id disponible
+  if (user.value?.point_of_sale_id) {
+    await loadData(false)
+    setTimeout(() => loadData(true), 1000)
+  } else if (isAdmin.value) {
+    console.warn('Admin: Aucun point_of_sale_id trouvé, certaines fonctionnalités peuvent être limitées')
   }
-
-  // Premier chargement (depuis cache si possible)
-  await loadData(false)
-
-  // Mise à jour silencieuse en arrière-plan pour garantir la fraîcheur des données
-  setTimeout(() => loadData(true), 1000)
 })
 
 const handleClosePaymentModal = () => {
@@ -487,7 +625,6 @@ const handlePaymentSuccess = (data) => {
   isPaymentModalOpen.value = false
   isInvoiceModalOpen.value = true
 }
-
 
 const handlePaymentError = (error) => {
   console.error('Erreur de paiement:', error);
