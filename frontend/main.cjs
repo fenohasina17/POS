@@ -65,17 +65,22 @@ async function executePrint(arg, type = 'receipt') {
             return `<div style="text-align:${textAlign}; font-weight:${fontWeight}; margin-bottom: 5px; font-size:${style.fontSize || '14px'};">${item.value.replace(/\n/g, '<br>')}</div>`;
           }
           if (item.type === 'table-header') {
-            return `<div style="display: flex; font-weight: bold; font-size:${item.style.fontSize || '12px'}; margin-bottom: 5px;">
-                      <span style="width: 15%;">Qte</span>
-                      <span style="width: 60%;">Désignation</span>
-                      <span style="width: 25%; text-align: right;">Total</span>
-                    </div>`;
+            return `<table style="width: 100%; border-collapse: collapse; margin-bottom: 5px; font-size:${item.style.fontSize || '12px'}; font-weight: bold;">
+                      <tr>
+                        <td style="width: 15%;">Qte</td>
+                        <td style="width: 60%;">Désignation</td>
+                        <td style="width: 25%; text-align: right;">Total</td>
+                      </tr>
+                    </table>`;
           }
           if (item.type === 'table-row') {
-            return `<div style="display: flex; font-size:${item.style.fontSize || '16px'}; margin-bottom: 2px;">
-                      <span style="width: 20%; padding-left: 20px;">${item.value.qte}</span>
-                      <span style="width: 80%;">${item.value.name}</span>
-                    </div>`;
+            return `<table style="width: 100%; border-collapse: collapse; font-size:${item.style.fontSize || '12px'};">
+                      <tr>
+                        <td style="width: 15%; padding-left: 5px;">${item.value.qte}</td>
+                        <td style="width: 60%;">${item.value.name}</td>
+                        <td style="width: 25%; text-align: right;">${item.value.total}</td>
+                      </tr>
+                    </table>`;
           }
           return '';
         }).join('')}

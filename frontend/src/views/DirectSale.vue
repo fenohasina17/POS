@@ -536,20 +536,28 @@ const checkActiveSessionAndRedirect = async () => {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
 
-    const localSession = localStorage.getItem('cashRegisterSession')
-    let isAdminVirtualSession = false
-    if (localSession) {
-      try {
-        const parsed = JSON.parse(localSession)
-        isAdminVirtualSession = parsed.is_admin_session === true
-      } catch (e) {}
-    }
+    const isAdminVirtualSession = (
+      localStorage.getItem('cashRegisterSession') && 
+      JSON.parse(localStorage.getItem('cashRegisterSession')).is_admin_session === true
+    )
 
-    const hasSession = response.data?.has_active_session === true || isAdminVirtualSession
+    // Vérifier si response.data.data contient un ID de session valide
+    console.log('🔍 Debug Session - response.data:', response.data)
+    console.log('🔍 Debug Session - isAdminVirtualSession:', isAdminVirtualSession)
+
+    const sessionData = response.data && response.data.data ? response.data.data : response.data
+    const hasSession = (sessionData && sessionData.id) || isAdminVirtualSession
 
     if (!hasSession) {
+      console.warn('⚠️ Redirection: Aucune session active détectée')
       router.push({ name: 'cash-registers-machine-link' })
       return false
+    }
+
+    // Mettre à jour le localStorage avec les données réelles de la session
+    if (sessionData && sessionData.id) {
+      localStorage.setItem('cashRegisterSession', JSON.stringify(sessionData))
+      console.log('✅ Session mise à jour dans localStorage')
     }
 
     // Récupérer les infos utilisateur
@@ -558,8 +566,7 @@ const checkActiveSessionAndRedirect = async () => {
     }
 
     return true
-  } catch (error) {
-    console.error('Erreur vérification session:', error)
+  } catch (error) {    console.error('Erreur vérification session:', error)
 
     const localSession = localStorage.getItem('cashRegisterSession')
     if (localSession) {

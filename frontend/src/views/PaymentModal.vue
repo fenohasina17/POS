@@ -528,7 +528,8 @@ const confirmPayment = async () => {
       point_of_sale_id: props.saleData?.point_of_sale_id || auth.user?.point_of_sale_id,
       cash_register_session_id: session?.id || null,
       table_id: props.saleData?.table_id || null,
-      user_id: auth.user?.id,
+      // Utiliser l'original_user_id (le caissier) s'il existe, sinon l'utilisateur authentifié
+      user_id: session?.original_user_id || auth.user?.id,
       total_amount: props.totalAmount,
       discount_percentage: selectedDiscount.value,
       final_amount: discountedTotal.value,
