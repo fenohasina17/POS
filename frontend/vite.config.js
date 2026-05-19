@@ -13,6 +13,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
+    watch: {
+      ignored: ['**/factures/**', '**/bons_cuisine/**']
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
