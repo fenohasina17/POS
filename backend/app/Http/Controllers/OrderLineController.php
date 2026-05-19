@@ -47,7 +47,7 @@ class OrderLineController extends Controller
         ]);
 
         try {
-            $orderLine = OrderLine::create($request->all());
+            $orderLine = OrderLine::create($request->validated());
            
             return response()->json($orderLine, 201);
             
