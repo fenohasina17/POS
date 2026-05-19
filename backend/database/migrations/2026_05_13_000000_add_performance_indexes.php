@@ -26,7 +26,9 @@ return new class extends Migration
         });
 
         Schema::table('cash_transactions', function (Blueprint $table) {
-            $table->index(['cash_register_session_id', 'created_at']);
+            if (Schema::hasColumn('cash_transactions', 'cash_register_session_id')) {
+                $table->index(['cash_register_session_id', 'created_at']);
+            }
             $table->index('type');
         });
     }
