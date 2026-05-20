@@ -126,6 +126,7 @@ EOF
             steps {
                 script {
                     echo '🚀 Mise à jour des services (Rolling Update)...'
+                    sh '${DOCKER_COMPOSE} down --remove-orphans || true'
                     sh '${DOCKER_COMPOSE} up -d db redis backend nginx frontend'
 
                     echo '⏳ Attente de la stabilisation (20s)...'
