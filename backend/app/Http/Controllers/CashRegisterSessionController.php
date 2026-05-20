@@ -195,6 +195,8 @@ public function show($id, Request $request)
             abort(403, 'This action is unauthorized.');
         }
         return response()->json($session);
+    } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+        throw $e;
     } catch (\Exception $e) {
         \Log::error('Exception: ' . $e->getMessage());
         return response()->json(['error' => $e->getMessage()], 500);
