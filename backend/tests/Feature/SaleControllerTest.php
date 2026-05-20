@@ -67,7 +67,8 @@ class SaleControllerTest extends TestCase
     public function admin_can_see_all_sales()
     {
         [$user, $token] = $this->authenticate();
-        $user->assignRole('admin');
+        $user->assignRole(Role::findByName('admin', 'api'));
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->getJson('/api/sales');
@@ -79,7 +80,8 @@ class SaleControllerTest extends TestCase
     public function cashier_can_only_see_their_own_sales()
     {
         [$cashier, $token] = $this->authenticate();
-        $cashier->assignRole('caissier');
+        $cashier->assignRole(Role::findByName('caissier', 'api'));
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         Sale::factory()->create(['user_id' => $cashier->id]);
         Sale::factory()->create(['user_id' => User::factory()->create()->id]);
@@ -95,7 +97,8 @@ class SaleControllerTest extends TestCase
     public function admin_can_access_product_kpis_for_any_pos()
     {
         [$admin, $token, $adminPos] = $this->authenticate();
-        $admin->assignRole('admin');
+        $admin->assignRole(Role::findByName('admin', 'api'));
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $targetPos = PointOfSale::factory()->create();
         $product = Product::factory()->create(['name' => 'Café']);
@@ -144,22 +147,24 @@ class SaleControllerTest extends TestCase
 #[Test]
 public function user_is_manager_logic()
 {
-    // Créer les mocks pour les deux services
     $saleServiceMock = $this->createMock(\App\Services\SaleService::class);
     $printGroupingServiceMock = $this->createMock(\App\Services\PrintGroupingService::class);
-    
-    // Passer les deux mocks au constructeur
-    $controller = new \App\Http\Controllers\SaleController($saleServiceMock, $printGroupingServiceMock);
-    
+    $cashTransactionServiceMock = $this->createMock(\App\Services\CashTransactionService::class);
+
+    $controller = new \App\Http\Controllers\SaleController($saleServiceMock, $printGroupingServiceMock, $cashTransactionServiceMock);
+
     $reflection = new ReflectionClass(get_class($controller));
     $method = $reflection->getMethod('userIsManager');
     $method->setAccessible(true);
 
+    Role::findOrCreate('gerant', 'api');
+    Role::findOrCreate('caissier', 'api');
+
     $manager = User::factory()->create();
-    $manager->assignRole('gerant');
+    $manager->assignRole(Role::findByName('gerant', 'api'));
 
     $caissier = User::factory()->create();
-    $caissier->assignRole('caissier');
+    $caissier->assignRole(Role::findByName('caissier', 'api'));
 
     $this->assertTrue($method->invoke($controller, $manager));
     $this->assertFalse($method->invoke($controller, $caissier));
@@ -168,7 +173,8 @@ public function user_is_manager_logic()
     public function admin_can_create_a_sale()
     {
         [$user, $token, $pos] = $this->authenticate();
-        $user->assignRole('admin');
+        $user->assignRole(Role::findByName('admin', 'api'));
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
 
@@ -223,7 +229,8 @@ public function user_is_manager_logic()
     public function cashier_can_create_completed_sale()
     {
         [$user, $token, $pos] = $this->authenticate();
-        $user->assignRole('caissier');
+        $user->assignRole(Role::findByName('caissier', 'api'));
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
         $session = CashRegisterSession::factory()->create([
