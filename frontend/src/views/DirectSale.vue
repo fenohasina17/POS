@@ -260,14 +260,14 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faBoxes, faSearch, faShoppingCart,
-  faTrash, faMinus, faPlus, faCheck, faXmark
+  faTrash, faMinus, faPlus, faCheck, faXmark, faLock
 } from '@fortawesome/free-solid-svg-icons'
 
 import PaymentModal from './PaymentModal.vue'
 import InvoiceModal from './InvoiceModal.vue'
 import placeholderImage from '../assets/avatar.png'
 
-library.add(faBoxes, faSearch, faShoppingCart, faTrash, faMinus, faPlus, faCheck, faXmark)
+library.add(faBoxes, faSearch, faShoppingCart, faTrash, faMinus, faPlus, faCheck, faXmark, faLock)
 
 // ========== ÉTATS ==========
 const isPaymentModalOpen = ref(false)
@@ -537,7 +537,7 @@ const checkActiveSessionAndRedirect = async () => {
     })
 
     const isAdminVirtualSession = (
-      localStorage.getItem('cashRegisterSession') && 
+      localStorage.getItem('cashRegisterSession') &&
       JSON.parse(localStorage.getItem('cashRegisterSession')).is_admin_session === true
     )
 
@@ -687,6 +687,14 @@ const openPaymentModal = () => {
   width: 4px;
 }
 .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+erflow-y-auto::-webkit-scrollbar-track {
   background: transparent;
 }
 .overflow-y-auto::-webkit-scrollbar-thumb {
