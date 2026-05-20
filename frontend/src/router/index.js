@@ -3,7 +3,6 @@ import axios from 'axios'
 import { storage } from '@/utils/storage'
 import Login from '../views/Login.vue'
 import DirectSale from '../views/DirectSale.vue'
-import Pos from '../views/Pos.vue'
 
 import Product from '../views/Product.vue'
 import CashPrinter from '../views/CashPrinter.vue'
@@ -74,7 +73,6 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'login', component: Login },
-    { path: '/pos', name: 'pos', component: Pos },
     { path: '/direct', redirect: { name: 'dashboard-direct' } },
 
     // Dashboard avec routes enfants
