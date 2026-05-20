@@ -178,7 +178,7 @@ class CashRegisterSessionControllerTest extends TestCase
 
         // Vérification statut Disponible
         $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/cash-registers-sessions/{$register->id}/status")
+            ->getJson("/api/cash-register-sessions/status/{$register->id}")
             ->assertStatus(200)
             ->assertJsonPath('status', 'available');
 
@@ -190,9 +190,9 @@ class CashRegisterSessionControllerTest extends TestCase
         ]);
 
         $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/cash-registers-sessions/{$register->id}/status")
+            ->getJson("/api/cash-register-sessions/status/{$register->id}")
             ->assertStatus(200)
-            ->assertJsonPath('status', 'in use');
+            ->assertJsonPath('status', 'in_use');
     }
 
     #[Test]
@@ -207,7 +207,7 @@ class CashRegisterSessionControllerTest extends TestCase
         ]);
 
         $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/cash-register-session/my-active-session")
+            ->getJson("/api/my-active-session")
             ->assertStatus(200)
             ->assertJsonPath('data.id', $session->id);
     }
@@ -252,7 +252,10 @@ class CashRegisterSessionControllerTest extends TestCase
         // 4. Assertions
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'closures' // Structure basée sur ton contrôleur ligne 332
+                'session',
+                'categories',
+                'payments',
+                'total_sales',
             ]);
     }
     #[Test]
@@ -327,8 +330,9 @@ class CashRegisterSessionControllerTest extends TestCase
         [$user, $token, $pos] = $this->authenticate('create.cash_register_sessions');
 
         // On lui donne le rôle gérant (pour déclencher userIsManager)
-        \Spatie\Permission\Models\Role::findOrCreate('gerant', 'api');
-        $user->assignRole('gerant');
+        $gerantRole = \Spatie\Permission\Models\Role::findOrCreate('gerant', 'api');
+        $user->assignRole($gerantRole);
+        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
 
@@ -388,6 +392,7 @@ class CashRegisterSessionControllerTest extends TestCase
         [$user, $token, $posA] = $this->authenticate('view.cash_register_sessions');
         $role = \Spatie\Permission\Models\Role::findOrCreate('gerant', 'api');
         $user->assignRole($role);
+        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         // Créer une session dans un POS B
         $posB = \App\Models\PointOfSale::factory()->create();
