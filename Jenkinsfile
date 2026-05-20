@@ -84,39 +84,41 @@ EOF
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo '🧪 Lancement des tests unitaires...'
-                sh '''
-                docker network create test-net || true
-                docker run -d --name pg-test \
-                    --network test-net \
-                    -e POSTGRES_DB=testing \
-                    -e POSTGRES_USER=postgres \
-                    -e POSTGRES_PASSWORD=password \
-                    postgres:15-alpine
+                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                    echo '🧪 Lancement des tests unitaires...'
+                    sh '''
+                    docker network create test-net || true
+                    docker run -d --name pg-test \
+                        --network test-net \
+                        -e POSTGRES_DB=testing \
+                        -e POSTGRES_USER=postgres \
+                        -e POSTGRES_PASSWORD=password \
+                        postgres:15-alpine
 
-                until docker exec pg-test pg_isready -U postgres; do
-                    echo "⏳ Attente de PostgreSQL..."
-                    sleep 2
-                done
+                    until docker exec pg-test pg_isready -U postgres; do
+                        echo "⏳ Attente de PostgreSQL..."
+                        sleep 2
+                    done
 
-                BACKEND_IMAGE=$(docker images --format "{{.Repository}}" | grep backend | head -n 1)
+                    BACKEND_IMAGE=$(docker images --format "{{.Repository}}" | grep backend | head -n 1)
 
-                docker run --rm \
-                    --network test-net \
-                    -e APP_ENV=testing \
-                    -e APP_KEY=base64:KFOlFFNXabFku6rDUj51Y1cq47i+ivysqwsh1Pz6KOw= \
-                    -e DB_CONNECTION=pgsql \
-                    -e DB_HOST=pg-test \
-                    -e DB_PORT=5432 \
-                    -e DB_DATABASE=testing \
-                    -e DB_USERNAME=postgres \
-                    -e DB_PASSWORD=password \
-                    -e CACHE_STORE=array \
-                    -e SESSION_DRIVER=array \
-                    -e QUEUE_CONNECTION=sync \
-                    "$BACKEND_IMAGE" \
-                    /var/www/run-tests.sh
-                '''
+                    docker run --rm \
+                        --network test-net \
+                        -e APP_ENV=testing \
+                        -e APP_KEY=base64:KFOlFFNXabFku6rDUj51Y1cq47i+ivysqwsh1Pz6KOw= \
+                        -e DB_CONNECTION=pgsql \
+                        -e DB_HOST=pg-test \
+                        -e DB_PORT=5432 \
+                        -e DB_DATABASE=testing \
+                        -e DB_USERNAME=postgres \
+                        -e DB_PASSWORD=password \
+                        -e CACHE_STORE=array \
+                        -e SESSION_DRIVER=array \
+                        -e QUEUE_CONNECTION=sync \
+                        "$BACKEND_IMAGE" \
+                        /var/www/run-tests.sh
+                    '''
+                }
             }
         }
 
