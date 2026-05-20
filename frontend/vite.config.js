@@ -5,11 +5,11 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
-    vueDevTools(),
-  ],
+    mode === 'development' && vueDevTools(),
+  ].filter(Boolean),
   build: {
     rollupOptions: {
       output: {
@@ -21,7 +21,7 @@ export default defineConfig({
       }
     },
     target: 'esnext',
-    minify: 'terser',
+    minify: 'esbuild',
     reportCompressedSize: false,
     sourcemap: false,
   },
@@ -40,4 +40,4 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-})
+}))

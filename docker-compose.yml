@@ -65,18 +65,16 @@ services:
     networks:
       - pos_network
 
-  # --- Frontend (Vue.js / Vite) ---
+  # --- Frontend (Vue.js / production build servi par Nginx) ---
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "5173:5173"
+      - "5173:80"
     depends_on:
       - nginx
-    env_file:
-      - ./frontend/.env
     networks:
       - pos_network
 
