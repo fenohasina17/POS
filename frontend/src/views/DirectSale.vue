@@ -25,6 +25,23 @@
     />
 
     <div class="direct-sale-layout grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] p-4 bg-slate-50/50">
+      <!-- OVERLAY DE VERROUILLAGE GLOBAL -->
+      <div v-if="isSessionBilleted && !isAdmin" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all duration-500">
+        <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-[3rem] shadow-2xl border-4 border-rose-500 scale-110">
+          <div class="h-24 w-24 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl animate-bounce">
+            <FontAwesomeIcon icon="fa-solid fa-lock" class="text-5xl" />
+          </div>
+          <div class="text-center">
+            <h2 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Ventes Verrouillées</h2>
+            <p class="text-lg font-bold text-rose-600 mt-2">Le billetage a déjà été validé.</p>
+            <p class="text-sm font-medium text-slate-500 mt-1 italic">Clôturez cette session pour continuer.</p>
+          </div>
+          <button @click="router.push({ name: 'cash-registers-machine-link' })" class="mt-4 px-8 py-3 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-600 transition-all">
+            Retour à l'accueil
+          </button>
+        </div>
+      </div>
+
       <!-- Section Produits -->
       <section class="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white bg-white/80 backdrop-blur-md p-5 shadow-xl shadow-slate-200/50">
         <div class="flex flex-col gap-5 border-b border-slate-100 pb-5">
@@ -238,7 +255,6 @@
             type="button"
             class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-slate-900 py-4 font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 active:scale-[0.98] disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none"
             @click="openPaymentModal"
-            :disabled="!cart.length"
           >
             <FontAwesomeIcon icon="fa-solid fa-check" class="text-lg" />
             <span>VALIDER L'ENCAISSEMENT</span>
@@ -286,6 +302,7 @@ const searchQuery = ref('')
 const user = ref(null)
 const selectedDiscount = ref(0)
 const isLoading = ref(false)
+const isSessionBilleted = ref(false) // 👈 Gère le verrouillage après billetage
 
 // Router pour redirection
 const router = useRouter()
@@ -294,6 +311,11 @@ const route = useRoute() // 👈 AJOUTER ceci
 // ========== COMPUTED ==========
 const totalPrice = computed(() => {
   return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+})
+
+// Désactiver la vente si session billetée (sauf pour Admin)
+const canSell = computed(() => {
+  return !isSessionBilleted.value || isAdmin.value
 })
 
 const filteredProducts = computed(() => {
@@ -554,6 +576,10 @@ const checkActiveSessionAndRedirect = async () => {
       return false
     }
 
+    // 🔥 MISE À JOUR DE L'ÉTAT DE VERROUILLAGE
+    isSessionBilleted.value = !!(sessionData && sessionData.is_bill_checked)
+    console.log('🔍 État du billetage session:', isSessionBilleted.value)
+
     // Mettre à jour le localStorage avec les données réelles de la session
     if (sessionData && sessionData.id) {
       localStorage.setItem('cashRegisterSession', JSON.stringify(sessionData))
@@ -566,12 +592,15 @@ const checkActiveSessionAndRedirect = async () => {
     }
 
     return true
-  } catch (error) {    console.error('Erreur vérification session:', error)
+  } catch (error) {
+    console.error('Erreur vérification session:', error)
 
     const localSession = localStorage.getItem('cashRegisterSession')
     if (localSession) {
       try {
         const parsed = JSON.parse(localSession)
+        isSessionBilleted.value = !!parsed.is_bill_checked // 👈 Ajouter ici
+
         if (parsed.is_admin_session === true) {
           console.log('👑 Session virtuelle admin trouvée')
           if (auth?.user) {

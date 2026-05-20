@@ -1,5 +1,27 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur">
+    <!-- 🔒 OVERLAY DE VERROUILLAGE GLOBAL (Incontournable) -->
+    <div v-if="isSessionBilleted" class="absolute inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl rounded-3xl">
+      <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-[2.5rem] shadow-2xl border-4 border-rose-500 scale-90 sm:scale-105">
+        <div class="h-24 w-24 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl animate-bounce">
+          <i class="fas fa-lock text-5xl"></i>
+        </div>
+        <div class="text-center">
+          <h2 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Clôture Requise</h2>
+          <p class="text-lg font-bold text-rose-600 mt-2">Votre billetage a été validé.</p>
+          <p class="text-sm font-medium text-slate-500 mt-1 italic">Vous devez clôturer cette session avant toute autre action.</p>
+        </div>
+        <div class="flex flex-col w-full gap-3 mt-2">
+          <button @click="router.push({ name: 'dashboard-direct' })" class="w-full px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all transform active:scale-95">
+            RETOURNER À MA SESSION
+          </button>
+          <button @click="closeModal" class="w-full px-8 py-3 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-all">
+            Fermer l'application
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="relative mx-4 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
 
       <!-- Header -->
@@ -237,7 +259,16 @@ const cashRegisters = ref([])
 const registerStatuses = ref({})
 const registerOwners = ref({})
 const selectedCashRegister = ref(null)
-const activeSession = ref(null)
+
+// ⚡ CHARGEMENT IMMÉDIAT POUR VERROUILLAGE INSTANTANÉ
+const getStoredSession = () => {
+  try {
+    const s = localStorage.getItem('cashRegisterSession') || localStorage.getItem('cash_register_session')
+    return s ? JSON.parse(s) : null
+  } catch { return null }
+}
+
+const activeSession = ref(getStoredSession())
 const errorMessage = ref('')
 const machineIdentifier = ref('')
 const connectedCashRegisterName = ref('')
@@ -252,14 +283,8 @@ const currentUserId = computed(() => currentUser?.value?.id ?? null)
 const currentUserName = computed(() => currentUser?.value?.name ?? null)
 
 const isAdminVirtualSession = computed(() => {
-  const session = localStorage.getItem('cashRegisterSession')
-  if (!session) return false
-  try {
-    const parsed = JSON.parse(session)
-    return parsed.is_admin_session === true
-  } catch {
-    return false
-  }
+  const session = activeSession.value
+  return session?.is_admin_session === true
 })
 
 const machineRegister = computed(() => {
@@ -276,6 +301,14 @@ const isSessionOpen = (session) => {
 const hasActiveSession = computed(() => isSessionOpen(activeSession.value))
 const activeRegisterId = computed(() => hasActiveSession.value ? activeSession.value.cash_register_id : null)
 const isSelfConnected = computed(() => hasActiveSession.value && activeSession.value?.user_id === currentUserId.value)
+
+// 🔒 Vérifier si la session actuelle de l'utilisateur est déjà billetée
+const isSessionBilleted = computed(() => {
+  const session = activeSession.value
+  if (!session) return false
+  const val = session.is_bill_checked
+  return val === true || val === 1 || val === '1'
+})
 
 const connectButtonText = computed(() => {
   if (isAdmin.value && !hasActiveSession.value) {

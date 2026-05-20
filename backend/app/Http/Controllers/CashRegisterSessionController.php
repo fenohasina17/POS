@@ -239,6 +239,7 @@ public function show($id, Request $request)
             'actual_cash_amount' => 'nullable|numeric|min:0',
             'expected_cash_amount' => 'nullable|numeric|min:0',
             'is_closed' => 'nullable|boolean',
+            'is_bill_checked' => 'nullable|boolean', // 👈 Ajouté
             'closed_at' => 'nullable|date',
             'start_ticket_number' => 'nullable|integer|min:0',
         ]);
@@ -283,6 +284,12 @@ public function show($id, Request $request)
             }
             if (isset($validated['expected_cash_amount'])) {
                 $session->expected_cash_amount = $validated['expected_cash_amount'];
+            }
+            if (isset($validated['expected_cash_amount'])) {
+                $session->expected_cash_amount = $validated['expected_cash_amount'];
+            }
+            if (isset($validated['is_bill_checked'])) {
+                $session->is_bill_checked = $validated['is_bill_checked'];
             }
             if ($closedAt !== null) {
                 $session->closed_at = $closedAt;
