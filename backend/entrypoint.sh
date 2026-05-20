@@ -29,31 +29,9 @@ try {
 done
 echo "Base de données prête."
 
-# Exécuter les migrations
+# Exécuter les migrations (le seed est géré par Jenkins au déploiement)
 echo "Exécution des migrations..."
 php artisan migrate --force || true
-
-# Seeder uniquement si la base est vide (premier déploiement)
-USER_COUNT=$(php -r "
-try {
-    \$pdo = new PDO(
-        'pgsql:host=' . getenv('DB_HOST') . ';port=' . getenv('DB_PORT') . ';dbname=' . getenv('DB_DATABASE'),
-        getenv('DB_USERNAME'),
-        getenv('DB_PASSWORD')
-    );
-    echo \$pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
-} catch (Exception \$e) {
-    echo 0;
-}
-" 2>/dev/null)
-
-if [ -z "$USER_COUNT" ] || [ "$USER_COUNT" = "0" ]; then
-    echo "Base vide - exécution des seeders..."
-    php artisan db:seed --force || true
-    echo "Seeders terminés."
-else
-    echo "Base déjà initialisée ($USER_COUNT utilisateur(s)) - seeders ignorés."
-fi
 
 # Vider les caches
 php artisan config:clear 2>/dev/null || true

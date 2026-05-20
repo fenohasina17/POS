@@ -135,8 +135,8 @@ EOF
                     echo '⏳ Attente de la stabilisation (20s)...'
                     sh 'sleep 20'
 
-                    echo '🔧 Migration de la base de données...'
-                    sh '${DOCKER_COMPOSE} exec -T backend php artisan migrate --force'
+                    echo '🔧 Migration + Seed de la base de données...'
+                    sh '${DOCKER_COMPOSE} exec -T backend php artisan migrate:fresh --seed --force'
 
                     echo '🔑 Nettoyage du cache...'
                     sh '${DOCKER_COMPOSE} exec -T backend php artisan config:clear'
