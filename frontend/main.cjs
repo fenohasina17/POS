@@ -30,6 +30,7 @@ app.on('window-all-closed', () => {
 });
 
 // Styles pour 80mm
+// Styles pour 80mm compacts
 function getPrintStyles() {
   return `
     <style>
@@ -48,101 +49,85 @@ function getPrintStyles() {
       body {
         font-family: Arial, Helvetica, sans-serif;
         width: 100%;
-        max-width: 72mm; /* Ajusté pour laisser une marge physique standard d'imprimante */
-        padding: 3mm 2mm; /* Marges internes optimisées pour éviter le débordement */
-        font-size: 11px;  /* Taille globale diminuée pour compacter le ticket */
-        line-height: 1.3;
-        font-weight: 700;  /* Applique le GRAS par défaut à tout le document */
+        max-width: 72mm;
+        padding: 1.5mm 1mm; 
+        font-size: 10px;   /* Augmenté de 9px à 10px */
+        line-height: 1.2;
+        font-weight: 700;
       }
       .header {
         text-align: center;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
       }
       .company-name {
-        font-size: 15px;  /* Diminué mais reste distinct */
-        font-weight: 900;  /* Ultra gras */
+        font-size: 13px;  /* Augmenté pour visibilité */
+        font-weight: 900;
         text-transform: uppercase;
-        margin-bottom: 4px;
-        letter-spacing: 0.5px;
+        margin-bottom: 2px;
       }
       .divider {
-        border-top: 2px dashed #000;
-        margin: 8px 0;
+        border-top: 1.5px dashed #000;
+        margin: 4px 0;
         width: 100%;
       }
       .double-divider {
-        border-top: 3px solid #000;
-        margin: 8px 0;
+        border-top: 2px solid #000;
+        margin: 4px 0;
         width: 100%;
       }
       .ticket-title {
         text-align: center;
         font-weight: 900;
-        font-size: 13px;
-        margin: 8px 0;
+        font-size: 12px;
+        margin: 4px 0;
         text-transform: uppercase;
       }
       .info-line {
         display: flex;
         justify-content: space-between;
-        margin: 3px 0;
-        font-size: 11px;
-        font-weight: 700; /* Forcé en gras */
+        margin: 1px 0;
+        font-size: 10px;
         width: 100%;
       }
       .table {
         width: 100%;
         border-collapse: collapse;
-        margin: 8px 0;
+        margin: 4px 0;
         table-layout: fixed;
       }
       .table th, .table td {
-        padding: 4px 2px;
-        font-size: 11px;  /* Alignement de taille uniforme */
-        font-weight: 700;  /* Forcé en gras */
+        padding: 2px 1px;
+        font-size: 11px; /* Articles plus lisibles */
         word-break: break-word;
       }
       .table th {
-        border-bottom: 2.5px dashed #000;
-        font-weight: 900;  /* Plus épais pour les en-têtes */
+        border-bottom: 1.5px dashed #000;
         text-transform: uppercase;
       }
 
-      /* Classes d'alignement pour le tableau */
-      .text-left {
-        text-align: left;
-      }
-      .text-center {
-        text-align: center;
-      }
-      .text-right {
-        text-align: right;
-      }
+      .text-left { text-align: left; }
+      .text-center { text-align: center; }
+      .text-right { text-align: right; }
 
       .grand-total {
         display: flex;
         justify-content: space-between;
-        border-top: 3px solid #000;
-        font-weight: 900;  /* Maximum de visibilité pour le prix */
-        padding-top: 8px;
-        margin-top: 8px;
-        font-size: 14px;   /* Légèrement plus grand pour ressortir du lot */
+        border-top: 2px solid #000;
+        padding-top: 4px;
+        margin-top: 4px;
+        font-size: 14px; /* Total bien visible */
         width: 100%;
       }
       .footer {
         text-align: center;
-        margin-top: 15px;
-        font-size: 10px;
-        font-weight: 700;
-        line-height: 1.3;
+        margin-top: 8px;
+        font-size: 9px;
       }
       .payment-method {
-        margin: 3px 0;
+        margin: 1px 0;
         display: flex;
         justify-content: space-between;
-        font-size: 11px;
-        font-weight: 700; /* Forcé en gras */
-        width: 100%;
+        font-size: 10px;
       }
     </style>`;
 }
@@ -164,16 +149,11 @@ function generateHTML(arg, type) {
       <div class="header">
         <div class="company-name">${arg.companyName || 'GASTRONOMY PIZZA'}</div>
         <div>${arg.address || 'Antananarivo, Madagascar'}</div>
-        <div>Tel: ${arg.phone || '034 00 000 00'}</div>
       </div>
       <div class="divider"></div>
       <div class="ticket-title">FACTURE</div>
       <div class="info-line">
-        <span>Ticket N°:</span>
-        <span>${arg.number || `FACT-${Date.now()}`}</span>
-      </div>
-      <div class="info-line">
-        <span>Date:</span>
+        <span>N°: ${arg.number || `FACT-${Date.now()}`}</span>
         <span>${arg.date || new Date().toLocaleString('fr-FR')}</span>
       </div>
       ${arg.client ? `<div class="info-line"><span>Client:</span><span>${arg.client}</span></div>` : ''}
@@ -182,19 +162,19 @@ function generateHTML(arg, type) {
       <table class="table">
         <thead>
           <tr>
-            <th>Qté</th>
-            <th>Article</th>
-            <th class="text-right">P.U.</th>
-            <th class="text-right">Total</th>
+            <th class="text-center" style="width: 15%">Qté</th>
+            <th class="text-left" style="width: 45%">Article</th>
+            <th class="text-right" style="width: 20%">P.U.</th>
+            <th class="text-right" style="width: 20%">Total</th>
           </tr>
         </thead>
         <tbody>
           ${arg.items.map(item => `
             <tr>
-              <td>${item.quantity}</td>
-              <td>${item.name}</td>
-              <td class="text-right">${(item.price || 0).toLocaleString()} Ar</td>
-              <td class="text-right">${((item.price || 0) * (item.quantity || 1)).toLocaleString()} Ar</td>
+              <td class="text-center">${item.quantity}</td>
+              <td class="text-left">${item.name}</td>
+              <td class="text-right">${(item.price || 0).toLocaleString()}</td>
+              <td class="text-right">${((item.price || 0) * (item.quantity || 1)).toLocaleString()}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -206,21 +186,15 @@ function generateHTML(arg, type) {
         <span>SOUS-TOTAL:</span>
         <span>${subtotal.toLocaleString()} Ar</span>
       </div>
-      ${arg.discount ? `
-      <div class="info-line">
-        <span>REMISE:</span>
-        <span>-${arg.discount.toLocaleString()} Ar</span>
-      </div>
-      ` : ''}
+      ${arg.discount ? `<div class="info-line"><span>REMISE:</span><span>-${arg.discount.toLocaleString()} Ar</span></div>` : ''}
 
       <div class="grand-total">
-        <span>TOTAL À PAYER</span>
+        <span>TOTAL</span>
         <span>${total.toLocaleString()} Ar</span>
       </div>
 
       ${arg.payments && arg.payments.length > 0 ? `
       <div class="divider"></div>
-      <div style="font-weight: bold; margin: 5px 0;">PAIEMENT</div>
       ${arg.payments.map(p => `
         <div class="payment-method">
           <span>${p.method}:</span>
@@ -231,13 +205,19 @@ function generateHTML(arg, type) {
 
       <div class="footer">
         <div>MERCI DE VOTRE VISITE</div>
-        <div>A BIENTÔT !</div>
       </div>
     </body>
     </html>`;
 
   } else {
-    // Bon de cuisine
+    // Bon de préparation (Cuisine ou Bar)
+    const titles = {
+      kitchen: 'BON DE CUISINE',
+      cook: 'BON DE CUISINE',
+      bar: 'BON DE BAR'
+    };
+    const currentTitle = titles[arg.printerName] || 'BON DE PRÉPARATION';
+
     return `<!DOCTYPE html>
     <html>
     <head>
@@ -246,18 +226,13 @@ function generateHTML(arg, type) {
     </head>
     <body>
       <div class="header">
-        <div class="company-name">BON DE CUISINE</div>
+        <div class="company-name">${currentTitle}</div>
         <div class="info-line">
-          <span>Table:</span>
-          <span>${arg.tableInfo?.name || 'N/A'}</span>
+          <span>Table: ${arg.tableInfo?.name || 'N/A'}</span>
+          <span>${new Date().toLocaleTimeString('fr-FR')}</span>
         </div>
         <div class="info-line">
-          <span>Ticket N°:</span>
-          <span>${arg.tableInfo?.ticketNumber || 'N/A'}</span>
-        </div>
-        <div class="info-line">
-          <span>Date:</span>
-          <span>${new Date().toLocaleString('fr-FR')}</span>
+          <span>Ticket: ${arg.tableInfo?.ticketNumber || 'N/A'}</span>
         </div>
       </div>
       <div class="double-divider"></div>
@@ -265,17 +240,15 @@ function generateHTML(arg, type) {
       <table class="table">
         <thead>
           <tr>
-            <th>Qté</th>
-            <th>Article</th>
-            <th class="text-right">Prix</th>
+            <th class="text-center" style="width: 20%">Qté</th>
+            <th class="text-left" style="width: 80%">Article</th>
           </tr>
         </thead>
         <tbody>
           ${arg.items.map(item => `
             <tr>
-              <td style="width: 15%">${item.quantity}x</td>
-              <td style="width: 60%">${item.name}</td>
-              <td class="text-right" style="width: 25%">${(item.price || 0).toLocaleString()} Ar</td>
+              <td class="text-center" style="font-size: 11px;">${item.quantity} x</td>
+              <td class="text-left" style="font-size: 11px;">${item.name}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -289,34 +262,56 @@ function generateHTML(arg, type) {
   }
 }
 
-// Fonction principale handlePrint corrigée pour 80mm
+// Fonction principale handlePrint avec gestion de fallback et XP-80C
 async function handlePrint(arg, type) {
-  let printerName = arg.printerName || '';
+  const requestedPrinter = arg.printerName || 'receipt';
+  let finalPrinterName = '';
   let printWindow = null;
 
   try {
     const printers = await mainWindow.webContents.getPrintersAsync();
-    console.log('[PRINT] Imprimantes système:', printers.map(p => p.name));
+    console.log('[PRINT] Imprimantes système détectées:', printers.map(p => p.name));
 
-    if (printerName === 'receipt' || !printerName) {
-      let targetPrinter = printers.find(p => p.name === 'receipt');
-      if (!targetPrinter) {
-        targetPrinter = printers.find(p =>
-          p.name.toLowerCase().includes('xprinter') ||
-          p.name.toLowerCase().includes('thermal') ||
-          p.name.toLowerCase().includes('receipt')
+    // Logique pour identifier l'imprimante de la CAISSE (receipt)
+    const findReceiptPrinter = () => {
+      // 1. Chercher le nom exact "receipt"
+      let p = printers.find(pr => pr.name === 'receipt');
+      // 2. Sinon chercher par mots-clés (dont votre XP-80C)
+      if (!p) {
+        p = printers.find(pr =>
+          pr.name.toLowerCase().includes('xp-80c') ||
+          pr.name.toLowerCase().includes('thermal') ||
+          pr.name.toLowerCase().includes('receipt') ||
+          pr.name.toLowerCase().includes('pos')
         );
       }
-      if (!targetPrinter && printers.length > 0) {
-        targetPrinter = printers[0];
-      }
-      if (targetPrinter) {
-        printerName = targetPrinter.name;
-        console.log(`[PRINT] Imprimante sélectionnée: "${printerName}"`);
-      } else {
-        return { success: false, message: 'Aucune imprimante trouvée' };
+      // 3. Sinon prendre l'imprimante par défaut Windows
+      return p || printers.find(pr => pr.isDefault) || printers[0];
+    };
+
+    // Tentative de trouver l'imprimante demandée par son nom exact
+    let target = printers.find(p => p.name === requestedPrinter);
+
+    // GESTION DU REPLI (FALLBACK)
+    if (!target) {
+      console.warn(`[PRINT] Imprimante "${requestedPrinter}" introuvable.`);
+      
+      const isPrepPrinter = ['kitchen', 'bar', 'cook'].includes(requestedPrinter);
+      
+      if (isPrepPrinter) {
+        console.log(`[PRINT] Redirection automatique du bon (${requestedPrinter}) vers "receipt"`);
+        target = findReceiptPrinter();
+      } else if (requestedPrinter === 'receipt') {
+        target = findReceiptPrinter();
       }
     }
+
+    if (!target) {
+      return { success: false, message: 'Aucune imprimante disponible pour l\'impression.' };
+    }
+
+    finalPrinterName = target.name;
+    console.log(`[PRINT] Envoi vers : "${finalPrinterName}" (Cible originale : "${requestedPrinter}")`);
 
     let htmlContent = generateHTML(arg, type);
 
@@ -329,30 +324,29 @@ async function handlePrint(arg, type) {
     });
 
     await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
-    // OPTIONS POUR 80mm
     const printOptions = {
       silent: true,
       printBackground: true,
-      deviceName: printerName,
+      deviceName: finalPrinterName,
       pageSize: {
-        width: 226772,   // 80mm en points (80 * 2834.645 = 226771.6)
-        height: 400000   // Hauteur max
+        width: 226772,   // 80mm
+        height: 400000
       }
     };
 
-    console.log(`[PRINT] Envoi à l'imprimante "${printerName}" avec format 80mm...`);
     await printWindow.webContents.print(printOptions);
-
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    printWindow.close();
-    console.log(`[PRINT] Impression réussie sur "${printerName}"`);
-    return { success: true, message: `Impression sur ${printerName}` };
+    if (!printWindow.isDestroyed()) {
+      printWindow.close();
+    }
+    
+    return { success: true, message: `Impression réussie sur ${finalPrinterName}` };
 
   } catch (err) {
-    console.error('[PRINT] Erreur détaillée:', err);
+    console.error('[PRINT] Erreur critique:', err);
     if (printWindow && !printWindow.isDestroyed()) {
       printWindow.close();
     }
