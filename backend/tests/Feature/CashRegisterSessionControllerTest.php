@@ -26,7 +26,7 @@ class CashRegisterSessionControllerTest extends TestCase
     /**
      * Méthode helper pour créer un environnement de test complet.
      */
-    private function authenticate(string $permission = null)
+    private function authenticate(string $permission = null, string $role = null)
     {
         $pos = PointOfSale::factory()->create();
         $user = User::factory()->create([
@@ -34,10 +34,16 @@ class CashRegisterSessionControllerTest extends TestCase
             'point_of_sale_id' => $pos->id,
         ]);
 
+        if ($role) {
+            $user->assignRole(\Spatie\Permission\Models\Role::findOrCreate($role, 'api'));
+        }
+
         if ($permission) {
             Permission::findOrCreate($permission, 'api');
             $user->givePermissionTo($permission);
         }
+
+        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
 
         $loginResponse = $this->postJson('/api/login', [
             'email' => $user->email,
@@ -178,7 +184,7 @@ class CashRegisterSessionControllerTest extends TestCase
 
         // Vérification statut Disponible
         $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/cash-registers-sessions/{$register->id}/status")
+            ->getJson("/api/cash-register-sessions/status/{$register->id}")
             ->assertStatus(200)
             ->assertJsonPath('status', 'available');
 
@@ -190,9 +196,9 @@ class CashRegisterSessionControllerTest extends TestCase
         ]);
 
         $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/cash-registers-sessions/{$register->id}/status")
+            ->getJson("/api/cash-register-sessions/status/{$register->id}")
             ->assertStatus(200)
-            ->assertJsonPath('status', 'in use');
+            ->assertJsonPath('status', 'in_use');
     }
 
     #[Test]
@@ -207,7 +213,7 @@ class CashRegisterSessionControllerTest extends TestCase
         ]);
 
         $this->withHeader('Authorization', 'Bearer ' . $token)
-            ->getJson("/api/cash-register-session/my-active-session")
+            ->getJson("/api/my-active-session")
             ->assertStatus(200)
             ->assertJsonPath('data.id', $session->id);
     }
@@ -252,7 +258,10 @@ class CashRegisterSessionControllerTest extends TestCase
         // 4. Assertions
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'closures' // Structure basée sur ton contrôleur ligne 332
+                'session',
+                'categories',
+                'payments',
+                'total_sales',
             ]);
     }
     #[Test]
@@ -323,12 +332,7 @@ class CashRegisterSessionControllerTest extends TestCase
     #[Test]
     public function un_gerant_ne_peut_pas_creer_de_session()
     {
-        // On crée un gérant
-        [$user, $token, $pos] = $this->authenticate('create.cash_register_sessions');
-
-        // On lui donne le rôle gérant (pour déclencher userIsManager)
-        \Spatie\Permission\Models\Role::findOrCreate('gerant', 'api');
-        $user->assignRole('gerant');
+        [$user, $token, $pos] = $this->authenticate('create.cash_register_sessions', 'gerant');
 
         $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
 
@@ -385,9 +389,7 @@ class CashRegisterSessionControllerTest extends TestCase
     public function un_gerant_ne_peut_pas_voir_une_session_d_un_autre_point_de_vente()
     {
         // Créer un gérant au POS A
-        [$user, $token, $posA] = $this->authenticate('view.cash_register_sessions');
-        $role = \Spatie\Permission\Models\Role::findOrCreate('gerant', 'api');
-        $user->assignRole($role);
+        [$user, $token, $posA] = $this->authenticate('view.cash_register_sessions', 'gerant');
 
         // Créer une session dans un POS B
         $posB = \App\Models\PointOfSale::factory()->create();

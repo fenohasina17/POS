@@ -12,6 +12,26 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - pos_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-giovanni} -d ${DB_DATABASE:-pos_system}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # --- Cache Redis ---
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - pos_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   # --- Backend Laravel (PHP-FPM) ---
   backend:
@@ -20,8 +40,13 @@ services:
       dockerfile: Dockerfile
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file: .env
+    volumes:
+      - app_data:/var/www
     networks:
       - pos_network
 
@@ -35,27 +60,29 @@ services:
       - "8000:80"
     depends_on:
       - backend
+    volumes:
+      - app_data:/var/www
     networks:
       - pos_network
 
-  # --- Frontend (Vue.js / Vite) ---
+  # --- Frontend (Vue.js / production build servi par Nginx) ---
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "5173:5173"
+      - "5173:80"
     depends_on:
       - nginx
-    env_file:
-      - ./frontend/.env
     networks:
       - pos_network
 
   # --- Jenkins (CI/CD Automation) ---
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: ./docker/jenkins
+      dockerfile: Dockerfile
     restart: always
     privileged: true
     user: root
@@ -65,7 +92,6 @@ services:
     volumes:
       - jenkins_data:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/bin/docker:/usr/bin/docker
     networks:
       - pos_network
 
@@ -75,4 +101,6 @@ networks:
 
 volumes:
   postgres_data:
+  redis_data:
   jenkins_data:
+  app_data:

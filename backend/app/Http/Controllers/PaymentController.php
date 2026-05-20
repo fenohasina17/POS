@@ -41,7 +41,7 @@ class PaymentController extends Controller
         ]);
 
         try {
-            $paymentType = Payment::create($request->all());
+            $paymentType = Payment::create($request->validated());
             return response()->json($paymentType, 201);
         } catch (Exception $e) {
             return response()->json(['error' => 'Failed to create payment type'], 500);

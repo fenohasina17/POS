@@ -5,11 +5,26 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
-    vueDevTools(),
-  ],
+    mode === 'development' && vueDevTools(),
+  ].filter(Boolean),
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'ui-vendor': ['@fortawesome/vue-fontawesome', 'flowbite'],
+          'utils': ['axios', 'lodash'],
+        }
+      }
+    },
+    target: 'esnext',
+    minify: 'esbuild',
+    reportCompressedSize: false,
+    sourcemap: false,
+  },
   server: {
     port: 5173,
     strictPort: true,
@@ -19,11 +34,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       }
-    }
+    },
+    compress: true,
   },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-})
+}))
