@@ -111,6 +111,9 @@ EOF
                     -e DB_DATABASE=testing \
                     -e DB_USERNAME=postgres \
                     -e DB_PASSWORD=password \
+                    -e CACHE_STORE=array \
+                    -e SESSION_DRIVER=array \
+                    -e QUEUE_CONNECTION=sync \
                     "$BACKEND_IMAGE" \
                     /var/www/run-tests.sh
                 '''
