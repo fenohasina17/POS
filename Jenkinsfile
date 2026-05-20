@@ -41,9 +41,9 @@ APP_NAME=POS
 APP_ENV=production
 APP_KEY=${APP_KEY}
 APP_DEBUG=false
-APP_URL=http://localhost:8000
-FRONTEND_URL=http://localhost:5173
-SANCTUM_STATEFUL_DOMAINS=localhost:5173
+APP_URL=http://192.168.0.9:8000
+FRONTEND_URL=http://192.168.0.9:5173
+SANCTUM_STATEFUL_DOMAINS=192.168.0.9:5173
 DB_CONNECTION=pgsql
 DB_HOST=db
 DB_PORT=5432
@@ -67,7 +67,7 @@ EOF
 
                         // .env frontend
                         sh '''
-                        printf "VITE_API_URL=http://localhost:8000/api\nVITE_APP_NAME=Point of Sale\n" > frontend/.env
+                        printf "VITE_API_URL=http://192.168.0.9:8000/api\nVITE_APP_NAME=Point of Sale\n" > frontend/.env
                         '''
                     }
 
