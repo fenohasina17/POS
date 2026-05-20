@@ -29,7 +29,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// Styles pour 80mm
 // Styles pour 80mm compacts
 function getPrintStyles() {
   return `
@@ -50,7 +49,7 @@ function getPrintStyles() {
         font-family: Arial, Helvetica, sans-serif;
         width: 100%;
         max-width: 72mm;
-        padding: 1.5mm 1mm; 
+        padding: 1.5mm 1mm;
         font-size: 10px;   /* Augmenté de 9px à 10px */
         line-height: 1.2;
         font-weight: 700;
@@ -209,6 +208,77 @@ function generateHTML(arg, type) {
     </body>
     </html>`;
 
+  } else if (type === 'resume_session') {
+    // Rapport Riche (Billetage)
+    console.log('[DEBUG_PRINT] Données complètes reçues par Electron:', JSON.stringify(arg, null, 2));
+    const cashSales = (arg.payments || []).find(p => p.payment_name === 'Espèce')?.total || 0;
+    const variance = arg.actual_cash_amount - cashSales;
+
+    return `<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      ${styles}
+    </head>
+    <body>
+      <div class="header">
+        <div class="company-name">RECAPITULATIF SESSION</div>
+        <div class="info-line"><span>Caisse:</span><span>${arg.cash_register_name}</span></div>
+        <div class="info-line"><span>Caissier:</span><span>${arg.user_name}</span></div>
+      </div>
+      <div class="double-divider"></div>
+      
+      <div class="info-line"><span>Ouverture:</span><span>${new Date(arg.opened_at).toLocaleString('fr-FR')}</span></div>
+      <div class="info-line"><span>Fond de caisse:</span><span>${(arg.starting_amount || 0).toLocaleString()} Ar</span></div>
+      
+      <div class="divider"></div>
+      
+      <!-- Produits par catégorie -->
+      ${(arg.categories || []).map(cat => `
+        <div style="margin-top: 5px;">
+          <div style="font-size: 9px; font-weight: 900; border-bottom: 1px solid #000; margin-bottom: 2px;">${cat.category_name}</div>
+          ${cat.products.map(p => `
+            <div class="info-line">
+              <span>${p.product_name} x${p.quantity}</span>
+              <span>${(p.amount || 0).toLocaleString()}</span>
+            </div>
+          `).join('')}
+        </div>
+      `).join('')}
+      
+      <div class="divider"></div>
+      <div class="ticket-title">DETAIL PAIEMENTS</div>
+      ${(arg.payments || []).map(p => `
+        <div class="info-line">
+          <span>${p.payment_name}:</span>
+          <span>${(p.total || 0).toLocaleString()} Ar</span>
+        </div>
+      `).join('')}
+      
+      <div class="double-divider"></div>
+      
+      <div class="info-line">
+        <span>Ventes Espèces:</span>
+        <span>${cashSales.toLocaleString()} Ar</span>
+      </div>
+      <div class="info-line">
+        <span>Compté (Billetage):</span>
+        <span>${(arg.actual_cash_amount || 0).toLocaleString()} Ar</span>
+      </div>
+      
+      <div class="grand-total" style="color: ${variance >= 0 ? '#000' : '#000'};">
+        <span>ECART</span>
+        <span>${variance.toLocaleString()} Ar</span>
+      </div>
+      
+      <div class="divider"></div>
+      <div class="footer">
+        <p>Gastronomie Pizza - Merci</p>
+        <p>${new Date().toLocaleString('fr-FR')}</p>
+      </div>
+    </body>
+    </html>`;
+
   } else {
     // Bon de préparation (Cuisine ou Bar)
     const titles = {
@@ -295,9 +365,9 @@ async function handlePrint(arg, type) {
     // GESTION DU REPLI (FALLBACK)
     if (!target) {
       console.warn(`[PRINT] Imprimante "${requestedPrinter}" introuvable.`);
-      
+
       const isPrepPrinter = ['kitchen', 'bar', 'cook'].includes(requestedPrinter);
-      
+
       if (isPrepPrinter) {
         console.log(`[PRINT] Redirection automatique du bon (${requestedPrinter}) vers "receipt"`);
         target = findReceiptPrinter();
@@ -342,7 +412,7 @@ async function handlePrint(arg, type) {
     if (!printWindow.isDestroyed()) {
       printWindow.close();
     }
-    
+
     return { success: true, message: `Impression réussie sur ${finalPrinterName}` };
 
   } catch (err) {
@@ -359,6 +429,11 @@ ipcMain.handle('print-receipt', (e, arg) => handlePrint(arg, 'facture'));
 ipcMain.handle('print-order', (e, arg) => handlePrint(arg, 'bon_cuisine'));
 ipcMain.handle('print-pdf-receipt', (e, arg) => handlePrint(arg, 'facture'));
 ipcMain.handle('print-pdf-order', (e, arg) => handlePrint(arg, 'bon_cuisine'));
+ipcMain.handle('print-session-summary', (e, arg) => handlePrint(arg, 'resume_session'));
+ipcMain.handle('send-raw-commands', async (e, arg) => {
+  console.log('[PRINT] Commandes brutes reçues (non supportées nativement via HTML print):', arg.commands);
+  return { success: true, message: 'Commandes simulées' };
+});
 ipcMain.handle('generate-and-print-pdf-receipt', (e, arg) => handlePrint(arg, 'facture'));
 ipcMain.handle('generate-pdf-receipt', (e, arg) => handlePrint(arg, 'facture'));
 ipcMain.handle('generate-pdf-order', (e, arg) => handlePrint(arg, 'bon_cuisine'));

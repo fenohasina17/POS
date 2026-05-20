@@ -49,6 +49,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: (filePath) => {
     console.log('[Preload] openFile called:', filePath);
     return ipcRenderer.invoke('open-file', filePath);
+  },
+
+  printSessionSummary: (data) => {
+    console.log('[Preload] printSessionSummary called');
+    return ipcRenderer.invoke('print-session-summary', data);
+  },
+
+  sendRawCommands: (data) => {
+    console.log('[Preload] sendRawCommands called');
+    return ipcRenderer.invoke('send-raw-commands', data);
   }
 });
 
