@@ -67,7 +67,7 @@ EOF
 
                         // .env frontend
                         sh '''
-                        printf "VITE_API_URL=http://192.168.0.9:8000/api\nVITE_APP_NAME=Point of Sale\n" > frontend/.env
+                        printf "VITE_API_URL=http://192.168.0.9:8000\nVITE_APP_NAME=Point of Sale\n" > frontend/.env
                         '''
                     }
 
