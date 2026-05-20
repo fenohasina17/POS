@@ -172,11 +172,11 @@ const fetchSummary = async () => {
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
-const goBack = () => router.push({ name: 'billetage' })
+const goBack = () => router.push({ name: 'dashboard-overview' })
 
 const printSummary = async () => {
   console.log("[DEBUG_SUMMARY] Clic sur imprimer. Données :", summaryData.value);
-  
+
   if (!summaryData.value) {
     console.error("[DEBUG_SUMMARY] Échec : summaryData est vide.");
     alert("Impossible d'imprimer : les données du résumé ne sont pas chargées.");
@@ -186,7 +186,7 @@ const printSummary = async () => {
   try {
     const result = await printingService.printSessionSummary(summaryData.value);
     console.log("[DEBUG_SUMMARY] Réponse du service d'impression :", result);
-    
+
     if (result && !result.success) {
       alert("Erreur d'impression : " + result.message);
     }
@@ -194,7 +194,7 @@ const printSummary = async () => {
     console.error("[DEBUG_SUMMARY] Erreur fatale lors de l'appel :", error);
     alert("Erreur système lors de l'impression.");
   }
-  
+
   // Avance papier optionnelle
   try {
     await printingService.sendRawCommands(['\n\n\n\x1D\x56\x41\x03']);
