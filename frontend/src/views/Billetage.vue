@@ -75,32 +75,6 @@
                 <p class="mt-2 text-2xl font-bold text-slate-800">{{ totalProductTypes }}</p>
               </div>
             </div>
-
-            <div v-if="categoryGroups.length" class="space-y-3">
-              <article v-for="category in categoryGroups" :key="category.label" class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-3">
-                  <div>
-                    <h3 class="text-base font-semibold text-slate-900">{{ category.label }}</h3>
-                    <p class="mt-1 text-xs text-slate-500">
-                      {{ category.productTypes }} produit(s) distinct(s) • {{ category.products }} article(s)
-                    </p>
-                  </div>
-                </div>
-                <div class="mt-4">
-                  <p class="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Détail des ventes</p>
-                  <ul class="space-y-2">
-                    <li v-for="item in category.items" :key="item.name" class="flex items-center justify-between rounded-xl border border-white bg-white px-3 py-2 text-sm text-slate-700">
-                      <span class="font-medium text-slate-900">{{ item.name }}</span>
-                      <span class="text-xs font-semibold text-slate-500">x{{ item.quantity }}</span>
-                    </li>
-                  </ul>
-                </div>
-              </article>
-            </div>
-            <div v-else class="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center text-sm text-slate-500">
-              <i class="fas fa-receipt mb-2 text-2xl text-slate-300"></i>
-              <p>Aucune vente enregistrée pour cette session.</p>
-            </div>
           </section>
 
           <!-- Colonne 2 : Formulaire de comptage -->
@@ -665,7 +639,9 @@ const submit = async () => {
   isSubmitting.value = true
   try {
     await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
-      actual_cash_amount: actualTotal.value
+      actual_cash_amount: actualTotal.value,
+      is_bill_checked: true
+
     }, { headers: authHeaders() })
 
     if (varianceAmount.value !== 0 && discrepancyExplanation.value.trim()) {
