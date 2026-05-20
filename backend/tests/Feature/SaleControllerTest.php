@@ -40,7 +40,7 @@ class SaleControllerTest extends TestCase
         $gerantRole->givePermissionTo(['view.sales', 'create.sales']);
     }
 
-    private function authenticate(string $permission = null)
+    private function authenticate(string $permission = null, string $role = null)
     {
         $pos = PointOfSale::factory()->create();
         $user = User::factory()->create([
@@ -48,10 +48,16 @@ class SaleControllerTest extends TestCase
             'point_of_sale_id' => $pos->id
         ]);
 
+        if ($role) {
+            $user->assignRole(Role::findByName($role, 'api'));
+        }
+
         if ($permission) {
             Permission::findOrCreate($permission, 'api');
             $user->givePermissionTo($permission);
         }
+
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $response = $this->postJson('/api/login', [
             'email' => $user->email,
@@ -66,9 +72,7 @@ class SaleControllerTest extends TestCase
     #[Test]
     public function admin_can_see_all_sales()
     {
-        [$user, $token] = $this->authenticate();
-        $user->assignRole(Role::findByName('admin', 'api'));
-        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        [$user, $token] = $this->authenticate(null, 'admin');
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->getJson('/api/sales');
@@ -79,9 +83,7 @@ class SaleControllerTest extends TestCase
     #[Test]
     public function cashier_can_only_see_their_own_sales()
     {
-        [$cashier, $token] = $this->authenticate();
-        $cashier->assignRole(Role::findByName('caissier', 'api'));
-        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        [$cashier, $token] = $this->authenticate(null, 'caissier');
 
         Sale::factory()->create(['user_id' => $cashier->id]);
         Sale::factory()->create(['user_id' => User::factory()->create()->id]);
@@ -96,9 +98,7 @@ class SaleControllerTest extends TestCase
     #[Test]
     public function admin_can_access_product_kpis_for_any_pos()
     {
-        [$admin, $token, $adminPos] = $this->authenticate();
-        $admin->assignRole(Role::findByName('admin', 'api'));
-        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        [$admin, $token, $adminPos] = $this->authenticate(null, 'admin');
 
         $targetPos = PointOfSale::factory()->create();
         $product = Product::factory()->create(['name' => 'Café']);
@@ -172,9 +172,7 @@ public function user_is_manager_logic()
     #[Test]
     public function admin_can_create_a_sale()
     {
-        [$user, $token, $pos] = $this->authenticate();
-        $user->assignRole(Role::findByName('admin', 'api'));
-        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        [$user, $token, $pos] = $this->authenticate(null, 'admin');
 
         $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
 
@@ -228,9 +226,7 @@ public function user_is_manager_logic()
     #[Test]
     public function cashier_can_create_completed_sale()
     {
-        [$user, $token, $pos] = $this->authenticate();
-        $user->assignRole(Role::findByName('caissier', 'api'));
-        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+        [$user, $token, $pos] = $this->authenticate(null, 'caissier');
 
         $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
         $session = CashRegisterSession::factory()->create([
