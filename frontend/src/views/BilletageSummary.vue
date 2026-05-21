@@ -172,13 +172,35 @@ const fetchSummary = async () => {
   } catch (err) { console.error(err) } finally { loading.value = false }
 }
 
-const goBack = () => router.push({ name: 'billetage' })
+const goBack = () => router.push({ name: 'dashboard-overview' })
 
 const printSummary = async () => {
-  if (!summaryData.value) return
-  await printingService.printSessionSummary(summaryData.value)
-  // Force l'avance et la coupe via une commande brute supplémentaire pour XPrinter
-  await printingService.sendRawCommands(['\n\n\n\x1D\x56\x41\x03'])
+  console.log("[DEBUG_SUMMARY] Clic sur imprimer. Données :", summaryData.value);
+
+  if (!summaryData.value) {
+    console.error("[DEBUG_SUMMARY] Échec : summaryData est vide.");
+    alert("Impossible d'imprimer : les données du résumé ne sont pas chargées.");
+    return;
+  }
+
+  try {
+    const result = await printingService.printSessionSummary(summaryData.value);
+    console.log("[DEBUG_SUMMARY] Réponse du service d'impression :", result);
+
+    if (result && !result.success) {
+      alert("Erreur d'impression : " + result.message);
+    }
+  } catch (error) {
+    console.error("[DEBUG_SUMMARY] Erreur fatale lors de l'appel :", error);
+    alert("Erreur système lors de l'impression.");
+  }
+
+  // Avance papier optionnelle
+  try {
+    await printingService.sendRawCommands(['\n\n\n\x1D\x56\x41\x03']);
+  } catch (e) {
+    console.warn("[DEBUG_SUMMARY] Erreur commandes brutes (ignorée) :", e);
+  }
 }
 
 onMounted(fetchSummary)

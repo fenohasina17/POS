@@ -32,8 +32,8 @@
       </div>
     </header>
 
-    <!-- Filtre Point de Vente (Admin uniquement) -->
-    <section v-if="isAdmin" class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <!-- Filtre Point de Vente (Admin et Gérant) -->
+    <section v-if="isAdmin || pointsOfSale.length > 1" class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <div class="flex flex-wrap items-center gap-4">
         <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
           <font-awesome-icon icon="fa-solid fa-filter" class="text-indigo-500" />
@@ -45,7 +45,7 @@
             class="rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all"
             :class="selectedPosFilter === null ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'"
           >
-            Tous les sites
+            Tous mes sites
           </button>
           <button
             v-for="pos in pointsOfSale"
@@ -272,10 +272,14 @@ const getAuthHeaders = () => {
 }
 
 const fetchPointsOfSale = async () => {
-  if (!isAdmin.value) return
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/point-of-sales`, { headers: getAuthHeaders() })
-    pointsOfSale.value = data?.data || data || []
+    if (isAdmin.value) {
+      const { data } = await axios.get(`${API_BASE_URL}/point-of-sales`, { headers: getAuthHeaders() })
+      pointsOfSale.value = data?.data || data || []
+    } else if (currentUser.value?.points_of_sale) {
+      // Si c'est un gérant, on utilise les sites qui lui sont assignés (déjà chargés dans le profil)
+      pointsOfSale.value = currentUser.value.points_of_sale
+    }
   } catch (err) {
     console.error('Erreur sites:', err)
   }

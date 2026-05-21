@@ -13,7 +13,7 @@
     "lint": "run-s lint:*",
     "format": "prettier --write src/",
     "electron:dev": "concurrently \"npm run dev\" \"npm run electron:start\"",
-    "electron:start": "wait-on http://localhost:5173 && electron main.cjs",
+    "electron:start": "wait-on http://localhost:5173 && electron .",
     "electron:build": "npm run build && electron ."
   },
   "dependencies": {

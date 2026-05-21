@@ -36,11 +36,16 @@ class RolePermissionRelationSeeder extends Seeder
         if ($gerantRole) {
             $gerantPermissions = $allPermissions->filter(function ($permission) {
                 return in_array($permission->name, [
-                    'view.cash_register_sessions',
-                    'create.cash_register_sessions',
-                    'update.cash_register_sessions',
-                    'view.discrepancies',
-                    'view.sales',
+                    'view.sales', 'create.sales', 'update.sales',
+                    'view.cash_register_sessions', 'create.cash_register_sessions', 'update.cash_register_sessions',
+                    'view.order_lines', 'create.order_lines', 'update.order_lines',
+                    'view.payments', 'create.payments',
+                    'view.cash_registers',
+                    'view.cash_transactions',
+                    'view.products', 'view.categories',
+                    'view.tables', 'update.tables',
+                    'view.point_of_sales',
+                    'view.orderlines',
                 ]);
             });
             $gerantRole->syncPermissions($gerantPermissions);
@@ -50,9 +55,13 @@ class RolePermissionRelationSeeder extends Seeder
         if ($caissierRole) {
             $caissierPermissions = $allPermissions->filter(function ($permission) {
                 return in_array($permission->name, [
-                    'view.cash_register_sessions',
-                    'create.cash_register_sessions',
-                    'update.cash_register_sessions',
+                    'view.sales', 'create.sales',
+                    'view.cash_register_sessions', 'create.cash_register_sessions', 'update.cash_register_sessions',
+                    'view.order_lines', 'create.order_lines',
+                    'view.payments', 'create.payments',
+                    'view.cash_registers',
+                    'view.tables', 'update.tables',
+                    'view.products', 'view.categories',
                 ]);
             });
             $caissierRole->syncPermissions($caissierPermissions);

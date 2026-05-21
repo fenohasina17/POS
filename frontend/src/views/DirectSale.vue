@@ -25,6 +25,23 @@
     />
 
     <div class="direct-sale-layout grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] p-4 bg-slate-50/50">
+      <!-- OVERLAY DE VERROUILLAGE GLOBAL -->
+      <div v-if="isSessionBilleted && !isAdmin" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all duration-500">
+        <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-[3rem] shadow-2xl border-4 border-rose-500 scale-110">
+          <div class="h-24 w-24 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl animate-bounce">
+            <FontAwesomeIcon icon="fa-solid fa-lock" class="text-5xl" />
+          </div>
+          <div class="text-center">
+            <h2 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Ventes Verrouillées</h2>
+            <p class="text-lg font-bold text-rose-600 mt-2">Le billetage a déjà été validé.</p>
+            <p class="text-sm font-medium text-slate-500 mt-1 italic">Clôturez cette session pour continuer.</p>
+          </div>
+          <button @click="router.push({ name: 'cash-registers-machine-link' })" class="mt-4 px-8 py-3 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-600 transition-all">
+            Retour à l'accueil
+          </button>
+        </div>
+      </div>
+
       <!-- Section Produits -->
       <section class="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white bg-white/80 backdrop-blur-md p-5 shadow-xl shadow-slate-200/50">
         <div class="flex flex-col gap-5 border-b border-slate-100 pb-5">
@@ -238,7 +255,6 @@
             type="button"
             class="group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-2xl bg-slate-900 py-4 font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 active:scale-[0.98] disabled:bg-slate-100 disabled:text-slate-300 disabled:shadow-none"
             @click="openPaymentModal"
-            :disabled="!cart.length"
           >
             <FontAwesomeIcon icon="fa-solid fa-check" class="text-lg" />
             <span>VALIDER L'ENCAISSEMENT</span>
@@ -251,7 +267,7 @@
 
 <script setup>
 import { ref, shallowRef, onMounted, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router' // 👈 AJOUTER useRoute
 import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
@@ -260,14 +276,14 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import {
   faBoxes, faSearch, faShoppingCart,
-  faTrash, faMinus, faPlus, faCheck, faXmark
+  faTrash, faMinus, faPlus, faCheck, faXmark, faLock
 } from '@fortawesome/free-solid-svg-icons'
 
 import PaymentModal from './PaymentModal.vue'
 import InvoiceModal from './InvoiceModal.vue'
 import placeholderImage from '../assets/avatar.png'
 
-library.add(faBoxes, faSearch, faShoppingCart, faTrash, faMinus, faPlus, faCheck, faXmark)
+library.add(faBoxes, faSearch, faShoppingCart, faTrash, faMinus, faPlus, faCheck, faXmark, faLock)
 
 // ========== ÉTATS ==========
 const isPaymentModalOpen = ref(false)
@@ -280,22 +296,28 @@ const paymentsList = ref([])
 
 const cart = ref([])
 const categories = ref([])
-const products = shallowRef([]) // Optimisation : pas de réactivité profonde sur les objets produits
+const products = shallowRef([])
 const activeCategoryId = ref(null)
 const searchQuery = ref('')
 const user = ref(null)
 const selectedDiscount = ref(0)
 const isLoading = ref(false)
+const isSessionBilleted = ref(false) // 👈 Gère le verrouillage après billetage
 
 // Router pour redirection
 const router = useRouter()
+const route = useRoute() // 👈 AJOUTER ceci
 
 // ========== COMPUTED ==========
 const totalPrice = computed(() => {
   return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
 })
 
-// Filtrage ultra-rapide via computed
+// Désactiver la vente si session billetée (sauf pour Admin)
+const canSell = computed(() => {
+  return !isSessionBilleted.value || isAdmin.value
+})
+
 const filteredProducts = computed(() => {
   let base = products.value
   if (activeCategoryId.value !== null) {
@@ -308,18 +330,90 @@ const filteredProducts = computed(() => {
   return base
 })
 
-const saleDataForModal = computed(() => ({
-  items: cart.value.map(item => ({
-    product_id: item.id,
-    quantity: item.quantity,
-    unit_price: Math.round(item.price),
-    total: Math.round(item.price * item.quantity),
-    name: item.name
-  })),
-  total_amount: Math.round(totalPrice.value),
-  customer_id: null,
-  point_of_sale_id: user.value?.point_of_sale_id || null
-}))
+// ========== COMPUTED ==========
+const saleDataForModal = computed(() => {
+  // Récupérer la session depuis localStorage
+  const cashSession = localStorage.getItem('cashRegisterSession')
+  let cashRegisterSessionId = null
+  let originalUserId = null
+  let isSupervisionMode = false
+
+  if (cashSession) {
+    try {
+      const parsed = JSON.parse(cashSession)
+
+      console.log('📋 Session parsée:', {
+        id: parsed.id,
+        is_supervision_mode: parsed.is_supervision_mode,
+        original_user_id: parsed.original_user_id,
+        admin_user_id: parsed.admin_user_id
+      })
+
+      // Mode supervision: utiliser l'ID de la session réelle
+      if (parsed.is_supervision_mode && parsed.id) {
+        cashRegisterSessionId = parsed.id  // 🔥 ID de la session réelle (ex: 1)
+        originalUserId = parsed.original_user_id  // ID du caissier (ex: 2)
+        isSupervisionMode = true
+        console.log('🏷️ Mode supervision:')
+        console.log('  - cash_register_session_id:', cashRegisterSessionId)
+        console.log('  - user_id (caissier):', originalUserId)
+      }
+      // Mode normal
+      else if (parsed.id && !isNaN(parseInt(parsed.id))) {
+        cashRegisterSessionId = parseInt(parsed.id)
+        console.log('🏷️ Mode normal - cash_register_session_id:', cashRegisterSessionId)
+      }
+    } catch(e) {
+      console.error('Erreur parsing session:', e)
+    }
+  }
+
+  // 🔥 Déterminer le user_id à associer à la vente
+  // En supervision: c'est l'ID du caissier occupant
+  // En mode normal: c'est l'ID de l'utilisateur connecté
+  let saleUserId = user.value?.id
+
+  if (isSupervisionMode && originalUserId) {
+    saleUserId = originalUserId  // Utiliser l'ID du caissier (ex: 2)
+    console.log('👥 Vente associée au caissier occupant ID:', saleUserId)
+  }
+
+  const saleData = {
+    items: cart.value.map(item => ({
+      product_id: item.id,
+      quantity: item.quantity,
+      unit_price: Math.round(item.price),
+      total: Math.round(item.price * item.quantity),
+      name: item.name
+    })),
+    total_amount: Math.round(totalPrice.value),
+    customer_id: null,
+    point_of_sale_id: user.value?.point_of_sale_id || null,
+    cash_register_session_id: cashRegisterSessionId,  // 🔥 ID session réelle (1)
+    user_id: saleUserId  // 🔥 ID caissier (2)
+  }
+
+  console.log('📤 Payload final:', {
+    cash_register_session_id: saleData.cash_register_session_id,
+    user_id: saleData.user_id,
+    point_of_sale_id: saleData.point_of_sale_id,
+    total_amount: saleData.total_amount
+  })
+
+  return saleData
+})
+
+// ========== VÉRIFICATION ADMIN ==========
+const isAdmin = computed(() => {
+  const auth = storage.getAuth()
+  const userRole = auth?.user?.role || auth?.user?.is_admin
+  return userRole === 'admin' || userRole === true
+})
+
+// Vérifier si on peut bypasser la session (admin + route dashboard-direct)
+const shouldBypassSession = computed(() => {
+  return route.name === 'dashboard-direct' && isAdmin.value
+})
 
 // ========== MÉTHODES ==========
 const formatPrice = (price) => {
@@ -402,7 +496,6 @@ const loadData = async (forceRefresh = false) => {
 
   try {
     isLoading.value = true
-    // Utilisation du cache pour un affichage instantané
     const data = await dataCacheService.getCategories(
       user.value.point_of_sale_id,
       auth.token,
@@ -416,7 +509,7 @@ const loadData = async (forceRefresh = false) => {
   }
 }
 
-// ========== VÉRIFICATION SESSION ACTIVE ==========
+// ========== VÉRIFICATION SESSION ACTIVE (MODIFIÉE POUR ADMIN) ==========
 const checkActiveSessionAndRedirect = async () => {
   const auth = storage.getAuth()
   if (!auth?.token) {
@@ -424,18 +517,100 @@ const checkActiveSessionAndRedirect = async () => {
     return false
   }
 
+  // 🔓 ADMIN : bypass la vérification de session
+  if (shouldBypassSession.value) {
+    console.log('👑 Admin détecté - bypass de la vérification de session caisse')
+
+    // Récupérer la session virtuelle admin ou définir un point de vente par défaut
+    const localSession = localStorage.getItem('cashRegisterSession')
+    if (localSession) {
+      try {
+        const parsed = JSON.parse(localSession)
+        if (parsed.is_admin_session === true && parsed.cash_register_id) {
+          if (auth.user) {
+            auth.user.point_of_sale_id = parsed.cash_register_id
+            user.value = auth.user
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Si toujours pas de point_of_sale_id, essayer d'en charger un
+    if (!user.value?.point_of_sale_id && auth.user) {
+      const savedPos = localStorage.getItem('lastUsedPointOfSale')
+      if (savedPos) {
+        auth.user.point_of_sale_id = parseInt(savedPos)
+        user.value = auth.user
+      } else if (auth.user.point_of_sale_id) {
+        user.value = auth.user
+      } else {
+        // Optionnel: définir un point de vente par défaut
+        console.warn('Admin: Aucun point de vente configuré')
+      }
+    }
+
+    return true
+  }
+
+  // 👤 Caissier normal : vérifier la session active
   try {
     const response = await axios.get(`${API_BASE_URL}/my-active-session`, {
       headers: { Authorization: `Bearer ${auth.token}` }
     })
-    const hasSession = response.data?.has_active_session === true
+
+    const isAdminVirtualSession = (
+      localStorage.getItem('cashRegisterSession') &&
+      JSON.parse(localStorage.getItem('cashRegisterSession')).is_admin_session === true
+    )
+
+    // Vérifier si response.data.data contient un ID de session valide
+    console.log('🔍 Debug Session - response.data:', response.data)
+    console.log('🔍 Debug Session - isAdminVirtualSession:', isAdminVirtualSession)
+
+    const sessionData = response.data && response.data.data ? response.data.data : response.data
+    const hasSession = (sessionData && sessionData.id) || isAdminVirtualSession
+
     if (!hasSession) {
+      console.warn('⚠️ Redirection: Aucune session active détectée')
       router.push({ name: 'cash-registers-machine-link' })
       return false
     }
+
+    // 🔥 MISE À JOUR DE L'ÉTAT DE VERROUILLAGE
+    isSessionBilleted.value = !!(sessionData && sessionData.is_bill_checked)
+    console.log('🔍 État du billetage session:', isSessionBilleted.value)
+
+    // Mettre à jour le localStorage avec les données réelles de la session
+    if (sessionData && sessionData.id) {
+      localStorage.setItem('cashRegisterSession', JSON.stringify(sessionData))
+      console.log('✅ Session mise à jour dans localStorage')
+    }
+
+    // Récupérer les infos utilisateur
+    if (auth?.user) {
+      user.value = auth.user
+    }
+
     return true
   } catch (error) {
     console.error('Erreur vérification session:', error)
+
+    const localSession = localStorage.getItem('cashRegisterSession')
+    if (localSession) {
+      try {
+        const parsed = JSON.parse(localSession)
+        isSessionBilleted.value = !!parsed.is_bill_checked // 👈 Ajouter ici
+
+        if (parsed.is_admin_session === true) {
+          console.log('👑 Session virtuelle admin trouvée')
+          if (auth?.user) {
+            user.value = auth.user
+          }
+          return true
+        }
+      } catch (e) {}
+    }
+
     router.push({ name: 'cash-registers-machine-link' })
     return false
   }
@@ -443,19 +618,18 @@ const checkActiveSessionAndRedirect = async () => {
 
 // ========== INITIALISATION ==========
 onMounted(async () => {
+  console.log('DirectSale - Route:', route.name, 'IsAdmin:', isAdmin.value)
+
   const sessionOk = await checkActiveSessionAndRedirect()
   if (!sessionOk) return
 
-  const auth = storage.getAuth()
-  if (auth?.user) {
-    user.value = auth.user
+  // Chargement des données si point_of_sale_id disponible
+  if (user.value?.point_of_sale_id) {
+    await loadData(false)
+    setTimeout(() => loadData(true), 1000)
+  } else if (isAdmin.value) {
+    console.warn('Admin: Aucun point_of_sale_id trouvé, certaines fonctionnalités peuvent être limitées')
   }
-
-  // Premier chargement (depuis cache si possible)
-  await loadData(false)
-
-  // Mise à jour silencieuse en arrière-plan pour garantir la fraîcheur des données
-  setTimeout(() => loadData(true), 1000)
 })
 
 const handleClosePaymentModal = () => {
@@ -487,7 +661,6 @@ const handlePaymentSuccess = (data) => {
   isPaymentModalOpen.value = false
   isInvoiceModalOpen.value = true
 }
-
 
 const handlePaymentError = (error) => {
   console.error('Erreur de paiement:', error);
@@ -543,6 +716,14 @@ const openPaymentModal = () => {
   width: 4px;
 }
 .overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+erflow-y-auto::-webkit-scrollbar-track {
   background: transparent;
 }
 .overflow-y-auto::-webkit-scrollbar-thumb {

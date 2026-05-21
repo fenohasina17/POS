@@ -116,33 +116,47 @@
       <!-- Actions Footer -->
       <div class="p-6 grid grid-cols-2 gap-3 border-t border-slate-50 bg-white rounded-b-[2rem]">
         <button
-          @click="printInvoice"
+          @click="printInvoicePDF"
           class="flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 py-3 text-[10px] font-black text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
         >
           <FontAwesomeIcon icon="fa-solid fa-print" class="text-xs" />
-          IMPRIMER LE REÇU
+          IMPRIMER
         </button>
         <button
           @click="closeModal"
           class="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-[10px] font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-indigo-700 active:scale-95"
         >
           <FontAwesomeIcon icon="fa-solid fa-check-circle" class="text-xs" />
-          TERMINER LA VENTE
+          TERMINER
         </button>
+      </div>
+
+      <!-- Notification Toast -->
+      <div v-if="notification.show" class="fixed bottom-4 right-4 z-[200] animate-slide-up">
+        <div :class="[
+          'rounded-xl px-4 py-3 shadow-lg flex items-center gap-3',
+          notification.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+        ]">
+          <FontAwesomeIcon :icon="notification.type === 'success' ? 'fa-solid fa-check-circle' : 'fa-solid fa-exclamation-circle'" />
+          <p class="text-sm font-medium">{{ notification.message }}</p>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { printingService } from '@/services/printing/PrintingService'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faTimes, faPrint, faMoneyBillWave, faMobileAlt, faCreditCard, faFileInvoice, faReceipt, faCheck, faCheckCircle } from '@fortawesome/free-solid-svg-icons'
-import { API_URL } from '@/utils/api'
+import {
+  faTimes, faPrint, faMoneyBillWave, faMobileAlt, faCreditCard,
+  faFileInvoice, faReceipt, faCheck, faCheckCircle, faFilePdf,
+  faExclamationCircle
+} from '@fortawesome/free-solid-svg-icons'
 
-library.add(faTimes, faPrint, faMoneyBillWave, faMobileAlt, faCreditCard, faFileInvoice, faReceipt, faCheck, faCheckCircle)
+library.add(faTimes, faPrint, faMoneyBillWave, faMobileAlt, faCreditCard, faFileInvoice, faReceipt, faCheck, faCheckCircle, faFilePdf, faExclamationCircle)
 
 const props = defineProps({
   isOpen: { type: Boolean, default: false },
@@ -152,9 +166,23 @@ const props = defineProps({
   invoiceNumber: { type: String, default: '' },
   paymentMethod: { type: String, default: '' },
   payments: { type: Array, default: () => [] },
-  discountPercentage: { type: Number, default: 0 }
+  discountPercentage: { type: Number, default: 0 },
+  tableName: { type: String, default: 'Vente Directe' }
 })
 const emit = defineEmits(['close-modal', 'clear-cart'])
+
+// État local
+const savePDF = ref(false)
+const silentPrint = ref(true)
+const notification = ref({ show: false, message: '', type: 'success' })
+
+// Notification helper
+const showNotification = (message, type = 'success') => {
+  notification.value = { show: true, message, type }
+  setTimeout(() => {
+    notification.value.show = false
+  }, 3000)
+}
 
 // Icône selon le mode de paiement
 const getPaymentIcon = (methodName) => {
@@ -199,17 +227,12 @@ const formatPrice = (price) => {
 
 const closeModal = () => emit('close-modal')
 
-const printInvoice = async () => {
-  let logoBase64 = null
-  try {
-    const res = await fetch('http://127.0.0.1:8000/api/logo')
-    if (res.ok) logoBase64 = await res.text()
-  } catch (e) { console.error('Erreur chargement logo:', e) }
-
+// Préparer les données d'impression
+const prepareInvoiceData = () => {
   const invoiceData = {
-    logo: logoBase64,
     companyName: 'INTERNATIONAL GASTRONOMY PIZZA',
     address: 'Antananarivo, Madagascar',
+    phone: '034 00 000 00',
     number: props.invoiceNumber || 'REC-' + Date.now(),
     date: currentDateTime.value,
     items: props.items.map(item => ({
@@ -217,25 +240,168 @@ const printInvoice = async () => {
       price: Number(item.price) || 0,
       quantity: Number(item.quantity) || 1
     })),
+    subtotal: props.total,
+    discount: discountAmount.value,
     total: finalTotal.value,
-    client: props.clientName
+    client: props.clientName || 'Client',
+    payments: props.payments?.map(p => ({
+      method: p.method || 'Espèces',
+      amount: Number(p.amount) || 0,
+      reference: p.reference || null
+    })) || [{ method: 'Espèces', amount: finalTotal.value }]
   }
-
-  try {
-    await printingService.printInvoice(invoiceData)
-    const tableInfo = { name: props.tableName || 'Vente Directe', ticketNumber: invoiceData.number }
-    const orderItems = props.items.map(item => ({ ...item, name: item.name || item.product?.name || 'Article', quantity: Number(item.quantity) || 1 }))
-    await printingService.printOrder(tableInfo, orderItems)
-  } catch (error) { console.error('Échec de l\'impression:', error) }
+  return invoiceData
 }
+
+// Impression directe (ancienne méthode)
+const printInvoiceDirect = async () => {
+  try {
+    const invoiceData = prepareInvoiceData()
+    await printingService.printInvoice(invoiceData)
+
+    const tableInfo = { name: props.tableName || 'Vente Directe', ticketNumber: invoiceData.number }
+    const orderItems = props.items.map(item => ({
+      ...item,
+      name: item.name || item.product?.name || 'Article',
+      quantity: Number(item.quantity) || 1,
+      price: Number(item.price) || 0
+    }))
+    await printingService.printOrder(tableInfo, orderItems)
+
+    showNotification('Impression directe réussie', 'success')
+  } catch (error) {
+    console.error('Échec de l\'impression directe:', error)
+    showNotification('Erreur impression directe: ' + error.message, 'error')
+  }
+}
+const printInvoicePDF = async () => {
+  try {
+    console.log('[DEBUG_PRINT] --- DÉBUT DU TRAITEMENT DE LA COMMANDE ---');
+
+    // Préparation des données globales de la facture
+    const invoiceData = prepareInvoiceData();
+
+    // ----------------------------------------------------------------
+    // 1. LA FACTURE CLIENT : Sort TOUJOURS sur l'imprimante 'receipt'
+    // ----------------------------------------------------------------
+    console.log('[DEBUG_PRINT] Étape 1 : Envoi de la facture globale à la caisse (receipt)...');
+
+    if (silentPrint.value) {
+      // On force explicitement 'receipt' pour l'imprimante de la caisse principale
+      const result = await printingService.printInvoicePDF({ ...invoiceData, printerName: 'receipt' });
+      if (result.success) showNotification('Facture imprimée à la caisse', 'success');
+      else showNotification('Erreur facture caisse: ' + result.message, 'error');
+    } else {
+      const result = await printingService.generateAndPrintInvoicePDF({ ...invoiceData, printerName: 'receipt' }, savePDF.value);
+      if (result.success) showNotification('Facture générée avec succès', 'success');
+    }
+
+    // ----------------------------------------------------------------
+    // 2. LES BONS DE CUISINE : Ventilés selon la catégorie du produit
+    // ----------------------------------------------------------------
+    if (props.items.length > 0) {
+      console.log('[DEBUG_PRINT] Étape 2 : Ventilation des articles pour les bons de préparation...');
+
+      const tableInfo = {
+        name: props.tableName || 'Vente Directe',
+        ticketNumber: invoiceData.number
+      };
+
+      // Regroupement dynamique basé STRICTEMENT sur item.printer (ex: 'bar', 'kitchen')
+      const itemsByPrinter = props.items.reduce((acc, item) => {
+        // Correction ici : On prend la racine exacte confirmée par vos logs, sinon repli sur 'receipt'
+        const targetPrinter = item.printer || 'receipt';
+
+        if (!acc[targetPrinter]) {
+          acc[targetPrinter] = [];
+        }
+
+        acc[targetPrinter].push({
+          name: item.name || item.product?.name || 'Article',
+          quantity: Number(item.quantity) || 1,
+          price: Number(item.price) || 0
+        });
+
+        return acc;
+      }, {});
+
+      console.log('[DEBUG_PRINT] Groupes d’impression détectés :', Object.keys(itemsByPrinter));
+
+      // Envoi de chaque bon de préparation vers son imprimante dédiée
+      for (const [printerName, printerItems] of Object.entries(itemsByPrinter)) {
+        console.log(`[DEBUG_PRINT] Envoi du bon de préparation vers -> "${printerName}" (${printerItems.length} articles)`);
+
+        // On passe le printerName issu du produit à notre service
+        const orderResult = await printingService.printOrderPDF(tableInfo, printerItems, printerName);
+
+        if (!orderResult.success) {
+          console.warn(`[DEBUG_PRINT] Échec d'impression préparation sur "${printerName}":`, orderResult.message);
+        } else {
+          console.log(`[DEBUG_PRINT] Succès d'envoi du bon vers "${printerName}"`);
+        }
+      }
+    }
+
+    console.log('[DEBUG_PRINT] --- FIN DU TRAITEMENT DE LA COMMANDE ---');
+  } catch (error) {
+    console.error('[DEBUG_PRINT] Erreur générale lors du clic imprimer:', error);
+    showNotification('Erreur système: ' + error.message, 'error');
+  }
+};
+
+// Récupérer les imprimantes disponibles
+const loadPrinters = async () => {
+  try {
+    const printers = await printingService.getAvailablePrinters()
+    console.log('Imprimantes disponibles:', printers)
+  } catch (error) {
+    console.error('Erreur chargement imprimantes:', error)
+  }
+}
+
+// Charger les imprimantes au montage
+if (props.isOpen) {
+  loadPrinters()
+}
+
 </script>
 
 <style scoped>
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
 @media print {
   .fixed { position: relative !important; }
   .fixed button { display: none !important; }
   .overflow-y-auto { overflow: visible !important; max-height: none !important; }
   .bg-black { background: none !important; }
   .shadow-xl { box-shadow: none !important; }
+}
+
+/* Scrollbar personnalisée */
+.scrollbar-hide::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-hide::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.scrollbar-hide::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
 }
 </style>

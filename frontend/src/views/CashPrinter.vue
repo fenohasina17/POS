@@ -1,5 +1,27 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur">
+    <!-- 🔒 OVERLAY DE VERROUILLAGE GLOBAL (Incontournable) -->
+    <div v-if="isSessionBilleted" class="absolute inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl rounded-3xl">
+      <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-[2.5rem] shadow-2xl border-4 border-rose-500 scale-90 sm:scale-105">
+        <div class="h-24 w-24 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl animate-bounce">
+          <i class="fas fa-lock text-5xl"></i>
+        </div>
+        <div class="text-center">
+          <h2 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Clôture Requise</h2>
+          <p class="text-lg font-bold text-rose-600 mt-2">Votre billetage a été validé.</p>
+          <p class="text-sm font-medium text-slate-500 mt-1 italic">Vous devez clôturer cette session avant toute autre action.</p>
+        </div>
+        <div class="flex flex-col w-full gap-3 mt-2">
+          <button @click="router.push({ name: 'dashboard-direct' })" class="w-full px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all transform active:scale-95">
+            RETOURNER À MA SESSION
+          </button>
+          <button @click="closeModal" class="w-full px-8 py-3 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-all">
+            Fermer l'application
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="relative mx-4 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
 
       <!-- Header -->
@@ -38,6 +60,12 @@
           <span v-else> → Aucune caisse ne porte ce nom. Vous pouvez en créer une ci-dessous.</span>
         </div>
 
+        <!-- Message admin -->
+        <div v-if="isAdmin && !hasActiveSession" class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          <i class="fas fa-shield-alt mr-2"></i>
+          Mode Administrateur : Vous pouvez superviser une caisse existante ou en créer une nouvelle.
+        </div>
+
         <!-- Conteneur des caisses -->
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-6">
           <div class="flex justify-between items-center mb-4">
@@ -65,9 +93,9 @@
                 class="rounded-2xl border border-slate-200 px-5 py-5 text-left transition-all hover:border-indigo-200 hover:bg-indigo-50 disabled:cursor-not-allowed"
                 :class="{
                   'selected': selectedCashRegister === register.id,
-                  'opacity-60 bg-slate-100 pointer-events-none': isRegisterLocked(register.id)
+                  'opacity-60 bg-slate-100 pointer-events-none': isRegisterLocked(register.id) && !isAdmin
                 }"
-                :disabled="isRegisterLocked(register.id)"
+                :disabled="isRegisterLocked(register.id) && !isAdmin"
                 @click="selectCashRegister(register.id)"
               >
                 <div class="flex items-start gap-4">
@@ -78,6 +106,9 @@
                     <p class="font-semibold text-slate-900 truncate">{{ register.name }}</p>
                     <p class="text-xs text-slate-400 mt-0.5 truncate">
                       {{ register.point_of_sale?.name || 'Sans point de vente' }}
+                    </p>
+                    <p v-if="register.current_session?.user?.name" class="text-xs text-indigo-600 mt-1">
+                      👤 Occupé par: {{ register.current_session.user.name }}
                     </p>
                   </div>
                 </div>
@@ -113,10 +144,12 @@
           </div>
         </div>
 
-
-
         <p v-if="isSelfConnected" class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-600">
           ✅ Caisse connectée : {{ activeSession?.cash_register?.name || connectedCashRegisterName }}
+        </p>
+
+        <p v-if="isAdminVirtualSession" class="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-600">
+          👑 Mode supervision Admin - Session virtuelle active
         </p>
 
         <!-- Bouton principal -->
@@ -128,6 +161,7 @@
         >
           <i class="fas fa-link"></i> {{ connectButtonText }}
         </button>
+
         <!-- Message d'erreur -->
         <div v-if="errorMessage" class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
           {{ errorMessage }}
@@ -141,6 +175,68 @@
     @close="closeAmountModal"
     @send="handleAmountModalSend"
   />
+
+  <!-- Modal résumé session -->
+  <div v-if="isSummaryModalOpen" class="summary-overlay" @click.self="closeSummaryModal">
+    <div class="summary-modal">
+      <div class="summary-modal-head">
+        <div>
+          <p class="summary-kicker">RÉSUMÉ DE SESSION</p>
+          <h3 class="summary-modal-title">Session caisse</h3>
+        </div>
+        <button type="button" class="summary-close-button" @click="closeSummaryModal">
+          <i class="fas fa-xmark"></i> Fermer
+        </button>
+      </div>
+      <div class="summary-modal-body">
+        <div v-if="summaryLoading" class="text-center py-8 text-slate-500">
+          <i class="fas fa-spinner fa-spin mr-2"></i> Chargement...
+        </div>
+        <div v-else-if="summaryError" class="text-center py-8 text-rose-500">
+          {{ summaryError }}
+        </div>
+        <div v-else-if="sessionSummary" class="summary-content">
+          <div class="summary-grid">
+            <div class="summary-row">
+              <span class="summary-label">Caissier</span>
+              <span class="summary-value">{{ sessionSummary.user_name || sessionSummary.user?.name || '—' }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Date d'ouverture</span>
+              <span class="summary-value">{{ formatDate(sessionSummary.started_at) }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Fond de caisse</span>
+              <span class="summary-value">{{ formatCurrency(sessionSummary.starting_amount) }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Ventes totales</span>
+              <span class="summary-value">{{ formatCurrency(sessionSummary.total_sales) }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Espèces encaissées</span>
+              <span class="summary-value">{{ formatCurrency(sessionSummary.cash_collected) }}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Fermeture prévue</span>
+              <span class="summary-value">{{ formatDate(sessionSummary.expected_close_date) || 'Non définie' }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-center py-8 text-slate-500">
+          Aucune donnée disponible
+        </div>
+      </div>
+      <div class="summary-modal-foot">
+        <button type="button" class="summary-action summary-action-secondary" @click="closeSummaryModal">
+          Annuler
+        </button>
+        <button type="button" class="summary-action summary-action-primary" @click="continueAfterSummary">
+          Continuer
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -154,13 +250,8 @@ import { API_BASE_URL } from '@/utils/api'
 const router = useRouter()
 const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
 
-const canAccessCashActions = computed(() => {
-  return isAdmin.value || hasRole('caissier')
-})
-
-// Mode debug : activer avec ?debug=true dans l'URL
+// ========== ÉTATS ==========
 const debugMode = ref(window.location.search.includes('debug=true'))
-
 const isAmountModalOpen = ref(false)
 const isProcessing = ref(false)
 const loadingRegisters = ref(false)
@@ -168,25 +259,38 @@ const cashRegisters = ref([])
 const registerStatuses = ref({})
 const registerOwners = ref({})
 const selectedCashRegister = ref(null)
-const activeSession = ref(null)
+
+// ⚡ CHARGEMENT IMMÉDIAT POUR VERROUILLAGE INSTANTANÉ
+const getStoredSession = () => {
+  try {
+    const s = localStorage.getItem('cashRegisterSession') || localStorage.getItem('cash_register_session')
+    return s ? JSON.parse(s) : null
+  } catch { return null }
+}
+
+const activeSession = ref(getStoredSession())
 const errorMessage = ref('')
 const machineIdentifier = ref('')
 const connectedCashRegisterName = ref('')
 const isSummaryModalOpen = ref(false)
 const summaryLoading = ref(false)
 const summaryError = ref('')
-const summaryInfo = ref('')
 const sessionSummary = ref(null)
+
+// ========== COMPUTED ==========
+const canAccessCashActions = computed(() => isAdmin.value || hasRole('caissier'))
+const currentUserId = computed(() => currentUser?.value?.id ?? null)
+const currentUserName = computed(() => currentUser?.value?.name ?? null)
+
+const isAdminVirtualSession = computed(() => {
+  const session = activeSession.value
+  return session?.is_admin_session === true
+})
 
 const machineRegister = computed(() => {
   const registers = Array.isArray(cashRegisters.value) ? cashRegisters.value : []
   return findRegisterForMachine(registers)
 })
-
-const closeModal = () => router.push({ name: 'dashboard-overview' })
-
-const currentUserId = computed(() => currentUser?.value?.id ?? null)
-const currentUserName = computed(() => currentUser?.value?.name ?? null)
 
 const isSessionOpen = (session) => {
   if (!session) return false
@@ -196,19 +300,42 @@ const isSessionOpen = (session) => {
 
 const hasActiveSession = computed(() => isSessionOpen(activeSession.value))
 const activeRegisterId = computed(() => hasActiveSession.value ? activeSession.value.cash_register_id : null)
-const isSelfConnected = computed(() => hasActiveSession.value && activeSession.value.user_id === currentUserId.value)
+const isSelfConnected = computed(() => hasActiveSession.value && activeSession.value?.user_id === currentUserId.value)
+
+// 🔒 Vérifier si la session actuelle de l'utilisateur est déjà billetée
+const isSessionBilleted = computed(() => {
+  const session = activeSession.value
+  if (!session) return false
+  const val = session.is_bill_checked
+  return val === true || val === 1 || val === '1'
+})
 
 const connectButtonText = computed(() => {
-  return isSelfConnected.value ? 'Résumé & Continuer' : 'Connecter'
+  if (isAdmin.value && !hasActiveSession.value) {
+    return 'Accéder au tableau de bord (Supervision)'
+  }
+
+  const currentSel = String(selectedCashRegister.value)
+  const myReg = String(activeRegisterId.value)
+
+  if (isSelfConnected.value && currentSel === myReg) {
+    return 'Continuer ma session'
+  }
+
+  const status = registerStatuses.value[selectedCashRegister.value]
+  if (status === 'connected') return 'Voir le résumé'
+  return 'Connecter'
 })
 
 const connectButtonDisabled = computed(() => {
   if (isProcessing.value) return true
   if (isSelfConnected.value) return false
+  if (isAdmin.value) return false
   if (!selectedCashRegister.value) return true
   return false
 })
 
+// ========== FONCTIONS UTILITAIRES ==========
 const getAuthHeaders = () => {
   const token = localStorage.getItem('token')
   if (!token) throw new Error("Token d'authentification manquant")
@@ -216,50 +343,80 @@ const getAuthHeaders = () => {
 }
 
 const statusBadgeClass = (registerId) => {
-  const status = statusBadgeText(registerId)
-  if (status.includes('Erreur')) return 'bg-red-100 text-red-700'
-  if (status.includes('Occupée (vous)')) return 'bg-blue-100 text-blue-700'
-  if (status.includes('Occupée')) return 'bg-amber-100 text-amber-700'
+  const text = statusBadgeText(registerId)
+  if (text?.includes('Erreur')) return 'bg-red-100 text-red-700'
+  if (text?.includes('Occupée (vous)')) return 'bg-blue-100 text-blue-700'
+  if (text?.includes('Occupée')) return 'bg-amber-100 text-amber-700'
   return 'bg-green-100 text-green-700'
 }
 
 const isRegisterLocked = (registerId) => {
-  // Sécuriser l'accès aux variables réactives
+  if (!registerId) return true
+  if (isAdmin.value) return false
+  if (isSelfConnected.value && registerId === activeRegisterId.value) return false
+
+  const status = registerStatuses.value[registerId]
+  const owner = registerOwners.value[registerId]
+
+  if (status !== 'connected') return false
+  if (!owner) return true
+
   const userId = currentUserId.value
   const userName = currentUserName.value
 
-  if (isSelfConnected.value && registerId === activeRegisterId.value) return false
-  const status = registerStatuses.value[registerId]
-  const owner = registerOwners.value[registerId]
-  if (status !== 'connected') return false
-  if (!owner) return false
   if (typeof owner === 'number') return owner !== userId
   return owner !== userName
 }
 
 const statusBadgeText = (registerId) => {
-  if (isSelfConnected.value && registerId === activeRegisterId.value) return 'Occupée (vous)'
+  if (!registerId) return ''
+
+  if (isSelfConnected.value && registerId === activeRegisterId.value) {
+    return 'Occupée (vous)'
+  }
+
   const status = registerStatuses.value[registerId]
   const owner = registerOwners.value[registerId]
+
   if (status === 'connected') {
-    if (owner && ((typeof owner === 'number' && owner === currentUserId.value) ||
-                   (typeof owner === 'string' && owner === currentUserName.value))) {
-      return 'Occupée (vous)'
-    }
+    const userId = currentUserId.value
+    const userName = currentUserName.value
+
+    const isOwn = (typeof owner === 'number' && owner === userId) ||
+                  (typeof owner === 'string' && owner === userName)
+
+    if (isOwn) return 'Occupée (vous)'
     return owner ? `Occupée par ${owner}` : 'Occupée'
   }
+
   if (status === 'error') return 'Erreur'
   return 'Disponible'
 }
 
-const selectCashRegister = (registerId) => {
-  if (loadingRegisters.value || isProcessing.value) return
-  if (isRegisterLocked(registerId)) return
-  selectedCashRegister.value = registerId
+const formatCurrency = (value) => {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return '0,00 Ar'
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(number)
 }
 
-const goToMachineManagement = () => router.push({ name: 'cash-registers-machine-link' })
+const formatDate = (date) => {
+  if (!date) return '—'
+  const parsed = new Date(date)
+  if (isNaN(parsed.getTime())) return '—'
+  return parsed.toLocaleString('fr-FR')
+}
 
+function normalizeName(name) {
+  return (name || '').toString().trim().toLowerCase()
+}
+
+function findRegisterForMachine(registers) {
+  if (!machineIdentifier.value) return null
+  const normalizedMachineName = normalizeName(machineIdentifier.value)
+  return registers.find(register => normalizeName(register.name) === normalizedMachineName) || null
+}
+
+// ========== API CALLS ==========
 const fetchCashRegisters = async () => {
   loadingRegisters.value = true
   errorMessage.value = ''
@@ -271,11 +428,17 @@ const fetchCashRegisters = async () => {
     else if (data?.items && Array.isArray(data.items)) registers = data.items
     else if (data?.results && Array.isArray(data.results)) registers = data.results
     else if (data?.cash_registers && Array.isArray(data.cash_registers)) registers = data.cash_registers
-    else for (const key in data) if (Array.isArray(data[key])) { registers = data[key]; break }
+    else {
+      for (const key in data) {
+        if (Array.isArray(data[key])) {
+          registers = data[key]
+          break
+        }
+      }
+    }
 
     cashRegisters.value = registers
 
-    // Mettre à jour les statuts à partir des données de l'API (is_occupied + current_session)
     const newStatuses = {}
     const newOwners = {}
     registers.forEach(register => {
@@ -288,6 +451,7 @@ const fetchCashRegisters = async () => {
         newOwners[register.id] = ownerId || ownerName || 'unknown'
       } else {
         newStatuses[register.id] = 'available'
+        newOwners[register.id] = null
       }
     })
     registerStatuses.value = newStatuses
@@ -301,56 +465,28 @@ const fetchCashRegisters = async () => {
   }
 }
 
-const resolveMachineIdentifier = () => {
-  try {
-    const storedIdentifiers = [
-      localStorage.getItem('cashRegisterMachineName'),
-      localStorage.getItem('cashPrinterName'),
-      localStorage.getItem('cash_printer_name'),
-      localStorage.getItem('machineIdentifier')
-    ]
-    const envIdentifier = import.meta.env?.VITE_CASH_PRINTER_NAME
-    const resolved = [...storedIdentifiers, envIdentifier]
-      .map(v => typeof v === 'string' ? v.trim() : '')
-      .find(v => v)
-
-    machineIdentifier.value = resolved || ''
-  } catch (error) {
-    console.error('Erreur récupération identifiant machine:', error)
-    machineIdentifier.value = ''
-  }
-}
-
-function normalizeName(name) {
-  return (name || '').toString().trim().toLowerCase()
-}
-
-function findRegisterForMachine(registers) {
-  if (!machineIdentifier.value) return null
-  const normalizedMachineName = normalizeName(machineIdentifier.value)
-  return registers.find(register => normalizeName(register.name) === normalizedMachineName) || null
-}
-
-const refreshAllStatuses = async () => {
-  await fetchCashRegisters()
-  if (debugMode.value) console.log('Statuts rafraîchis', registerStatuses.value)
-}
-
 const fetchMyActiveSession = async () => {
   try {
     const { data } = await axios.get(`${API_BASE_URL}/my-active-session`, { headers: getAuthHeaders() })
-    console.log('Réponse my-active-session:', data)
 
-    // Si l'API indique explicitement qu'il n'y a pas de session active
     if (data?.has_active_session === false || !data?.data) {
       activeSession.value = null
-      localStorage.removeItem('cashRegisterSession')
-      localStorage.removeItem('cash_register_session')
-      selectedCashRegister.value = null
+      const existingSession = localStorage.getItem('cashRegisterSession')
+      if (existingSession) {
+        try {
+          const parsed = JSON.parse(existingSession)
+          if (parsed.is_admin_session !== true) {
+            localStorage.removeItem('cashRegisterSession')
+            localStorage.removeItem('cash_register_session')
+          }
+        } catch {
+          localStorage.removeItem('cashRegisterSession')
+          localStorage.removeItem('cash_register_session')
+        }
+      }
       return
     }
 
-    // Sinon, on prend la session (data.data doit contenir l'objet session)
     const session = data?.data
     if (session && isSessionOpen(session)) {
       activeSession.value = session
@@ -359,33 +495,27 @@ const fetchMyActiveSession = async () => {
       localStorage.setItem('cashRegisterSession', JSON.stringify(session))
       localStorage.setItem('cash_register_session', JSON.stringify(session))
       registerStatuses.value = { ...registerStatuses.value, [session.cash_register_id]: 'connected' }
-      registerOwners.value = { ...registerOwners.value, [session.cash_register_id]: currentUserId.value }
+      registerOwners.value = { ...registerOwners.value, [session.cash_register_id]: currentUserId.value || session.user_id }
     } else {
       activeSession.value = null
-      localStorage.removeItem('cashRegisterSession')
-      localStorage.removeItem('cash_register_session')
-      selectedCashRegister.value = null
     }
   } catch (error) {
-    if (error.response?.status !== 404) console.error('Erreur récupération session active:', error)
+    if (error.response?.status !== 404) {
+      console.error('Erreur récupération session active:', error)
+    }
     activeSession.value = null
-    localStorage.removeItem('cashRegisterSession')
-    localStorage.removeItem('cash_register_session')
-    selectedCashRegister.value = null
   }
 }
 
-const initializeSessions = async () => {
-  if (hasActiveSession.value) {
-    selectedCashRegister.value = activeRegisterId.value
-  } else if (!selectedCashRegister.value) {
-    if (machineRegister.value) {
-      selectedCashRegister.value = machineRegister.value.id
-    } else {
-      const registers = Array.isArray(cashRegisters.value) ? cashRegisters.value : []
-      const fallback = registers.find(r => !isRegisterLocked(r.id)) || registers[0]
-      selectedCashRegister.value = fallback?.id ?? null
-    }
+const getCurrentSessionForRegister = async (registerId) => {
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/cash-registers/${registerId}/current-session`, {
+      headers: getAuthHeaders()
+    })
+    return data?.data || null
+  } catch (error) {
+    console.error('Erreur récupération session:', error)
+    return null
   }
 }
 
@@ -394,54 +524,83 @@ const fetchSessionSummary = async (sessionId) => {
     const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${sessionId}/summary`, { headers: getAuthHeaders() })
     return data?.data || data || null
   } catch (error) {
-    if (error.response?.status === 409) throw new Error(error.response?.data?.message || "Le résumé n'est pas disponible tant que la session n'est pas clôturée.")
+    if (error.response?.status === 409) {
+      return error.response?.data?.data || error.response?.data || null
+    }
     throw error
   }
 }
 
-const openSummaryModal = async () => {
-  if (!activeSession.value?.id) {
-    router.push({ name: 'dashboard-direct' })
-    return
-  }
-  summaryError.value = ''
-  summaryInfo.value = ''
-  sessionSummary.value = null
-  isSummaryModalOpen.value = true
+// ========== GESTION DES SESSIONS ADMIN ==========
+const createAdminSupervisionSession = (registerId, occupantSession, selectedRegister) => {
+  // Récupérer les informations du caissier occupant
+  const occupantId = occupantSession.user_id || occupantSession.user?.id
+  const occupantName = occupantSession.user?.name || occupantSession.user_name
+  const realSessionId = occupantSession.id // 🔥 C'est ça qu'on veut pour cash_register_session_id
 
-  summaryLoading.value = true
-  try {
-    sessionSummary.value = await fetchSessionSummary(activeSession.value.id)
-  } catch (error) {
-    summaryError.value = error.message || error.response?.data?.message || 'Impossible de récupérer le résumé de la session.'
-  } finally {
-    summaryLoading.value = false
+  console.log('👤 Session supervision - Détails:', {
+    real_session_id: realSessionId,    // ID de la session réelle (ex: 1)
+    occupant_user_id: occupantId,       // ID du caissier (ex: 2)
+    occupant_name: occupantName
+  })
+
+  const adminSession = {
+    // 🔥 Pour les requêtes SQL, on utilise l'ID de la session réelle
+    id: realSessionId,  // ⚠️ Changement: utiliser realSessionId au lieu de occupantId
+    cash_register_id: registerId,
+    admin_user_id: currentUserId.value,    // Qui est l'admin (ex: 1)
+    original_user_id: occupantId,          // Caissier d'origine (ex: 2)
+    original_session_id: realSessionId,    // Session réelle (ex: 1)
+    user_name: currentUserName.value,
+    occupant_name: occupantName,
+    is_closed: false,
+    is_admin_session: true,
+    is_supervision_mode: true,
+    started_at: new Date().toISOString(),
+    cash_register: selectedRegister
   }
+
+  localStorage.setItem('cashRegisterSession', JSON.stringify(adminSession))
+  localStorage.setItem('cash_register_session', JSON.stringify(adminSession))
+
+  console.log('✅ Session supervision créée:', {
+    cash_register_session_id: adminSession.id,  // Sera 1 (ID session réelle)
+    admin_id: adminSession.admin_user_id,       // Sera 1 (ID admin)
+    occupant_id: adminSession.original_user_id  // Sera 2 (ID caissier)
+  })
+
+  return adminSession
 }
 
-const closeSummaryModal = () => { isSummaryModalOpen.value = false }
-
-const continueAfterSummary = () => {
-  if (activeSession.value?.id) {
-    localStorage.setItem('cashRegisterSession', JSON.stringify(activeSession.value))
-    localStorage.setItem('cash_register_session', JSON.stringify(activeSession.value))
+const createAdminNormalSession = (registerId, selectedRegister) => {
+  const adminSession = {
+    id: currentUserId.value,
+    cash_register_id: registerId,
+    user_id: currentUserId.value,
+    user_name: currentUserName.value,
+    is_closed: false,
+    is_admin_session: true,
+    is_supervision_mode: false,
+    started_at: new Date().toISOString(),
+    cash_register: selectedRegister
   }
-  closeSummaryModal()
-  router.push({ name: 'dashboard-direct' })
+
+  localStorage.setItem('cashRegisterSession', JSON.stringify(adminSession))
+  localStorage.setItem('cash_register_session', JSON.stringify(adminSession))
+
+  console.log('✅ Session normale admin créée:', adminSession)
+  return adminSession
 }
 
-const openAmountModal = () => { if (!isProcessing.value) isAmountModalOpen.value = true }
-const closeAmountModal = () => { isAmountModalOpen.value = false }
-const handleAmountModalSend = (payload) => { if (!isProcessing.value) sendFondDeCaisse(payload) }
-
+// ========== GESTION DES SESSIONS CAISSIER ==========
 const sendFondDeCaisse = async ({ amount, ticketNumber, note }) => {
   if (!selectedCashRegister.value) {
-    alert('Sélectionnez une caisse');
+    alert('Sélectionnez une caisse')
     return
   }
+
   isProcessing.value = true
   try {
-    // Utiliser une récupération directe via localStorage si currentUser est indisponible
     const user = currentUser?.value || JSON.parse(localStorage.getItem('user') || '{}')
     if (!user?.id) throw new Error('Utilisateur non authentifié')
 
@@ -476,106 +635,381 @@ const sendFondDeCaisse = async ({ amount, ticketNumber, note }) => {
   }
 }
 
-const resetCashRegister = async () => {
-  if (isSelfConnected.value) {
-    alert('Fermez votre session avant de réinitialiser la caisse.')
-    return
-  }
-  if (!selectedCashRegister.value) {
-    alert('Sélectionnez une caisse');
-    return
-  }
-  if (!confirm('Confirmez la remise à zéro ?')) return
+// ========== ACTIONS UI ==========
+const selectCashRegister = (registerId) => {
+  if (loadingRegisters.value || isProcessing.value) return
+  if (isRegisterLocked(registerId) && !isAdmin.value) return
+  selectedCashRegister.value = registerId
+}
+
+const goToMachineManagement = () => {
+  router.push({ name: 'dashboard-cash-register-sessions' })
+}
+
+const refreshAllStatuses = async () => {
+  await fetchCashRegisters()
+  if (debugMode.value) console.log('Statuts rafraîchis', registerStatuses.value)
+}
+
+const closeModal = () => router.push({ name: 'dashboard-overview' })
+const closeAmountModal = () => { isAmountModalOpen.value = false }
+const openAmountModal = () => { if (!isProcessing.value) isAmountModalOpen.value = true }
+const handleAmountModalSend = (payload) => { if (!isProcessing.value) sendFondDeCaisse(payload) }
+
+const openSummaryModalForSession = async (sessionId) => {
+  summaryError.value = ''
+  sessionSummary.value = null
+  isSummaryModalOpen.value = true
+  summaryLoading.value = true
 
   try {
-    await axios.post(`${API_BASE_URL}/cash-registers/reset`, { cash_register_id: selectedCashRegister.value }, { headers: getAuthHeaders() })
-    alert('RAZ effectuée avec succès !')
-    await fetchCashRegisters()
-    await initializeSessions()
+    const summary = await fetchSessionSummary(sessionId)
+    if (!summary) throw new Error("Aucune donnée disponible pour cette session.")
+    sessionSummary.value = summary
   } catch (error) {
-    console.error('Erreur reset caisse:', error)
-    alert(error.response?.data?.message || 'Échec de la remise à zéro')
+    summaryError.value = error.message || 'Impossible de récupérer le résumé.'
+    console.error('Erreur modal résumé:', error)
+  } finally {
+    summaryLoading.value = false
   }
 }
 
-const performCashCount = () => router.push({ name: 'billetage' })
-const viewSales = () => router.push({ name: 'dashboard-user-sales' })
+const continueAfterSummary = () => {
+  if (activeSession.value?.id) {
+    localStorage.setItem('cashRegisterSession', JSON.stringify(activeSession.value))
+    localStorage.setItem('cash_register_session', JSON.stringify(activeSession.value))
+  }
+  closeSummaryModal()
+  router.push({ name: 'dashboard-direct' })
+}
 
-const onConnectButtonClick = () => {
-  if (isProcessing.value) return
-  if (isSelfConnected.value) {
-   router.push({ name: 'dashboard-direct' })
+const closeSummaryModal = () => {
+  isSummaryModalOpen.value = false
+}
+
+const resolveMachineIdentifier = () => {
+  try {
+    const storedIdentifiers = [
+      localStorage.getItem('cashRegisterMachineName'),
+      localStorage.getItem('cashPrinterName'),
+      localStorage.getItem('cash_printer_name'),
+      localStorage.getItem('machineIdentifier')
+    ]
+    const envIdentifier = import.meta.env?.VITE_CASH_PRINTER_NAME
+    const resolved = [...storedIdentifiers, envIdentifier]
+      .map(v => typeof v === 'string' ? v.trim() : '')
+      .find(v => v)
+
+    machineIdentifier.value = resolved || ''
+  } catch (error) {
+    console.error('Erreur récupération identifiant machine:', error)
+    machineIdentifier.value = ''
+  }
+}
+
+const initializeSessions = async () => {
+  const registers = Array.isArray(cashRegisters.value) ? cashRegisters.value : []
+
+  if (isAdmin.value) {
+    if (machineRegister.value) {
+      selectedCashRegister.value = machineRegister.value.id
+    } else if (registers.length > 0) {
+      selectedCashRegister.value = registers[0].id
+    } else {
+      selectedCashRegister.value = null
+    }
     return
   }
+
+  if (hasActiveSession.value && activeRegisterId.value) {
+    selectedCashRegister.value = activeRegisterId.value
+    return
+  }
+
   if (!selectedCashRegister.value) {
-    alert('Sélectionnez une caisse');
+    if (machineRegister.value && !isRegisterLocked(machineRegister.value.id)) {
+      selectedCashRegister.value = machineRegister.value.id
+      return
+    }
+
+    const unlockedRegister = registers.find(r => !isRegisterLocked(r.id))
+    if (unlockedRegister) {
+      selectedCashRegister.value = unlockedRegister.id
+    } else if (registers.length > 0) {
+      selectedCashRegister.value = registers[0].id
+    } else {
+      selectedCashRegister.value = null
+    }
+  }
+}
+
+// ========== ACTION PRINCIPALE ==========
+const onConnectButtonClick = async () => {
+  if (isProcessing.value) return
+
+  // ADMIN
+  if (isAdmin.value) {
+    if (!selectedCashRegister.value) {
+      alert('Veuillez sélectionner une caisse')
+      return
+    }
+
+    const registerId = selectedCashRegister.value
+    const selectedRegister = cashRegisters.value.find(r => r.id === registerId)
+    const isOccupied = selectedRegister?.is_occupied === true
+
+    if (isOccupied) {
+      const occupantSession = await getCurrentSessionForRegister(registerId)
+      if (occupantSession) {
+        createAdminSupervisionSession(registerId, occupantSession, selectedRegister)
+      } else {
+        console.warn('⚠️ Impossible de récupérer la session, création normale')
+        createAdminNormalSession(registerId, selectedRegister)
+      }
+    } else {
+      createAdminNormalSession(registerId, selectedRegister)
+    }
+
+    router.push({ name: 'dashboard-direct' })
     return
   }
-  openAmountModal()
+
+  // CAISSIER
+  if (!selectedCashRegister.value) {
+    alert('Sélectionnez une caisse')
+    return
+  }
+
+  const registerId = selectedCashRegister.value
+  const status = registerStatuses.value[registerId]
+  const isSelf = isSelfConnected.value && registerId === activeRegisterId.value
+
+  if (isSelf) {
+    router.push({ name: 'dashboard-direct' })
+    return
+  }
+
+  if (status === 'connected') {
+    try {
+      const { data } = await axios.get(`${API_BASE_URL}/cash-registers/${registerId}/current-session`, {
+        headers: getAuthHeaders()
+      })
+      const session = data?.data
+      if (session && session.id) {
+        await openSummaryModalForSession(session.id)
+      } else {
+        alert('Impossible de récupérer la session active.')
+      }
+    } catch (error) {
+      console.error('Erreur accès session:', error)
+      alert('Impossible d\'accéder à la session de cette caisse.')
+    }
+  } else {
+    openAmountModal()
+  }
 }
 
-const formatCurrency = (value) => {
-  const number = Number(value)
-  if (!Number.isFinite(number)) return '0,00 Ar'
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(number)
-}
-
-const formatDate = (date) => {
-  if (!date) return '—'
-  const parsed = new Date(date)
-  if (isNaN(parsed.getTime())) return '—'
-  return parsed.toLocaleString('fr-FR')
-}
-
+// ========== INIT ==========
 onMounted(async () => {
-  try { await loadUserData() } catch (error) { console.error('Erreur chargement utilisateur:', error) }
+  try {
+    await loadUserData()
+  } catch (error) {
+    console.error('Erreur chargement utilisateur:', error)
+  }
+
   resolveMachineIdentifier()
-  await fetchMyActiveSession()
   await fetchCashRegisters()
+  await fetchMyActiveSession()
   await initializeSessions()
 })
 </script>
 
 <style scoped>
-/* Styles du summary modal */
-.summary-overlay { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-.summary-overlay .modal-background { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.35); backdrop-filter: blur(8px); }
-.summary-modal { position: relative; width: min(100%, 760px); border: 1px solid rgb(226 232 240 / 0.95); border-radius: 1.75rem; overflow: hidden; background: radial-gradient(circle at top right, rgb(224 231 255 / 0.85), transparent 30%), linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); box-shadow: 0 32px 80px -36px rgba(15, 23, 42, 0.45); }
-
-.summary-modal-head, .summary-modal-body, .summary-modal-foot { position: relative; z-index: 1; }
-.summary-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.5rem 1.75rem 1.25rem; border-bottom: 1px solid rgb(226 232 240 / 0.9); background: rgb(255 255 255 / 0.86); }
-.summary-kicker { margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase; color: rgb(99 102 241); }
-.summary-modal-title { margin: 0; font-size: 1.4rem; font-weight: 700; color: rgb(15 23 42); }
-.summary-close-button { display: inline-flex; align-items: center; gap: 0.5rem; border: 1px solid rgb(226 232 240); border-radius: 9999px; background: rgb(255 255 255 / 0.95); padding: 0.7rem 1rem; font-size: 0.92rem; font-weight: 600; color: rgb(71 85 105); transition: all 0.2s ease; }
-.summary-close-button:hover { border-color: rgb(251 113 133 / 0.35); color: rgb(225 29 72); }
-
-.summary-modal-body { padding: 1.5rem 1.75rem; }
-.summary-content { display: flex; flex-direction: column; gap: 1rem; }
-.summary-grid { display: grid; gap: 0.9rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.summary-row { display: flex; flex-direction: column; gap: 0.35rem; padding: 1rem 1.1rem; border: 1px solid rgb(226 232 240); border-radius: 1rem; background: rgb(255 255 255 / 0.92); box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.35); }
-.summary-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgb(100 116 139); }
-.summary-value { font-size: 1rem; font-weight: 700; line-height: 1.35; color: rgb(15 23 42); word-break: break-word; }
-
-.summary-modal-foot { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1.25rem 1.75rem 1.6rem; border-top: 1px solid rgb(226 232 240 / 0.9); background: rgb(248 250 252 / 0.85); }
-.summary-action { display: inline-flex; align-items: center; justify-content: center; min-width: 180px; border-radius: 9999px; padding: 0.85rem 1.25rem; font-size: 0.95rem; font-weight: 700; transition: all 0.2s ease; }
-.summary-action:disabled { cursor: not-allowed; opacity: 0.6; }
-.summary-action-primary { border: 1px solid transparent; background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: #fff; box-shadow: 0 20px 36px -24px rgba(79, 70, 229, 0.8); }
-.summary-action-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 24px 42px -24px rgba(79, 70, 229, 0.95); }
-.summary-action-secondary { border: 1px solid rgb(226 232 240); background: rgb(255 255 255 / 0.95); color: rgb(71 85 105); }
-.summary-action-secondary:hover:not(:disabled) { border-color: rgb(148 163 184); color: rgb(15 23 42); }
-
-@media (max-width: 640px) {
-  .summary-overlay { padding: 0.85rem; }
-  .summary-modal-head, .summary-modal-body, .summary-modal-foot { padding-left: 1rem; padding-right: 1rem; }
-  .summary-modal-head, .summary-modal-foot { flex-direction: column; align-items: stretch; }
-  .summary-grid { grid-template-columns: 1fr; }
-  .summary-action { width: 100%; min-width: 0; }
-}
-
+/* ... vos styles existants ... */
 .selected {
   border-color: #4f46e5 !important;
   background-color: #eef2ff !important;
   box-shadow: 0 0 0 2px #4f46e5;
   transition: all 0.2s ease;
+}
+
+.summary-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.summary-modal {
+  position: relative;
+  width: min(100%, 760px);
+  border: 1px solid rgb(226 232 240 / 0.95);
+  border-radius: 1.75rem;
+  overflow: hidden;
+  background: radial-gradient(circle at top right, rgb(224 231 255 / 0.85), transparent 30%), linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 32px 80px -36px rgba(15, 23, 42, 0.45);
+}
+
+.summary-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 1.75rem 1.25rem;
+  border-bottom: 1px solid rgb(226 232 240 / 0.9);
+  background: rgb(255 255 255 / 0.86);
+}
+
+.summary-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgb(99 102 241);
+}
+
+.summary-modal-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: rgb(15 23 42);
+}
+
+.summary-close-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.95);
+  padding: 0.7rem 1rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgb(71 85 105);
+  transition: all 0.2s ease;
+}
+
+.summary-close-button:hover {
+  border-color: rgb(251 113 133 / 0.35);
+  color: rgb(225 29 72);
+}
+
+.summary-modal-body {
+  padding: 1.5rem 1.75rem;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summary-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgb(226 232 240);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 12px 30px -24px rgba(15, 23, 42, 0.35);
+}
+
+.summary-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(100 116 139);
+}
+
+.summary-value {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: rgb(15 23 42);
+  word-break: break-word;
+}
+
+.summary-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.25rem 1.75rem 1.6rem;
+  border-top: 1px solid rgb(226 232 240 / 0.9);
+  background: rgb(248 250 252 / 0.85);
+}
+
+.summary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 180px;
+  border-radius: 9999px;
+  padding: 0.85rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.summary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.summary-action-primary {
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  color: #fff;
+  box-shadow: 0 20px 36px -24px rgba(79, 70, 229, 0.8);
+}
+
+.summary-action-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 24px 42px -24px rgba(79, 70, 229, 0.95);
+}
+
+.summary-action-secondary {
+  border: 1px solid rgb(226 232 240);
+  background: rgb(255 255 255 / 0.95);
+  color: rgb(71 85 105);
+}
+
+.summary-action-secondary:hover:not(:disabled) {
+  border-color: rgb(148 163 184);
+  color: rgb(15 23 42);
+}
+
+@media (max-width: 640px) {
+  .summary-overlay {
+    padding: 0.85rem;
+  }
+  .summary-modal-head, .summary-modal-body, .summary-modal-foot {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .summary-modal-head, .summary-modal-foot {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .summary-action {
+    width: 100%;
+    min-width: 0;
+  }
 }
 </style>

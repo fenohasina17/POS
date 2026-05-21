@@ -29,14 +29,25 @@
             />
           </div>
 
-          <div v-if="printerTypes.length" class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700">Type d'imprimante</label>
+          <div class="space-y-2">
+            <label class="text-sm font-semibold text-slate-700">Imprimante associée</label>
             <select
-              v-model="category.printer_type_id"
+              v-model="category.printer"
               class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
             >
-              <option v-for="type in printerTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+              <optgroup label="Imprimantes configurées">
+                <option v-for="p in availablePrinters" :key="p.id" :value="p.name">
+                  {{ p.name }}
+                </option>
+              </optgroup>
+              <optgroup label="Rôles logiques">
+                <option value="receipt">receipt (Caisse)</option>
+                <option value="kitchen">kitchen (Cuisine)</option>
+                <option value="cook">cook (Cuisson)</option>
+                <option value="bar">bar (Bar)</option>
+              </optgroup>
             </select>
+            <p class="text-[10px] text-slate-400">Si l'imprimante n'est pas branchée, le ticket sera imprimé sur la caisse.</p>
           </div>
         </section>
 
@@ -52,8 +63,9 @@
             type="button"
             class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
             @click="submit"
-            :disabled="!category.name.trim()"
+            :disabled="!category.name.trim() || isLoadingPrinters"
           >
+            <span v-if="isLoadingPrinters" class="mr-2"><i class="fas fa-spinner fa-spin"></i></span>
             Ajouter
           </button>
         </footer>
@@ -63,8 +75,8 @@
 </template>
 
 <script setup>
-import { ref, watch, defineEmits, defineProps } from 'vue'
-import { usePrinterTypes } from '../composables/usePrinterTypes.js'
+import { ref, watch, defineEmits, defineProps, onMounted } from 'vue'
+import printerService from '../services/printerService.js'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -72,28 +84,32 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'added'])
 
-const { printerTypes, fetchPrinterTypes } = usePrinterTypes()
+const category = ref({ name: '', description: '', printer: 'receipt' })
+const availablePrinters = ref([])
+const isLoadingPrinters = ref(false)
 
-const category = ref({ name: '', description: '', printer_type_id: '', printer_type: '' })
+const fetchPrinters = async () => {
+  try {
+    isLoadingPrinters.value = true
+    const response = await printerService.getAll()
+    availablePrinters.value = response.data.data ? response.data.data : response.data
+  } catch (error) {
+    console.error('Erreur lors du chargement des imprimantes:', error)
+  } finally {
+    isLoadingPrinters.value = false
+  }
+}
+
+onMounted(() => {
+  fetchPrinters()
+})
 
 watch(() => props.isOpen, (newVal) => {
   if (newVal) {
-    category.value = { name: '', description: '', printer_type_id: '', printer_type: '' }
-    fetchPrinterTypes().then(() => {
-      if (!category.value.printer_type_id && printerTypes.value.length > 0) {
-        category.value.printer_type_id = printerTypes.value[0].id
-        category.value.printer_type = printerTypes.value[0].id
-      }
-    })
+    fetchPrinters()
+    category.value = { name: '', description: '', printer: 'receipt' }
   }
 })
-
-watch(
-  () => category.value.printer_type_id,
-  (value) => {
-    category.value.printer_type = value
-  }
-)
 
 const close = () => {
   emit('close')
@@ -101,11 +117,7 @@ const close = () => {
 
 const submit = () => {
   if (!category.value.name.trim()) return
-  const payload = {
-    ...category.value,
-    printer_type: category.value.printer_type_id || category.value.printer_type,
-  }
-  emit('added', payload)
+  emit('added', { ...category.value })
   close()
 }
 </script>

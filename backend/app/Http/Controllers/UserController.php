@@ -14,13 +14,14 @@ class UserController extends Controller
     public function index()
     {
         try {
-            $users = User::with('pointOfSale:id,name')->get()->map(function ($user) {
+            $users = User::with(['pointsOfSale:id,name'])->get()->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'point_of_sale_id' => $user->point_of_sale_id,
                     'point_of_sale_name' => $user->pointOfSale ? $user->pointOfSale->name : null,
+                    'points_of_sale' => $user->pointsOfSale->map(fn($p) => ['id' => $p->id, 'name' => $p->name]),
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
                 ];
@@ -43,6 +44,8 @@ class UserController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
             'point_of_sale_id' => 'nullable|exists:point_of_sales,id',
+            'point_of_sale_ids' => 'nullable|array',
+            'point_of_sale_ids.*' => 'exists:point_of_sales,id',
         ]);
 
         // Si la validation échoue
@@ -58,9 +61,16 @@ class UserController extends Controller
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'point_of_sale_id' => $request->point_of_sale_id,
+                'point_of_sale_id' => $request->point_of_sale_id ?? ($request->point_of_sale_ids[0] ?? null),
             ]);
-            return response()->json($user, 201); // Code HTTP 201 pour la création
+
+            if ($request->has('point_of_sale_ids')) {
+                $user->pointsOfSale()->sync($request->point_of_sale_ids);
+            } elseif ($request->point_of_sale_id) {
+                $user->pointsOfSale()->sync([$request->point_of_sale_id]);
+            }
+
+            return response()->json($user->load('pointsOfSale'), 201);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Erreur lors de la création de l\'utilisateur',
@@ -73,7 +83,7 @@ class UserController extends Controller
     public function show($id)
     {
         try {
-            $user = User::findOrFail($id);
+            $user = User::with('pointsOfSale')->findOrFail($id);
             return response()->json($user);
         } catch (ModelNotFoundException $e) {
             return response()->json([
@@ -99,7 +109,8 @@ class UserController extends Controller
                 'email' => 'email|unique:users,email,' . $id,
                 'password' => 'string|min:8|nullable',
                 'point_of_sale_id' => 'nullable|exists:point_of_sales,id',
-
+                'point_of_sale_ids' => 'nullable|array',
+                'point_of_sale_ids.*' => 'exists:point_of_sales,id',
             ]);
 
             if ($validator->fails()) {
@@ -113,11 +124,18 @@ class UserController extends Controller
                 'name' => $request->name ?? $user->name,
                 'email' => $request->email ?? $user->email,
                 'password' => $request->password ? Hash::make($request->password) : $user->password,
-                'point_of_sale_id' => $request->point_of_sale_id,
-
+                'point_of_sale_id' => $request->has('point_of_sale_id') ? $request->point_of_sale_id : $user->point_of_sale_id,
             ]);
 
-            return response()->json($user);
+            if ($request->has('point_of_sale_ids')) {
+                $user->pointsOfSale()->sync($request->point_of_sale_ids);
+                // Optionnel: Mettre à jour le point_of_sale_id par défaut si non fourni
+                if (!$request->has('point_of_sale_id') && !empty($request->point_of_sale_ids)) {
+                    $user->update(['point_of_sale_id' => $request->point_of_sale_ids[0]]);
+                }
+            }
+
+            return response()->json($user->load('pointsOfSale'));
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'message' => 'Utilisateur non trouvé'

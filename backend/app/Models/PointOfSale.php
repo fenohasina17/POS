@@ -16,10 +16,16 @@ class PointOfSale extends Model
     protected $table = 'point_of_sales';
 
 
-    // Un point de vente a plusieurs utilisateurs
+    // Un point de vente a plusieurs utilisateurs (un-à-plusieurs legacy)
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    // Un point de vente a plusieurs utilisateurs (plusieurs-à-plusieurs)
+    public function assignedUsers()
+    {
+        return $this->belongsToMany(User::class, 'point_of_sale_user', 'point_of_sale_id', 'user_id')->withTimestamps();
     }
     public function products()
     {

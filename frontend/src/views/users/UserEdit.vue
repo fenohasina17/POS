@@ -144,18 +144,31 @@
             <p v-if="errors.role" class="text-xs font-semibold text-rose-500">{{ errors.role }}</p>
           </div>
 
-          <div class="space-y-2">
-            <label class="text-sm font-medium text-slate-600">Point de vente</label>
-            <select
-              v-model="user.point_of_sale_id"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-              :class="{ 'border-rose-300': errors.point_of_sale_id }"
-            >
-              <option value="">Sélectionner un point de vente</option>
-              <option v-for="pos in pointsOfSale" :key="pos.id" :value="pos.id">
-                {{ pos.name }}
-              </option>
-            </select>
+          <!-- Section Points de Vente (Multi-sélection) -->
+          <div class="space-y-3 sm:col-span-2">
+            <label class="text-sm font-medium text-slate-600 flex items-center justify-between">
+              <span>Points de vente autorisés</span>
+              <span class="text-[10px] uppercase font-black text-indigo-400">
+                {{ user.point_of_sale_ids?.length || 0 }} sélectionné(s)
+              </span>
+            </label>
+            
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-4">
+              <label 
+                v-for="pos in pointsOfSale" 
+                :key="pos.id"
+                class="flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer bg-white"
+                :class="user.point_of_sale_ids?.includes(pos.id) ? 'border-indigo-200 bg-indigo-50/50 ring-2 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'"
+              >
+                <input 
+                  type="checkbox" 
+                  :value="pos.id" 
+                  v-model="user.point_of_sale_ids"
+                  class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                />
+                <span class="text-xs font-bold text-slate-700">{{ pos.name }}</span>
+              </label>
+            </div>
             <p v-if="errors.point_of_sale_id" class="text-xs font-semibold text-rose-500">
               {{ errors.point_of_sale_id }}
             </p>
@@ -191,23 +204,12 @@ defineOptions({ name: 'UserEdit', components: { FontAwesomeIcon } })
 const route = useRoute()
 const router = useRouter()
 
-const user = ref({
-  id: null,
-  name: '',
-  email: '',
-  password: '',
-  password_confirmation: '',
-  role: '',
-  point_of_sale_id: null
-})
-
 const roles = ref([])
 const pointsOfSale = ref([])
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
 const originalUser = ref({})
-
 const errors = ref({
   name: '',
   email: '',
@@ -215,6 +217,16 @@ const errors = ref({
   password_confirmation: '',
   role: '',
   point_of_sale_id: ''
+})
+const user = ref({
+  id: null,
+  name: '',
+  email: '',
+  password: '',
+  password_confirmation: '',
+  role: '',
+  point_of_sale_id: null,
+  point_of_sale_ids: []
 })
 
 const loadUser = async () => {
@@ -229,16 +241,33 @@ const loadUser = async () => {
       userService.getRoles(userId)
     ])
 
-    user.value = { ...userResponse.data, password: '', password_confirmation: '' }
-    originalUser.value = { ...userResponse.data }
-    roles.value = rolesResponse.data
+    const userData = userResponse.data;
+    user.value = { 
+      ...userData, 
+      password: '', 
+      password_confirmation: '',
+      point_of_sale_ids: userData.points_of_sale?.map(p => p.id) || []
+    }
+    originalUser.value = { ...userData }
 
-    if (Array.isArray(userRolesResponse.data) && userRolesResponse.data.length > 0) {
-      user.value.role = userRolesResponse.data[0].name
+    // Correction de l'affichage du rôle
+    const allRoles = rolesResponse.data?.data || rolesResponse.data || []
+    roles.value = Array.isArray(allRoles) ? allRoles : []
+    
+    const userRoles = userRolesResponse.data?.data || userRolesResponse.data || []
+    if (Array.isArray(userRoles) && userRoles.length > 0) {
+      const firstRole = userRoles[0]
+      user.value.role = firstRole.name || firstRole
+      console.log('User role identified:', user.value.role)
     }
 
     const posResponse = await pointOfSaleService.getAll()
-    pointsOfSale.value = posResponse.data || posResponse
+    console.log('POS Response:', posResponse);
+    // Dans votre service, .then(res => res.data) est déjà fait. 
+    // Donc posResponse contient déjà le tableau ou l'objet {data: [...]}
+    const posResData = posResponse.data || posResponse || []
+    pointsOfSale.value = Array.isArray(posResData) ? posResData : []
+    console.log('Points of sale loaded:', pointsOfSale.value);
   } catch (err) {
     error.value = 'Erreur lors du chargement des données.'
     console.error(err)
@@ -311,7 +340,7 @@ const updateUser = async () => {
       id: user.value.id,
       name: user.value.name,
       email: user.value.email,
-      point_of_sale_id: user.value.point_of_sale_id
+      point_of_sale_ids: user.value.point_of_sale_ids
     }
 
     if (user.value.password) {
