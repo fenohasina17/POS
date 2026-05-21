@@ -1,21 +1,40 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 set -e
 
-# Si vendor absent, installer les dépendances dans le volume nommé
-if [ ! -d "/var/www/vendor" ] || [ -z "$(ls -A /var/www/vendor 2>/dev/null)" ]; then
-  echo "vendor absent — installation des dépendances composer..."
-  if command -v composer >/dev/null 2>&1; then
-    composer install --no-dev --optimize-autoloader --no-interaction || true
-  elif [ -f /usr/local/bin/composer ]; then
-    /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction || true
-  else
-    echo "Composer non disponible dans le conteneur. Rebuild de l'image nécessaire."
-  fi
-fi
+# Créer les répertoires Laravel obligatoires
+mkdir -p /var/www/storage/framework/{sessions,views,cache/data}
+mkdir -p /var/www/storage/logs
+mkdir -p /var/www/bootstrap/cache
 
 # Permissions
-chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache /var/www/vendor || true
-chmod -R 775 /var/www/storage /var/www/bootstrap/cache /var/www/vendor || true
+chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache /var/www/vendor 2>/dev/null || true
+chmod -R 775 /var/www/storage /var/www/bootstrap/cache /var/www/vendor 2>/dev/null || true
 
-# Exécuter la commande par défaut
+# Attendre que la base de données soit prête (via PDO)
+echo "En attente de la base de données..."
+until php -r "
+try {
+    \$pdo = new PDO(
+        'pgsql:host=' . getenv('DB_HOST') . ';port=' . getenv('DB_PORT') . ';dbname=' . getenv('DB_DATABASE'),
+        getenv('DB_USERNAME'),
+        getenv('DB_PASSWORD')
+    );
+    echo 'connected';
+} catch (Exception \$e) {
+    exit(1);
+}
+" 2>/dev/null | grep -q connected; do
+  echo "  Base de données non disponible, nouvel essai dans 2s..."
+  sleep 2
+done
+echo "Base de données prête."
+
+# Exécuter les migrations (le seed est géré par Jenkins au déploiement)
+echo "Exécution des migrations..."
+php artisan migrate --force || true
+
+# Vider les caches
+php artisan config:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
+
 exec "$@"

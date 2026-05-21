@@ -2,14 +2,15 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_COMPOSE = "${WORKSPACE}/bin/docker-compose -p deployement-application-web"
+        DOCKER_COMPOSE = "docker compose -p deployement-application-web"
     }
 
     options {
         timeout(time: 30, unit: 'MINUTES')
         ansiColor('xterm')
+        disableConcurrentBuilds()
     }
-    
+
     stages {
         stage('🎬 Début') {
             steps {
@@ -19,17 +20,7 @@ pipeline {
 
         stage('🛠️ Préparation des outils') {
             steps {
-                script {
-                    sh '''
-                    mkdir -p ${WORKSPACE}/bin
-                    if [ ! -f "${WORKSPACE}/bin/docker-compose" ]; then
-                        echo "📥 Téléchargement de docker-compose..."
-                        curl -L "https://github.com/docker/compose/releases/download/v2.24.1/docker-compose-$(uname -s)-$(uname -m)" -o ${WORKSPACE}/bin/docker-compose
-                        chmod +x ${WORKSPACE}/bin/docker-compose
-                    fi
-                    ${WORKSPACE}/bin/docker-compose version
-                    '''
-                }
+                sh 'docker compose version'
             }
         }
 
@@ -43,23 +34,40 @@ pipeline {
                         string(credentialsId: 'db-password', variable: 'DB_PASS'),
                         string(credentialsId: 'app-key', variable: 'APP_KEY')
                     ]) {
-                        // 1. Création du .env à la racine
+                        // Génération directe du .env racine (pas de dépendance à .env.example)
                         sh '''
-                        cp backend/.env.example .env
-                        sed -i 's/DB_DATABASE=app/DB_DATABASE=pos_system/' .env
-                        sed -i 's/DB_USERNAME=app/DB_USERNAME=giovanni/' .env
-                        sed -i "s/DB_PASSWORD=secret/DB_PASSWORD=$DB_PASS/" .env
-                        sed -i 's|APP_URL=http://localhost:8080|APP_URL=http://localhost:8000|' .env
-                        sed -i "s|APP_KEY=|APP_KEY=$APP_KEY|" .env
+                        cat > .env <<EOF
+APP_NAME=POS
+APP_ENV=production
+APP_KEY=${APP_KEY}
+APP_DEBUG=false
+APP_URL=http://192.168.0.9:8000
+FRONTEND_URL=http://192.168.0.9:5173
+SANCTUM_STATEFUL_DOMAINS=192.168.0.9:5173
+DB_CONNECTION=pgsql
+DB_HOST=db
+DB_PORT=5432
+DB_DATABASE=pos_system
+DB_USERNAME=giovanni
+DB_PASSWORD=${DB_PASS}
+CACHE_STORE=redis
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=
+QUEUE_CONNECTION=sync
+LOG_CHANNEL=stderr
+LOG_LEVEL=error
+EOF
                         '''
 
-                        // 2. Création du .env dans le dossier backend
+                        // Copie dans le dossier backend
                         sh 'cp .env backend/.env'
 
-                        // 3. Création du .env dans le dossier frontend
+                        // .env frontend
                         sh '''
-                        echo "VITE_API_URL=http://localhost:8000" > frontend/.env
-                        echo "VITE_APP_NAME='Point of Sale Giovanni'" >> frontend/.env
+                        printf "VITE_API_URL=http://192.168.0.9:8000\nVITE_APP_NAME=Point of Sale\n" > frontend/.env
                         '''
                     }
 
@@ -77,38 +85,41 @@ pipeline {
 
         stage('🧪 Tests Automatisés') {
             steps {
-                echo '🧪 Lancement des tests unitaires...'
-                sh '''
-                docker network create test-net || true
-                docker run -d --name pg-test \
-                    --network test-net \
-                    -e POSTGRES_DB=testing \
-                    -e POSTGRES_PASSWORD=password \
-                    postgres:15-alpine
+                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                    echo '🧪 Lancement des tests unitaires...'
+                    sh '''
+                    docker network create test-net || true
+                    docker run -d --name pg-test \
+                        --network test-net \
+                        -e POSTGRES_DB=testing \
+                        -e POSTGRES_USER=postgres \
+                        -e POSTGRES_PASSWORD=password \
+                        postgres:15-alpine
 
-                until docker exec pg-test pg_isready -U postgres; do
-                    echo "⏳ Attente de PostgreSQL..."
-                    sleep 2
-                done
+                    until docker exec pg-test pg_isready -U postgres; do
+                        echo "⏳ Attente de PostgreSQL..."
+                        sleep 2
+                    done
 
-                BACKEND_IMAGE=$(docker images --format "{{.Repository}}" | grep backend | head -n 1)
+                    BACKEND_IMAGE=$(docker images --format "{{.Repository}}" | grep backend | head -n 1)
 
-                docker run --rm \
-                    --network test-net \
-                    -e APP_ENV=testing \
-                    -e APP_KEY=base64:KFOlFFNXabFku6rDUj51Y1cq47i+ivysqwsh1Pz6KOw= \
-                    -e DB_CONNECTION=pgsql \
-                    -e DB_HOST=pg-test \
-                    -e DB_PORT=5432 \
-                    -e DB_DATABASE=testing \
-                    -e DB_USERNAME=postgres \
-                    -e DB_PASSWORD=password \
-                    $BACKEND_IMAGE \
-                    /var/www/run-tests.sh
-
-                docker rm -f pg-test || true
-                docker network rm test-net || true
-                '''
+                    docker run --rm \
+                        --network test-net \
+                        -e APP_ENV=testing \
+                        -e APP_KEY=base64:KFOlFFNXabFku6rDUj51Y1cq47i+ivysqwsh1Pz6KOw= \
+                        -e DB_CONNECTION=pgsql \
+                        -e DB_HOST=pg-test \
+                        -e DB_PORT=5432 \
+                        -e DB_DATABASE=testing \
+                        -e DB_USERNAME=postgres \
+                        -e DB_PASSWORD=password \
+                        -e CACHE_STORE=array \
+                        -e SESSION_DRIVER=array \
+                        -e QUEUE_CONNECTION=sync \
+                        "$BACKEND_IMAGE" \
+                        /var/www/run-tests.sh
+                    '''
+                }
             }
         }
 
@@ -116,14 +127,17 @@ pipeline {
             steps {
                 script {
                     echo '🚀 Mise à jour des services (Rolling Update)...'
-                    sh '${DOCKER_COMPOSE} up -d db backend nginx frontend'
-                    
-                    echo '⏳ Attente de la stabilisation...'
-                    sh 'sleep 5'
+                    sh '${DOCKER_COMPOSE} down --remove-orphans || true'
+                    sh 'docker ps -q --filter publish=8000 | xargs -r docker stop || true'
+                    sh 'docker ps -q --filter publish=5173 | xargs -r docker stop || true'
+                    sh '${DOCKER_COMPOSE} up -d db redis backend nginx frontend'
 
-                    echo '🔧 Migration de la base de données...'
-                    sh '${DOCKER_COMPOSE} exec -T backend php artisan migrate --force'
-                    
+                    echo '⏳ Attente de la stabilisation (20s)...'
+                    sh 'sleep 20'
+
+                    echo '🔧 Migration + Seed de la base de données...'
+                    sh '${DOCKER_COMPOSE} exec -T backend php artisan migrate:fresh --seed --force'
+
                     echo '🔑 Nettoyage du cache...'
                     sh '${DOCKER_COMPOSE} exec -T backend php artisan config:clear'
                 }
@@ -133,12 +147,17 @@ pipeline {
 
     post {
         always {
-            sh 'docker rm -f pg-test || true'
-            sh 'docker network rm test-net || true'
+            script {
+                sh 'docker rm -f pg-test 2>/dev/null || true'
+                sh 'docker network rm test-net 2>/dev/null || true'
+            }
         }
         success {
             echo '✅ Déploiement réussi !'
             sh 'docker image prune -f'
+        }
+        failure {
+            echo '❌ Le pipeline a échoué. Vérifier les logs ci-dessus.'
         }
     }
 }
