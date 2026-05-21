@@ -33,10 +33,11 @@ class DatabaseSeeder extends Seeder
         );
         $admin->assignRole('admin');
 
-        // 3. Création de base : Points de vente et Paiements
+        // 3. Création de base : Points de vente, Caisses, Caissiers et Paiements
         $this->call([
             PointOfSaleSeeder::class,
             CashRegisterSeeder::class,
+            CashierSeeder::class,
             PaymentSeeder::class,
         ]);
     }
