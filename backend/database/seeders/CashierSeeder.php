@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\PointOfSale;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class CashierSeeder extends Seeder
@@ -34,6 +35,12 @@ class CashierSeeder extends Seeder
                         'password' => Hash::make('password'),
                         'point_of_sale_id' => $pos->id,
                     ]
+                );
+
+                // Associer explicitement dans la table pivot
+                DB::table('point_of_sale_user')->updateOrInsert(
+                    ['point_of_sale_id' => $pos->id, 'user_id' => $user->id],
+                    ['created_at' => now(), 'updated_at' => now()]
                 );
 
                 $user->assignRole($caissierRole);
