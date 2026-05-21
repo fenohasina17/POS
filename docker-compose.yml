@@ -78,6 +78,34 @@ services:
     networks:
       - pos_network
 
+  # --- Sauvegarde automatique PostgreSQL ---
+  backup:
+    image: postgres:15
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - DB_HOST=db
+    volumes:
+      - backup_data:/backups
+      - ./docker/backup/backup.sh:/backup.sh:ro
+    entrypoint: >
+      sh -c "
+        echo '⏰ Sauvegarde planifiée — toutes les 24h à 02h00';
+        while true; do
+          NEXT=$$(date -d 'tomorrow 02:00' +%s 2>/dev/null || date -v+1d -f '%H:%M' '02:00' +%s 2>/dev/null || echo $$(( $$(date +%s) + 86400 )));
+          NOW=$$(date +%s);
+          SLEEP=$$((NEXT - NOW));
+          echo \"Prochaine sauvegarde dans $${SLEEP}s ($$(date -d \"@$$NEXT\" 2>/dev/null || date -r $$NEXT))\";
+          sleep $$SLEEP;
+          sh /backup.sh;
+        done
+      "
+    networks:
+      - pos_network
+
   # --- Jenkins (CI/CD Automation) ---
   jenkins:
     build:
@@ -104,3 +132,4 @@ volumes:
   redis_data:
   jenkins_data:
   storage_data:
+  backup_data:
