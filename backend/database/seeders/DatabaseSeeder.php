@@ -8,7 +8,8 @@ use Database\Seeders\{
     PermissionSeeder,
     RolePermissionRelationSeeder,
     CashRegisterSeeder,
-    PaymentSeeder
+    PaymentSeeder,
+    PointOfSaleSeeder
 };
 
 class DatabaseSeeder extends Seeder
@@ -22,19 +23,21 @@ class DatabaseSeeder extends Seeder
             RolePermissionRelationSeeder::class,
         ]);
 
-        // 2. Création de base : Admin (sans POS par défaut)
-        User::firstOrCreate(
+        // 2. Création de base : Admin
+        $admin = User::firstOrCreate(
             ['email' => 'admin@igp.com'],
             [
                 'name' => 'Administrateur',
                 'password' => bcrypt('password'),
             ]
         );
+        $admin->assignRole('admin');
 
-        // 3. Création de base : Paiements
+        // 3. Création de base : Points de vente et Paiements
         $this->call([
+            PointOfSaleSeeder::class,
             PaymentSeeder::class,
         ]);
-        }
-        }
+    }
+}
 
