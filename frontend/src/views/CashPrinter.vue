@@ -85,19 +85,34 @@
           </div>
 
           <div v-else>
-            <div v-if="cashRegisters.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="mb-4">
+              <input
+                v-model="searchRegister"
+                type="text"
+                placeholder="Rechercher une caisse..."
+                class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div class="max-h-[400px] overflow-y-auto rounded-xl border border-slate-200 bg-white p-2">
+              <div v-if="filteredRegisters.length === 0" class="py-4 text-center text-sm text-slate-500">
+                Aucune caisse trouvée.
+              </div>
               <button
-                v-for="register in cashRegisters"
+                v-for="register in filteredRegisters"
                 :key="register.id"
                 type="button"
-                class="rounded-2xl border border-slate-200 px-5 py-5 text-left transition-all hover:border-indigo-200 hover:bg-indigo-50 disabled:cursor-not-allowed"
+                class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-all hover:bg-indigo-50 disabled:cursor-not-allowed"
                 :class="{
-                  'selected': selectedCashRegister === register.id,
+                  'bg-indigo-50 border-indigo-200': selectedCashRegister === register.id,
                   'opacity-60 bg-slate-100 pointer-events-none': isRegisterLocked(register.id) && !isAdmin
                 }"
                 :disabled="isRegisterLocked(register.id) && !isAdmin"
                 @click="selectCashRegister(register.id)"
               >
+                <span class="text-sm font-medium text-slate-700">{{ register.name }}</span>
+                <span v-if="isRegisterLocked(register.id)" class="text-xs text-rose-500"><i class="fas fa-lock"></i></span>
+              </button>
+            </div>
                 <div class="flex items-start gap-4">
                   <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                     <i class="fas fa-desktop text-xl"></i>
@@ -255,6 +270,14 @@ const debugMode = ref(window.location.search.includes('debug=true'))
 const isAmountModalOpen = ref(false)
 const isProcessing = ref(false)
 const loadingRegisters = ref(false)
+const searchRegister = ref('')
+
+const filteredRegisters = computed(() => {
+  if (!searchRegister.value) return cashRegisters.value
+  return cashRegisters.value.filter(r => 
+    r.name.toLowerCase().includes(searchRegister.value.toLowerCase())
+  )
+})
 const cashRegisters = ref([])
 const registerStatuses = ref({})
 const registerOwners = ref({})
