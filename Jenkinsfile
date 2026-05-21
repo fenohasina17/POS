@@ -49,9 +49,10 @@ APP_NAME=POS
 APP_ENV=production
 APP_KEY=${APP_KEY}
 APP_DEBUG=false
-APP_URL=http://192.168.0.9:8000
-FRONTEND_URL=http://192.168.0.9:5173
-SANCTUM_STATEFUL_DOMAINS=192.168.0.9:5173
+APP_URL=https://192.168.0.9:8443
+SERVER_IP=192.168.0.9
+FRONTEND_URL=https://192.168.0.9:5443
+SANCTUM_STATEFUL_DOMAINS=192.168.0.9:5443
 DB_CONNECTION=pgsql
 DB_HOST=db
 DB_PORT=5432
@@ -70,7 +71,7 @@ LOG_LEVEL=error
 EOF
                         '''
                         sh 'cp .env backend/.env'
-                        sh 'printf "VITE_API_URL=http://192.168.0.9:8000\nVITE_APP_NAME=Point of Sale\n" > frontend/.env'
+                        sh 'printf "VITE_API_URL=https://192.168.0.9:8443\nVITE_APP_NAME=Point of Sale\n" > frontend/.env'
                     }
 
                     echo "✅ Fichiers .env préparés."
@@ -182,8 +183,8 @@ EOF
                     echo '🔍 Vérification de la santé des services...'
                     sh '${DOCKER_COMPOSE} ps'
                     // Vérification que l'API répond
-                    sh 'sleep 5 && curl -sf http://192.168.0.9:8000/api/login -X POST -H "Content-Type: application/json" -d "{}" -o /dev/null -w "HTTP Backend: %{http_code}\\n" || true'
-                    sh 'curl -sf http://192.168.0.9:5173 -o /dev/null -w "HTTP Frontend: %{http_code}\\n" || true'
+                    sh 'sleep 5 && curl -sfk https://192.168.0.9:8443/api/login -X POST -H "Content-Type: application/json" -d "{}" -o /dev/null -w "HTTPS Backend: %{http_code}\\n" || true'
+                    sh 'curl -sfk https://192.168.0.9:5443 -o /dev/null -w "HTTPS Frontend: %{http_code}\\n" || true'
                 }
             }
         }

@@ -50,31 +50,40 @@ services:
     networks:
       - pos_network
 
-  # --- Serveur Web (Nginx) ---
+  # --- Serveur Web (Nginx + HTTPS) ---
   nginx:
     build:
       context: ./docker/nginx
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "8000:80"
+      - "8000:80"    # HTTP → redirige vers HTTPS
+      - "8443:443"   # HTTPS (API)
+    environment:
+      - SERVER_IP=${SERVER_IP:-192.168.0.9}
     depends_on:
       - backend
     volumes:
       - storage_data:/var/www/storage
+      - ssl_nginx_data:/etc/nginx/ssl
     networks:
       - pos_network
 
-  # --- Frontend (Vue.js / production build servi par Nginx) ---
+  # --- Frontend (Vue.js + HTTPS) ---
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "5173:80"
+      - "5173:80"    # HTTP → redirige vers HTTPS
+      - "5443:443"   # HTTPS (Frontend)
+    environment:
+      - SERVER_IP=${SERVER_IP:-192.168.0.9}
     depends_on:
       - nginx
+    volumes:
+      - ssl_frontend_data:/etc/nginx/ssl
     networks:
       - pos_network
 
@@ -133,3 +142,5 @@ volumes:
   jenkins_data:
   storage_data:
   backup_data:
+  ssl_nginx_data:
+  ssl_frontend_data:
