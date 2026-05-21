@@ -8,13 +8,14 @@ use Database\Seeders\{
     PermissionSeeder,
     RolePermissionRelationSeeder,
     CashRegisterSeeder,
+    CashierSeeder,
+    PosTablesSeeder,
     PaymentSeeder,
-    PointOfSaleSeeder,
-    CashierSeeder
-};
+    PointOfSaleSeeder
+    };
 
-class DatabaseSeeder extends Seeder
-{
+    class DatabaseSeeder extends Seeder
+    {
     public function run(): void
     {
         // 1. Création de base : Rôles et Permissions
@@ -34,13 +35,15 @@ class DatabaseSeeder extends Seeder
         );
         $admin->assignRole('admin');
 
-        // 3. Création de base : Points de vente, Caisses, Caissiers et Paiements
+        // 3. Création de base : Points de vente, Caisses, Caissiers, Tables et Paiements
         $this->call([
             PointOfSaleSeeder::class,
             CashRegisterSeeder::class,
             CashierSeeder::class,
+            PosTablesSeeder::class,
             PaymentSeeder::class,
         ]);
     }
-}
+    }
+
 
