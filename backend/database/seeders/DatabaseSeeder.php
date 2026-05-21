@@ -9,7 +9,8 @@ use Database\Seeders\{
     RolePermissionRelationSeeder,
     CashRegisterSeeder,
     PaymentSeeder,
-    PointOfSaleSeeder
+    PointOfSaleSeeder,
+    CashierSeeder
 };
 
 class DatabaseSeeder extends Seeder
