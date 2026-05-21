@@ -1,18 +1,17 @@
 FROM php:8.4-fpm-bookworm
 WORKDIR /var/www
 
+# Outils système pour composer + build des extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    unzip \
-    zip \
-    libpq-dev \
-    libzip-dev \
-    libicu-dev \
-    && docker-php-ext-configure intl \
-    && docker-php-ext-install pdo_pgsql zip intl \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    git unzip zip curl \
     && rm -rf /var/lib/apt/lists/*
+
+# install-php-extensions : méthode fiable (évite les problèmes PECL/pecl.php.net)
+# Gère automatiquement toutes les dépendances système (libpq-dev, libzip-dev, libicu-dev…)
+RUN curl -sSfL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions \
+        -o /usr/local/bin/install-php-extensions \
+    && chmod +x /usr/local/bin/install-php-extensions \
+    && install-php-extensions pdo_pgsql zip intl redis
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
