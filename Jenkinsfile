@@ -126,6 +126,10 @@ EOF
         }
 
         stage('🚀 Déploiement Rolling Update') {
+            // Déploiement uniquement sur la branche main
+            when {
+                branch 'main'
+            }
             steps {
                 script {
 
@@ -177,6 +181,9 @@ EOF
         }
 
         stage('✅ Vérification Post-Déploiement') {
+            when {
+                branch 'main'
+            }
             steps {
                 script {
                     echo '🔍 Vérification de la santé des services...'
