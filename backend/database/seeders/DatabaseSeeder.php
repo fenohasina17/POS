@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
         // 3. Création de base : Points de vente et Paiements
         $this->call([
             PointOfSaleSeeder::class,
+            CashRegisterSeeder::class,
             PaymentSeeder::class,
         ]);
     }
