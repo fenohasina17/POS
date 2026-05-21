@@ -20,7 +20,7 @@ class CashRegisterSeeder extends Seeder
                 CashRegister::firstOrCreate(
                     [
                         'point_of_sale_id' => $pos->id,
-                        'name' => 'Caisse ' . $i
+                        'name' => 'Caisse ' . $pos->name . '-' . $i
                     ],
                     [
                         'created_at' => now(),
