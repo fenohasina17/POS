@@ -25,6 +25,31 @@ use App\Http\Controllers\QZSignatureController;
 use App\Http\Controllers\SessionDiscrepancyController;
 use App\Http\Controllers\SalesExportController;
 
+// Endpoint de santé (non authentifié — utilisé par monitoring)
+Route::get('/health', function () {
+    try {
+        \DB::connection()->getPdo();
+        $dbStatus = 'ok';
+    } catch (\Exception $e) {
+        $dbStatus = 'error';
+    }
+    try {
+        \Cache::store('redis')->set('health_check', '1', 5);
+        $redisStatus = 'ok';
+    } catch (\Exception $e) {
+        $redisStatus = 'error';
+    }
+    $status = ($dbStatus === 'ok' && $redisStatus === 'ok') ? 'healthy' : 'degraded';
+    $code   = $status === 'healthy' ? 200 : 503;
+    return response()->json([
+        'status'    => $status,
+        'db'        => $dbStatus,
+        'redis'     => $redisStatus,
+        'timestamp' => now()->toISOString(),
+        'version'   => config('app.name'),
+    ], $code);
+})->name('health');
+
 // Routes publiques (non authentifiées)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/register', [AuthController::class, 'register']);
