@@ -46,7 +46,7 @@ services:
         condition: service_healthy
     env_file: .env
     volumes:
-      - app_data:/var/www
+      - storage_data:/var/www/storage
     networks:
       - pos_network
 
@@ -61,7 +61,7 @@ services:
     depends_on:
       - backend
     volumes:
-      - app_data:/var/www
+      - storage_data:/var/www/storage
     networks:
       - pos_network
 
@@ -103,4 +103,4 @@ volumes:
   postgres_data:
   redis_data:
   jenkins_data:
-  app_data:
+  storage_data:
