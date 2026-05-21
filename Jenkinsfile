@@ -66,8 +66,9 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_PASSWORD=
 QUEUE_CONNECTION=sync
-LOG_CHANNEL=stderr
+LOG_CHANNEL=daily
 LOG_LEVEL=error
+LOG_DEPRECATIONS_CHANNEL=null
 EOF
                         '''
                         sh 'cp .env backend/.env'

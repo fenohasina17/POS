@@ -1,8 +1,15 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   # --- Base de Données (Postgres) ---
   db:
     image: postgres:15
     restart: always
+    logging: *default-logging
     env_file: .env
     environment:
       - POSTGRES_DB=${DB_DATABASE}
@@ -23,6 +30,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
+    logging: *default-logging
     volumes:
       - redis_data:/data
     networks:
@@ -39,6 +47,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: always
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -56,6 +65,7 @@ services:
       context: ./docker/nginx
       dockerfile: Dockerfile
     restart: always
+    logging: *default-logging
     ports:
       - "8000:80"    # HTTP → redirige vers HTTPS
       - "8443:443"   # HTTPS (API)
@@ -75,6 +85,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: always
+    logging: *default-logging
     ports:
       - "5173:80"    # HTTP → redirige vers HTTPS
       - "5443:443"   # HTTPS (Frontend)
@@ -132,6 +143,7 @@ services:
       context: ./docker/jenkins
       dockerfile: Dockerfile
     restart: always
+    logging: *default-logging
     privileged: true
     user: root
     ports:
