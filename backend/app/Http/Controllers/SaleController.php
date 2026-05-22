@@ -152,58 +152,76 @@ class SaleController extends Controller
 
             $isAdmin = $user->hasRole('admin', 'api');
             $isManager = $user->hasAnyRole(['gerant', 'gérant'], 'api');
-            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-            if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+            $activePosId = $request->attributes->get('activePosId');
 
             // ========== RESTRICTIONS ==========
             if (!$isAdmin) {
-                if ($isManager && !empty($assignedPosIds)) {
-                    $sales->whereIn('point_of_sale_id', $assignedPosIds);
-                } else {
+                if (!$activePosId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                // Check if user is assigned to the active POS
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès refusé pour ce point de vente.'
+                    ], 403);
+                }
+                $sales->where('point_of_sale_id', $activePosId);
+
+                if (!$isManager) {
+                    // Caissier : voit uniquement ses propres ventes
                     $sales->where('user_id', $user->id);
                 }
 
                 if ($sessionId) {
-                    $sessionQuery = CashRegisterSession::where('id', $sessionId);
-                    if ($isManager && !empty($assignedPosIds)) {
-                        $sessionQuery->whereIn('point_of_sale_id', $assignedPosIds);
-                    } else {
-                        $sessionQuery->where('user_id', $user->id);
-                    }
-                    if (!$sessionQuery->exists()) {
+                    // Vérifier que la session appartient au POS actif
+                    $session = CashRegisterSession::where('id', $sessionId)
+                        ->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $activePosId))
+                        ->first();
+                    if (!$session) {
                         return response()->json(['message' => 'Session non trouvée ou accès non autorisé.'], 403);
                     }
+                    $sales->where('cash_register_session_id', $sessionId);
                 }
 
                 if ($userId) {
-                    if ($isManager && !empty($assignedPosIds)) {
-                        $targetUser = User::find($userId);
-                        // Check if target user belongs to one of the manager's assigned POS
-                        $targetPosId = $targetUser->point_of_sale_id;
-                        if (!$targetUser || !in_array($targetPosId, $assignedPosIds)) {
-                             // Check pivot table for target user too
-                             $targetAssignedPosIds = $targetUser->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-                             if (empty(array_intersect($assignedPosIds, $targetAssignedPosIds))) {
-                                return response()->json(['message' => 'Utilisateur non autorisé.'], 403);
-                             }
-                        }
-                    } elseif ((int) $userId !== (int) $user->id) {
-                        return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
+                    // Vérifier que l'utilisateur cible est rattaché au POS actif
+                    $targetUser = User::where('id', $userId)
+                        ->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $activePosId))
+                        ->first();
+                    if (!$targetUser) {
+                        return response()->json(['message' => 'Utilisateur non trouvé ou accès non autorisé.'], 403);
                     }
+                    // Pour les non-managers, s'assurer que l'utilisateur cible est l'utilisateur connecté
+                    if (!$isManager && (int)$userId !== (int)$user->id) {
+                         return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
+                    }
+                    $sales->where('user_id', $userId);
                 }
-            }
- else {
+            } else { // Admin
                 if ($sessionId && !CashRegisterSession::where('id', $sessionId)->exists()) {
                     return response()->json(['message' => 'Session non trouvée.'], 404);
                 }
-            }
-
-            // ========== FILTRES ==========
-            if ($sessionId) {
-                $sales->where('cash_register_session_id', $sessionId);
-            }
-            if ($userId) {
-                $sales->where('user_id', $userId);
+                if ($sessionId) {
+                    $sales->where('cash_register_session_id', $sessionId);
+                }
+                if ($userId) {
+                    $sales->where('user_id', $userId);
+                }
+                // Admin can filter by point_of_sale_id in query
+                $requestedPosId = $request->query('point_of_sale_id');
+                if ($requestedPosId) {
+                    if (!$user->pointsOfSale->contains($requestedPosId)) {
+                        return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                    }
+                    $sales->where('point_of_sale_id', $requestedPosId);
+                } elseif ($activePosId) {
+                    // If no requested POS, filter by active POS if set
+                    $sales->where('point_of_sale_id', $activePosId);
+                }
             }
 
             $sales = $sales->orderByDesc('created_at')->get();
