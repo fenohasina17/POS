@@ -21,7 +21,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RolePermissionController;
 use App\Http\Controllers\UserRoleController;
 use App\Http\Controllers\UserPermissionController;
-use App\Http\Controllers\QZSignatureController;
+// use App\Http\Controllers\QZSignatureController;
 use App\Http\Controllers\SessionDiscrepancyController;
 use App\Http\Controllers\SalesExportController;
 
@@ -53,9 +53,9 @@ Route::get('/health', function () {
 // Routes publiques (non authentifiées)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/qz/sign', [QZSignatureController::class, 'sign']);
 
 Route::get('/logo', function () {
+
     $path = public_path('photos/logo.png');
     if (!file_exists($path)) {
         return response()->json(['error' => 'Logo not found'], 404);
