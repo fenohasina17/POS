@@ -383,7 +383,7 @@ const saleDataForModal = computed(() => {
     })),
     total_amount: Math.round(totalPrice.value),
     customer_id: null,
-    point_of_sale_id: user.value?.point_of_sale_id || null,
+    point_of_sale_id: activePos.value?.id || null,
     cash_register_session_id: cashRegisterSessionId,  // 🔥 ID session réelle (1)
     user_id: saleUserId  // 🔥 ID caissier (2)
   }
@@ -487,12 +487,12 @@ const processData = (data) => {
 
 const loadData = async (forceRefresh = false) => {
   const auth = storage.getAuth()
-  if (!user.value?.point_of_sale_id || !auth?.token) return
+  if (!activePos.value?.id || !auth?.token) return
 
   try {
     isLoading.value = true
     const data = await dataCacheService.getCategories(
-      user.value.point_of_sale_id,
+      activePos.value.id,
       auth.token,
       forceRefresh
     )
