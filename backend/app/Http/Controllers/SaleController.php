@@ -1652,18 +1652,49 @@ class SaleController extends Controller
     {
         try {
             $user = auth()->user();
-            if (!$user->hasRole('admin')) {
-                return response()->json(['message' => 'Seuls les administrateurs peuvent modifier une vente.'], 403);
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
+            }
+
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                }
             }
 
             $sale = Sale::findOrFail($id);
+
+            // Ensure sale belongs to the active POS for non-admins
+            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
+            }
+
+            // Only admin can update status and discount percentage. Others can't.
+            if (!$isAdmin && ($request->has('status') || $request->has('discount_percentage'))) {
+                return response()->json(['message' => 'Vous n\'avez pas la permission de modifier le statut ou la remise de cette vente.'], 403);
+            }
+
 
             $validated = $request->validate([
                 'discount_percentage' => 'nullable|numeric|min:0|max:100',
                 'status' => 'sometimes|in:pending,completed,cancelled',
                 'notes' => 'nullable|string',
                 'orderlines' => 'sometimes|array',
-                'orderlines.*.product_id' => 'required|exists:products,id',
+                'orderlines.*.product_id' => [
+                    'required',
+                    Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $isAdmin, $request) {
+                        $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        if ($targetPosId) {
+                            $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
+                        }
+                    }),
+                ],
                 'orderlines.*.quantity' => 'required|integer|min:1',
                 'orderlines.*.price' => 'required|numeric|min:0',
             ]);
@@ -1686,6 +1717,27 @@ class SaleController extends Controller
                     ]);
                 }
             }
+
+            $sale->refresh();
+            $sale->updateTotalAmount();
+
+            DB::commit();
+
+            $sale->load('orderlines.product');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vente mise à jour avec succès',
+                'data' => $sale
+            ]);
+
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['error' => 'Vente non trouvée'], 404);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
 
             $sale->refresh();
             $sale->updateTotalAmount();
