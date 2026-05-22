@@ -722,7 +722,6 @@ onMounted(async () => {
     await loadTables()
 })
 </script>
-</script>
 
 <style scoped>
 .table-management {
