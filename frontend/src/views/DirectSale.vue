@@ -258,7 +258,7 @@ import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
 import ProductCatalog from '@/components/ProductCatalog.vue'
 
 // ...
-const {  totalPriceremoveFromCart} = useCart()
+const { cart, totalPrice, addToCart, removeFromCart, clearCart } = useCart()
 const { isSessionBilleted, checkActiveSession } = useCashRegisterSession()
 // ...
 const canSell = computed(() => {
