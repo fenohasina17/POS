@@ -282,8 +282,11 @@ import { faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScree
 import { saleService } from '@/services/saleService'
 import { storage } from '@/utils/storage'
 import apiClient from '@/services/apiClient'
+import { useAuth } from '@/composables/useAuth'
 
 library.add(faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck)
+
+const { activePos } = useAuth()
 
 const props = defineProps({
   saleId: { type: [Number, String], default: null },
@@ -525,7 +528,7 @@ const confirmPayment = async () => {
     })
 
     const payload = {
-      point_of_sale_id: props.saleData?.point_of_sale_id || auth.user?.point_of_sale_id,
+      point_of_sale_id: props.saleData?.point_of_sale_id || activePos.value?.id,
       cash_register_session_id: session?.id || null,
       table_id: props.saleData?.table_id || null,
       // Utiliser l'original_user_id (le caissier) s'il existe, sinon l'utilisateur authentifié
