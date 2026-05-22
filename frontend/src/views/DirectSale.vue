@@ -302,18 +302,11 @@ const searchQuery = ref('')
 const user = ref(null)
 const selectedDiscount = ref(0)
 const isLoading = ref(false)
-const isSessionBilleted = ref(false) // 👈 Gère le verrouillage après billetage
+import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
 
-// Router pour redirection
-const router = useRouter()
-const route = useRoute() // 👈 AJOUTER ceci
-
-// ========== COMPUTED ==========
-const totalPrice = computed(() => {
-  return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-})
-
-// Désactiver la vente si session billetée (sauf pour Admin)
+// ...
+const { isSessionBilleted, checkActiveSession } = useCashRegisterSession()
+// ...
 const canSell = computed(() => {
   return !isSessionBilleted.value || isAdmin.value
 })
