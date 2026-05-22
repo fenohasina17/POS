@@ -1017,7 +1017,7 @@ class SaleController extends Controller
      *         - 403 : Permission refusée
      *         - 404 : Vente non trouvée
      */
-    public function destroy($id)
+    public function destroy($id, Request $request)
     {
         try {
             $user = auth()->guard('api')->user();
@@ -1025,15 +1025,36 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
-            if (!$user->hasPermissionTo('delete.sales', 'api') && !$user->hasRole('admin', 'api')) {
+            if (!$user->hasPermissionTo('delete.sales', 'api')) {
                 return response()->json(['message' => 'Vous n\'avez pas la permission de supprimer une vente.'], 403);
             }
 
-            if (!$user->hasRole('admin', 'api') && $this->userIsManager($user)) {
-                return response()->json(['message' => 'Les gérants ne peuvent pas supprimer une vente.'], 403);
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            // Non-admin users are restricted by their active POS
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès refusé pour ce point de vente.'
+                    ], 403);
+                }
             }
 
             $sale = Sale::findOrFail($id);
+
+            // Ensure sale belongs to the active POS for non-admins
+            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
+            }
+
             $sale->delete();
 
             return response()->json(['message' => 'Vente supprimée avec succès'], 204);
