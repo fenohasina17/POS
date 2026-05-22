@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
+import { useAuth } from '@/composables/useAuth'
 
 export function useCategories() {
   const categories = ref([])
@@ -10,6 +11,8 @@ export function useCategories() {
   const activeCategory = ref(null)
   const categoryPrinterTypes = ref({})
   const productCatalog = ref({})
+
+  const { activePos } = useAuth()
 
   const loadCategories = async (forceRefresh = false) => {
     console.log('loadCategories : démarrage de l\'exécution')
@@ -22,24 +25,13 @@ export function useCategories() {
         return
       }
 
-      console.log('loadCategories : appel de l\'API /me')
-      const userResponse = await axios.get(`${API_BASE_URL}/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-
-      const user = userResponse.data.user
-      console.log('loadCategories : données utilisateur reçues :', user)
-
-      if (!user.point_of_sale_id) {
-        console.log('loadCategories : aucun point_of_sale_id dans les données utilisateur, arrêt anticipé')
+      if (!activePos.value?.id) {
+        console.log('loadCategories : aucun point de vente actif, arrêt anticipé')
         return
       }
 
       console.log('loadCategories : récupération des catégories (cache ou API)')
-      const rawCategories = await dataCacheService.getCategories(user.point_of_sale_id, token, forceRefresh)
+      const rawCategories = await dataCacheService.getCategories(activePos.value.id, token, forceRefresh)
       
       console.log('loadCategories : catégories reçues :', rawCategories.length, 'catégories')
 
