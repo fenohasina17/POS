@@ -33,7 +33,6 @@ class CashierSeeder extends Seeder
                     [
                         'name' => 'Caissier ' . $pos->name . '-' . $i,
                         'password' => Hash::make('password'),
-                        'point_of_sale_id' => $pos->id,
                     ]
                 );
 
