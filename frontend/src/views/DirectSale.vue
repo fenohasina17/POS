@@ -100,60 +100,11 @@
 
         <!-- Grid Produits -->
         <div class="mt-5 flex-1 overflow-hidden">
-          <div
-            v-if="filteredProducts.length"
-            class="grid h-full grid-cols-2 gap-4 overflow-y-auto pr-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-          >
-            <button
-              v-for="product in filteredProducts"
-              :key="product.id"
-              type="button"
-              class="group relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-3 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-2xl hover:shadow-indigo-100/50 active:scale-95"
-              @click="addToCart(product)"
-            >
-              <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-50">
-                <img
-                  :src="getProductImageUrl(product)"
-                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  @error="handleImageError"
-                  loading="lazy"
-                />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
-              </div>
-
-              <div class="mt-3 w-full space-y-1">
-                <p class="truncate text-sm font-bold text-slate-800">{{ product.name }}</p>
-                <div class="flex items-center justify-center gap-1.5">
-                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                  <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    {{ product.category_name || 'Divers' }}
-                  </p>
-                </div>
-                <div class="pt-1">
-                  <span class="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-black text-indigo-600">
-                    {{ formatPrice(product.price) }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Badge flottant "Plus" -->
-              <div class="absolute right-2 top-2 scale-0 rounded-full bg-indigo-600 p-1.5 text-white shadow-lg transition-transform group-hover:scale-100">
-                <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[10px]" />
-              </div>
-            </button>
-          </div>
-
-          <!-- Empty State -->
-          <div
-            v-else
-            class="flex h-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/30 py-20"
-          >
-            <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm">
-              <FontAwesomeIcon icon="fa-solid fa-boxes" class="text-3xl text-slate-200" />
-            </div>
-            <p class="text-base font-bold text-slate-400">Aucun produit trouvé</p>
-            <p class="text-sm text-slate-300">Essayez une autre catégorie ou recherche</p>
-          </div>
+            <ProductCatalog 
+                :products="filteredProducts" 
+                :active-category-id="activeCategoryId"
+                @add="addToCart" 
+            />
         </div>
       </section>
 
@@ -304,9 +255,10 @@ const selectedDiscount = ref(0)
 const isLoading = ref(false)
 import { useCart } from '@/composables/useCart'
 import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
+import ProductCatalog from '@/components/ProductCatalog.vue'
 
 // ...
-const { cart, totalPrice, addToCart, removeFromCart, clearCart } = useCart()
+const {  totalPriceremoveFromCart} = useCart()
 const { isSessionBilleted, checkActiveSession } = useCashRegisterSession()
 // ...
 const canSell = computed(() => {
