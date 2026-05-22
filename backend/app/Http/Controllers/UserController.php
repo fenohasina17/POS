@@ -19,8 +19,7 @@ class UserController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    'point_of_sale_id' => $user->point_of_sale_id,
-                    'point_of_sale_name' => $user->pointOfSale ? $user->pointOfSale->name : null,
+                    // 'point_of_sale_id' and 'point_of_sale_name' removed as the column no longer exists
                     'points_of_sale' => $user->pointsOfSale->map(fn($p) => ['id' => $p->id, 'name' => $p->name]),
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
@@ -43,7 +42,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'point_of_sale_id' => 'nullable|exists:point_of_sales,id',
+            // 'point_of_sale_id' is removed from validation rules
             'point_of_sale_ids' => 'nullable|array',
             'point_of_sale_ids.*' => 'exists:point_of_sales,id',
         ]);
@@ -61,14 +60,13 @@ class UserController extends Controller
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'point_of_sale_id' => $request->point_of_sale_id ?? ($request->point_of_sale_ids[0] ?? null),
+                // 'point_of_sale_id' is removed from here
             ]);
 
             if ($request->has('point_of_sale_ids')) {
                 $user->pointsOfSale()->sync($request->point_of_sale_ids);
-            } elseif ($request->point_of_sale_id) {
-                $user->pointsOfSale()->sync([$request->point_of_sale_id]);
             }
+            // Logic for 'point_of_sale_id' removed
 
             return response()->json($user->load('pointsOfSale'), 201);
         } catch (\Exception $e) {
@@ -108,7 +106,7 @@ class UserController extends Controller
                 'name' => 'string|max:255',
                 'email' => 'email|unique:users,email,' . $id,
                 'password' => 'string|min:8|nullable',
-                'point_of_sale_id' => 'nullable|exists:point_of_sales,id',
+                // 'point_of_sale_id' is removed from validation rules
                 'point_of_sale_ids' => 'nullable|array',
                 'point_of_sale_ids.*' => 'exists:point_of_sales,id',
             ]);
@@ -124,15 +122,12 @@ class UserController extends Controller
                 'name' => $request->name ?? $user->name,
                 'email' => $request->email ?? $user->email,
                 'password' => $request->password ? Hash::make($request->password) : $user->password,
-                'point_of_sale_id' => $request->has('point_of_sale_id') ? $request->point_of_sale_id : $user->point_of_sale_id,
+                // 'point_of_sale_id' is removed from here
             ]);
 
             if ($request->has('point_of_sale_ids')) {
                 $user->pointsOfSale()->sync($request->point_of_sale_ids);
-                // Optionnel: Mettre à jour le point_of_sale_id par défaut si non fourni
-                if (!$request->has('point_of_sale_id') && !empty($request->point_of_sale_ids)) {
-                    $user->update(['point_of_sale_id' => $request->point_of_sale_ids[0]]);
-                }
+                // Logic for 'point_of_sale_id' removed
             }
 
             return response()->json($user->load('pointsOfSale'));
