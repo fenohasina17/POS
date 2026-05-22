@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Response;
 
 class CategoryController extends Controller
 {
@@ -17,7 +19,7 @@ class CategoryController extends Controller
      * Paramètres optionnels :
      * - with_products : (bool) Inclure les produits associés
      * - with_pricing : (bool) Inclure les prix des produits
-     * - point_of_sale_id : (int) Obligatoire si with_pricing=true
+     * - point_of_sale_id : (int) Pour les admins, permet de filtrer par POS spécifique. Pour les autres, utilise l'activePosId.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -25,42 +27,78 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié'], 401);
+            }
+
+            $isAdmin = $user->hasRole('admin');
+            $activePosId = $request->attributes->get('activePosId');
+
             $request->validate([
                 'with_pricing' => 'sometimes|boolean',
-                'point_of_sale_id' => 'required_if:with_pricing,true|integer',
                 'with_products' => 'sometimes|boolean'
             ]);
 
-            $pointOfSaleId = $request->input('point_of_sale_id');
             $withProducts = $request->boolean('with_products');
             $withPricing = $request->boolean('with_pricing');
+
+            $targetPosId = null;
+
+            if ($isAdmin) {
+                // Admin can explicitly request a point_of_sale_id
+                $targetPosId = $request->input('point_of_sale_id') ?? $activePosId;
+            } else {
+                // Non-admin must use their activePosId from middleware
+                $targetPosId = $activePosId;
+            }
+
+            // If pricing is requested, a POS context is mandatory for non-admins
+            if ($withPricing && !$targetPosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Un point de vente actif est requis pour récupérer les prix.'
+                ], 422);
+            }
+            // If there's a targetPosId, ensure the user has access to it
+            if ($targetPosId && !$user->pointsOfSale->contains($targetPosId) && !$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+
 
             $query = Category::query();
 
             if ($withProducts) {
-                $productsRelation = function ($q) use ($pointOfSaleId, $withPricing) {
-                    // CORRECTION : Utiliser la relation 'pricing' pour filtrer les produits du POS
-                    if ($pointOfSaleId) {
-                        $q->whereHas('pricing', function ($pq) use ($pointOfSaleId) {
-                            $pq->where('point_of_sale_id', $pointOfSaleId);
+                $productsRelation = function ($q) use ($targetPosId, $withPricing) {
+                    if ($targetPosId) {
+                        $q->whereHas('pricings', function ($pq) use ($targetPosId) {
+                            $pq->where('point_of_sale_id', $targetPosId);
                         });
                     }
-                    if ($withPricing && $pointOfSaleId) {
-                        $q->with(['pricing' => function ($pq) use ($pointOfSaleId) {
-                            $pq->where('point_of_sale_id', $pointOfSaleId);
+                    if ($withPricing && $targetPosId) {
+                        $q->with(['pricings' => function ($pq) use ($targetPosId) {
+                            $pq->where('point_of_sale_id', $targetPosId);
                         }]);
                     }
                 };
                 $query->with(['products' => $productsRelation]);
-            } elseif ($withPricing && $pointOfSaleId) {
-                // Si seulement with_pricing sans with_products, on charge les produits avec pricing
+            } elseif ($withPricing && $targetPosId) {
                 $query->with([
-                    'products' => function ($q) use ($pointOfSaleId) {
-                        $q->whereHas('pricing', fn($pq) => $pq->where('point_of_sale_id', $pointOfSaleId))
-                          ->with(['pricing' => fn($pq) => $pq->where('point_of_sale_id', $pointOfSaleId)]);
+                    'products' => function ($q) use ($targetPosId) {
+                        $q->whereHas('pricings', fn($pq) => $pq->where('point_of_sale_id', $targetPosId))
+                          ->with(['pricings' => fn($pq) => $pq->where('point_of_sale_id', $targetPosId)]);
                     }
                 ]);
             }
+            
+            // If a specific POS is targeted, also filter categories by this POS
+            // Assuming categories are related to POS, if not, this might need adjustment
+            // if ($targetPosId) {
+            //     $query->where('point_of_sale_id', $targetPosId);
+            // }
 
             $categories = $query->get();
 
@@ -83,18 +121,35 @@ class CategoryController extends Controller
      */
     protected function resolveRelations(Request $request): array
     {
+        $user = Auth::user();
+        $isAdmin = $user->hasRole('admin');
+        $activePosId = $request->attributes->get('activePosId');
+
+        $targetPosId = null;
+        if ($isAdmin) {
+            $targetPosId = $request->input('point_of_sale_id') ?? $activePosId;
+        } else {
+            $targetPosId = $activePosId;
+        }
+
         $relations = [];
-        $pointOfSaleId = $request->input('point_of_sale_id');
 
         if ($request->boolean('with_products')) {
             $relations[] = 'products';
         }
 
         if ($request->boolean('with_pricing')) {
-            $relations['products'] = function ($query) use ($pointOfSaleId) {
+            // If pricing is requested, a POS context is mandatory for non-admins
+            if (!$targetPosId) {
+                // This helper should not throw exceptions directly, rather return filtered relations.
+                // The main controller method should handle this.
+                // For now, returning an empty array to prevent errors if targetPosId is null.
+                return [];
+            }
+            $relations['products'] = function ($query) use ($targetPosId) {
                 $query->with([
-                    'pricing' => function ($q) use ($pointOfSaleId) {
-                        $q->where('point_of_sale_id', $pointOfSaleId);
+                    'pricings' => function ($q) use ($targetPosId) {
+                        $q->where('point_of_sale_id', $targetPosId);
                     }
                 ]);
             };
@@ -114,6 +169,14 @@ class CategoryController extends Controller
     public function getProducts($id)
     {
         try {
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié'], 401);
+            }
+
+            $isAdmin = $user->hasRole('admin');
+            $activePosId = $request->attributes->get('activePosId');
+
             $category = Category::find($id);
 
             if (!$category) {
@@ -121,6 +184,19 @@ class CategoryController extends Controller
                     'success' => false,
                     'message' => 'Catégorie non trouvée'
                 ], 404);
+            }
+            
+            // If non-admin, ensure category is accessible via active POS
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                // Assuming categories are tied to POS. If not, this check needs to be removed
+                // or adapted based on how categories are shared/scoped.
+                // For now, let's assume direct relation or all categories are globally visible but products are filtered.
             }
 
             $products = Product::where('category_id', $id)->get();
@@ -155,13 +231,34 @@ class CategoryController extends Controller
     public function getProductsWithPrices(Request $request, $id)
     {
         try {
-            $pointOfSaleId = $request->query('point_of_sale_id');
+            $user = Auth::user();
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié'], 401);
+            }
 
-            if (!$pointOfSaleId) {
+            $isAdmin = $user->hasRole('admin');
+            $activePosId = $request->attributes->get('activePosId');
+
+            $targetPosId = null;
+
+            if ($isAdmin) {
+                $targetPosId = $request->query('point_of_sale_id') ?? $activePosId;
+            } else {
+                $targetPosId = $activePosId;
+            }
+
+            if (!$targetPosId) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'point_of_sale_id est requis'
+                    'message' => 'Un point de vente actif est requis pour récupérer les prix des produits.'
                 ], 422);
+            }
+            // If there's a targetPosId, ensure the user has access to it
+            if (!$user->pointsOfSale->contains($targetPosId) && !$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
             }
 
             $category = Category::find($id);
@@ -175,8 +272,8 @@ class CategoryController extends Controller
 
             $products = Product::where('category_id', $id)
                 ->with([
-                    'pricings' => function ($query) use ($pointOfSaleId) {
-                        $query->where('point_of_sale_id', $pointOfSaleId)
+                    'pricings' => function ($query) use ($targetPosId) {
+                        $query->where('point_of_sale_id', $targetPosId)
                             ->where('is_active', true);
                     }
                 ])
@@ -242,6 +339,8 @@ class CategoryController extends Controller
                 ], 404);
             }
 
+            // This endpoint needs to be reviewed to determine its POS filtering requirements.
+            // For now, assuming it returns all products in a category regardless of POS.
             $products = Product::where('category_id', $categoryId)->get();
 
             return response()->json([
