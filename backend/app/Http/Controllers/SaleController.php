@@ -1560,16 +1560,46 @@ class SaleController extends Controller
     public function replaceOrderLines(Request $request, Sale $sale)
     {
         try {
+            $user = auth()->guard('api')->user();
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
+            }
+            
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                }
+            }
+
+            // Ensure sale belongs to the active POS for non-admins
+            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
+            }
+
             $request->validate([
                 'orderlines' => 'required|array',
-                'orderlines.*.product_id' => 'required|exists:products,id',
+                'orderlines.*.product_id' => [
+                    'required',
+                    Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $isAdmin, $request) {
+                        $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        if ($targetPosId) {
+                            $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
+                        }
+                    }),
+                ],
                 'orderlines.*.quantity'   => 'required|integer|min:1',
                 'orderlines.*.price'      => 'required|numeric|min:0',
             ]);
 
             // Optionnel : Restreindre la modification aux ventes "pending" ou aux admins
-            if ($sale->status === 'completed' && !auth()->user()->hasRole('admin')) {
-                return response()->json(['error' => 'Les ventes terminées ne peuvent pas être modifiées.'], 422);
+            if ($sale->status === 'completed' && !$isAdmin) {
+                return response()->json(['error' => 'Les ventes terminées ne peuvent pas être modifiées par des non-administrateurs.'], 422);
             }
 
             DB::beginTransaction();
