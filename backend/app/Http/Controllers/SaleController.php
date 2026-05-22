@@ -1452,7 +1452,7 @@ class SaleController extends Controller
      *         - 404 : Vente non trouvée
      *         - 500 : Erreur serveur
      */
-    public function getSaleCategories($saleId)
+    public function getSaleCategories($saleId, Request $request)
     {
         try {
             $sale = Sale::with([
@@ -1470,6 +1470,29 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Accès non autorisé.'], 403);
             }
 
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            // Non-admin users are restricted by their active POS
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès refusé pour ce point de vente.'
+                    ], 403);
+                }
+                // Ensure sale belongs to the active POS
+                if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                    return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
+                }
+            }
+            
             $categories = $this->saleService->getItemsGroupedByCategory($sale);
 
             return response()->json([
