@@ -209,7 +209,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import placeholderImage from '@/assets/avatar.png'
 import { useAuth } from '@/composables/useAuth'
 
-const { isAdmin } = useAuth()
+const { isAdmin, activePos } = useAuth()
 
 const products = ref([])
 const categories = ref([])
@@ -235,12 +235,11 @@ const getAuthHeaders = () => {
 const fetchData = async () => {
   try {
     loading.value = true
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const pointOfSaleId = user?.point_of_sale_id
-    if (!pointOfSaleId) throw new Error('Point de vente non configuré')
+    const posId = activePos.value?.id
+    if (!posId) throw new Error('Point de vente non configuré')
 
     const response = await axios.get(`${API_BASE_URL}/categories`, {
-      params: { with_products: 1, point_of_sale_id: pointOfSaleId, with_pricing: 1 },
+      params: { with_products: 1, point_of_sale_id: posId, with_pricing: 1 },
       headers: getAuthHeaders(),
     })
 
@@ -255,7 +254,7 @@ const fetchData = async () => {
       for (const product of category.products) {
         let price = 0
         if (Array.isArray(product.pricing)) {
-          const pricing = product.pricing.find(p => p.point_of_sale_id === pointOfSaleId)
+          const pricing = product.pricing.find(p => p.point_of_sale_id === posId)
           if (pricing) price = parseFloat(pricing.price)
         }
         allProducts.push({
