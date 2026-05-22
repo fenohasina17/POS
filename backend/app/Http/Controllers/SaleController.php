@@ -248,7 +248,7 @@ class SaleController extends Controller
      *         - 401 : Utilisateur non authentifié
      *         - 403 : Permission refusée ou accès restreint (gérant ne peut voir que son point de vente)
      */
-    public function productKpis(PointOfSale $pointOfSale)
+    public function productKpis(PointOfSale $pointOfSale, Request $request)
     {
         $user = auth()->user();
 
@@ -256,12 +256,20 @@ class SaleController extends Controller
             return response()->json(['message' => 'Vous n\'avez pas la permission de voir les KPIs.'], 403);
         }
 
-        if ($user->hasRole('gerant', 'api')) {
-            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-            if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
-            if (!in_array($pointOfSale->id, $assignedPosIds)) {
-                return response()->json(['message' => 'Vous n\'avez pas accès aux KPIs de ce point de vente.'], 403);
+        // Non-admin users (including managers) must be associated with the requested pointOfSale, or it must be their active POS
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+            }
+            // Ensure the requested pointOfSale matches the active POS
+            if ((int)$pointOfSale->id !== (int)$activePosId) {
+                return response()->json(['message' => 'Accès refusé : Ce point de vente ne correspond pas à votre point de vente actif.'], 403);
             }
         }
 
