@@ -838,18 +838,91 @@ class SaleController extends Controller
             return response()->json(['message' => 'Vous n\'avez pas la permission de créer une commande.'], 403);
         }
 
+        $activePosId = $request->attributes->get('activePosId');
+
+        // Non-admins must have an active POS set by middleware
+        if (!$user->hasRole('admin', 'api') && !$activePosId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+            ], 403);
+        }
+        // Non-admins must be assigned to their active POS
+        if (!$user->hasRole('admin', 'api') && !$user->pointsOfSale->contains($activePosId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé pour ce point de vente.'
+            ], 403);
+        }
+
         try {
             $validated = $request->validate([
-                'table_id' => 'required|exists:tables,id',
+                'table_id' => [
+                    'required',
+                    Rule::exists('tables', 'id')->where(function ($query) use ($activePosId, $user, $request) {
+                        $isAdmin = Auth::user()->hasRole('admin', 'api');
+                        $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        if ($targetPosId) {
+                            $query->where('point_of_sale_id', $targetPosId);
+                        }
+                    }),
+                ],
                 'user_id' => 'required|exists:users,id',
-                'point_of_sale_id' => 'required|exists:point_of_sales,id',
-                'cash_register_session_id' => 'required|exists:cash_register_sessions,id',
+                'point_of_sale_id' => [
+                    'required',
+                    Rule::exists('point_of_sales', 'id')->where(function ($query) use ($user, $activePosId) {
+                        $isAdmin = $user->hasRole('admin', 'api');
+                        if (!$isAdmin) {
+                            $query->where('id', $activePosId); // Non-admin must target their active POS
+                        }
+                    }),
+                ],
+                'cash_register_session_id' => [
+                    'required',
+                    Rule::exists('cash_register_sessions', 'id')->where(function ($query) use ($activePosId, $user, $request) {
+                         $isAdmin = $user->hasRole('admin', 'api');
+                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        if ($targetPosId) {
+                            $query->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $targetPosId));
+                        }
+                    }),
+                ],
                 'discount_percentage' => 'nullable|numeric|min:0|max:100',
                 'order_lines' => 'required|array|min:1',
-                'order_lines.*.product_id' => 'required|exists:products,id',
+                'order_lines.*.product_id' => [
+                    'required',
+                    Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $user, $request) {
+                         $isAdmin = $user->hasRole('admin', 'api');
+                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        if ($targetPosId) {
+                            $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
+                        }
+                    }),
+                ],
                 'order_lines.*.quantity' => 'required|integer|min:1',
                 'order_lines.*.price' => 'required|numeric|min:0',
             ]);
+
+            $targetPointOfSaleId = $validated['point_of_sale_id'];
+            $isAdmin = $user->hasRole('admin', 'api');
+
+            // For admin, if point_of_sale_id is provided, check if admin is assigned to it.
+            if ($isAdmin && $targetPointOfSaleId && !$user->pointsOfSale->contains($targetPointOfSaleId)) {
+                return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+            }
+            // For non-admin, ensure the validated point_of_sale_id matches the active POS ID
+            if (!$isAdmin && (int)$targetPointOfSaleId !== (int)$activePosId) {
+                return response()->json(['message' => 'Vous ne pouvez créer des commandes que sur votre point de vente actif.'], 403);
+            }
+
+            $session = CashRegisterSession::find($validated['cash_register_session_id']);
+            if (!$session) {
+                return response()->json(['message' => 'La session de caisse est inexistante. Vous ne pouvez pas créer de vente.'], 422);
+            }
+            // Ensure session belongs to the target POS
+            if ($session->cashRegister->point_of_sale_id !== $targetPointOfSaleId) {
+                return response()->json(['message' => 'La session de caisse n\'appartient pas au point de vente ciblé.'], 403);
+            }
 
             $sale = $this->saleService->createPendingOrder($validated, $user);
             return response()->json($sale, 201);
