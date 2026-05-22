@@ -1182,14 +1182,41 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                }
+            }
+
             $validated = $request->validate([
                 'order_lines' => 'required|array|min:1',
-                'order_lines.*.product_id' => 'required|exists:products,id',
+                'order_lines.*.product_id' => [
+                    'required',
+                    Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $user, $request) {
+                        $isAdmin = Auth::user()->hasRole('admin', 'api');
+                        $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        if ($targetPosId) {
+                            $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
+                        }
+                    }),
+                ],
                 'order_lines.*.quantity' => 'required|integer|min:1',
                 'order_lines.*.price' => 'required|numeric|min:0',
             ]);
 
             $sale = Sale::findOrFail($saleId);
+
+            // Ensure sale belongs to the active POS for non-admins
+            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json(['message' => 'Cette commande n\'appartient pas à votre point de vente actif.'], 403);
+            }
+
             $updatedSale = $this->saleService->addToPendingOrder($sale, $validated['order_lines']);
 
             return response()->json($updatedSale, 200);
