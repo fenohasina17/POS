@@ -356,18 +356,19 @@ class SaleController extends Controller
         }
 
         $isAdmin = $user->hasRole('admin', 'api');
-        $isManager = $user->hasAnyRole(['gerant', 'gérant'], 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
+        // Non-admin users (including managers) must be associated with the requested pointOfSale, or it must be their active POS
         if (!$isAdmin) {
-            if ($isManager) {
-                $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-                if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
-
-                if (!in_array((int)$pointOfSaleId, $assignedPosIds)) {
-                    return response()->json(['message' => 'Vous ne pouvez consulter que les statistiques de vos points de vente.'], 403);
-                }
-            } else {
-                return response()->json(['message' => 'Seuls les administrateurs ou gérants peuvent consulter ces statistiques.'], 403);
+            if (!$activePosId) {
+                return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+            }
+            // Ensure the requested pointOfSale matches the active POS
+            if ((int)$pointOfSaleId !== (int)$activePosId) {
+                return response()->json(['message' => 'Accès refusé : Ce point de vente ne correspond pas à votre point de vente actif.'], 403);
             }
         }
 
@@ -443,6 +444,28 @@ class SaleController extends Controller
         if ($hasPaymentColumn) {
             $monthlySelect[] = DB::raw("SUM(CASE WHEN LOWER(COALESCE(payments.name, '')) REGEXP '{$cashRegex}' THEN 1 ELSE 0 END) as cash_transactions");
             $monthlySelect[] = DB::raw("SUM(CASE WHEN LOWER(COALESCE(payments.name, '')) REGEXP '{$cashRegex}' THEN COALESCE({$saleTable}.final_amount, {$saleTable}.total_amount, 0) ELSE 0 END) as cash_sales");
+        } else {
+            $monthlySelect[] = DB::raw('0 as cash_transactions');
+            $monthlySelect[] = DB::raw('0 as cash_sales');
+        }
+
+        $monthlyBuilder = (clone $salesQuery)->select($monthlySelect);
+        if ($hasPaymentColumn) {
+            $monthlyBuilder->leftJoin('payments', "{$saleTable}.payment_id", '=', 'payments.id');
+        }
+
+        $monthlyQuery = $monthlyBuilder->groupBy(DB::raw("DATE_FORMAT({$saleTable}.created_at, '%Y-%m')"))->orderBy('period')->get();
+
+        $dailySelect = [
+            DB::raw("DATE_FORMAT({$saleTable}.created_at, '%Y-%m') as period"),
+            DB::raw("DATE({$saleTable}.created_at) as day_date"),
+            DB::raw('COUNT(*) as transactions'),
+            DB::raw("SUM(COALESCE({$saleTable}.final_amount, {$saleTable}.total_amount, 0)) as total_sales"),
+        ];
+
+        if ($hasPaymentColumn) {
+            $dailySelect[] = DB::raw("SUM(CASE WHEN LOWER(COALESCE(payments.name, '')) REGEXP '{$cashRegex}' THEN 1 ELSE 0 END) as cash_transactions");
+            $dailySelect[] = DB::raw("SUM(CASE WHEN LOWER(COALESCE(payments.name, '')) REGEXP '{$cashRegex}' THEN COALESCE({$saleTable}.final_amount, {$saleTable}.total_amount, 0) ELSE 0 END) as cash_sales");
         } else {
             $monthlySelect[] = DB::raw('0 as cash_transactions');
             $monthlySelect[] = DB::raw('0 as cash_sales');
