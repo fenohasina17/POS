@@ -22,10 +22,10 @@
       </div>
     </div>
 
-    <div class="relative mx-4 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
+    <div class="relative mx-4 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
 
       <!-- Header -->
-      <header class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+      <header class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5 flex-shrink-0">
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Connexion caisse</p>
           <h1 class="mt-2 text-2xl font-semibold text-slate-900">Choisir une caisse</h1>
@@ -50,7 +50,8 @@
         </div>
       </header>
 
-      <div class="px-6 py-6">
+      <!-- Contenu scrollable du modal -->
+      <div class="px-6 py-6 overflow-y-auto flex-grow">
 
         <!-- Message machine détectée -->
         <div v-if="machineIdentifier" class="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-600">
@@ -93,67 +94,44 @@
                 class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none"
               />
             </div>
-            <div class="max-h-[400px] overflow-y-auto rounded-xl border border-slate-200 bg-white p-2">
-              <div v-if="filteredRegisters.length === 0" class="py-4 text-center text-sm text-slate-500">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto rounded-xl border border-slate-200 bg-white p-4">
+              <div v-if="filteredRegisters.length === 0" class="col-span-full py-4 text-center text-sm text-slate-500">
                 Aucune caisse trouvée.
               </div>
               <button
                 v-for="register in filteredRegisters"
                 :key="register.id"
                 type="button"
-                class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-all hover:bg-indigo-50 disabled:cursor-not-allowed"
+                class="flex flex-col items-start p-4 bg-white rounded-xl border border-slate-200 hover:bg-indigo-50 transition-all disabled:cursor-not-allowed text-left"
                 :class="{
-                  'bg-indigo-50 border-indigo-200': selectedCashRegister === register.id,
-                  'opacity-60 bg-slate-100 pointer-events-none': isRegisterLocked(register.id) && !isAdmin
+                  'border-indigo-400 bg-indigo-50': selectedCashRegister === register.id,
+                  'opacity-60 pointer-events-none bg-slate-100': isRegisterLocked(register.id) && !isAdmin
                 }"
                 :disabled="isRegisterLocked(register.id) && !isAdmin"
                 @click="selectCashRegister(register.id)"
               >
-                <span class="text-sm font-medium text-slate-700">{{ register.name }}</span>
-                <span v-if="isRegisterLocked(register.id)" class="text-xs text-rose-500"><i class="fas fa-lock"></i></span>
-              </button>
-            </div>
-                <div class="flex items-start gap-4">
+                <div class="flex items-center gap-3 w-full">
                   <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
                     <i class="fas fa-desktop text-xl"></i>
                   </span>
                   <div class="flex-1 min-w-0">
                     <p class="font-semibold text-slate-900 truncate">{{ register.name }}</p>
-                    <p class="text-xs text-slate-400 mt-0.5 truncate">
-                      {{ register.point_of_sale?.name || 'Sans point de vente' }}
-                    </p>
-                    <p v-if="register.current_session?.user?.name" class="text-xs text-indigo-600 mt-1">
-                      👤 Occupé par: {{ register.current_session.user.name }}
-                    </p>
+                    <p class="text-xs text-slate-400 mt-0.5 truncate">{{ register.point_of_sale?.name || 'Sans point de vente' }}</p>
+                    <p v-if="register.current_session?.user?.name" class="text-xs text-indigo-600 mt-1">👤 Occupé par: {{ register.current_session.user.name }}</p>
                   </div>
-                </div>
-
-                <div class="mt-4">
                   <span
                     v-if="statusBadgeText(register.id)"
-                    :class="['inline-block px-3.5 py-1 rounded-xl text-xs font-semibold', statusBadgeClass(register.id)]"
+                    :class="['inline-block px-2 py-1 rounded-lg text-xs font-semibold', statusBadgeClass(register.id)]"
                   >
                     {{ statusBadgeText(register.id) }}
                   </span>
                 </div>
 
                 <!-- Panneau de debug -->
-                <div v-if="debugMode" class="mt-2 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-400 space-y-0.5">
-                  <div>🔍 Status: {{ registerStatuses[register.id] || '?' }}</div>
+                <div v-if="debugMode" class="mt-3 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-400 w-full">
                   <div>👤 Owner: {{ registerOwners[register.id] || '-' }}</div>
                   <div>🔒 Locked: {{ isRegisterLocked(register.id) }}</div>
                 </div>
-              </button>
-            </div>
-
-            <div v-else class="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-              Aucune caisse disponible.
-              <button
-                type="button"
-                class="ml-2 text-indigo-600 underline hover:text-indigo-700"
-                @click="goToMachineManagement"
-              >
-                Créer une caisse
               </button>
             </div>
           </div>
@@ -166,18 +144,19 @@
         <p v-if="isAdminVirtualSession" class="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-600">
           👑 Mode supervision Admin - Session virtuelle active
         </p>
+      </div>
 
-        <!-- Bouton principal -->
+      <!-- Footer (Bouton principal et message d'erreur) -->
+      <div class="px-6 py-6 flex-shrink-0 border-t border-slate-100">
         <button
           type="button"
-          class="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="connectButtonDisabled"
           @click="onConnectButtonClick"
         >
           <i class="fas fa-link"></i> {{ connectButtonText }}
         </button>
 
-        <!-- Message d'erreur -->
         <div v-if="errorMessage" class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
           {{ errorMessage }}
         </div>
@@ -191,7 +170,7 @@
     @send="handleAmountModalSend"
   />
 
-  <!-- Modal résumé session -->
+  <!-- Modal résumé session (une seule fois) -->
   <div v-if="isSummaryModalOpen" class="summary-overlay" @click.self="closeSummaryModal">
     <div class="summary-modal">
       <div class="summary-modal-head">
@@ -256,11 +235,10 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import { useRouter } from 'vue-router'
 import AmountModal from './AmountModal.vue'
 import { useAuth } from '@/composables/useAuth'
-import { API_BASE_URL } from '@/utils/api'
 
 const router = useRouter()
 const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
@@ -273,11 +251,21 @@ const loadingRegisters = ref(false)
 const searchRegister = ref('')
 
 const filteredRegisters = computed(() => {
-  if (!searchRegister.value) return cashRegisters.value
-  return cashRegisters.value.filter(r => 
-    r.name.toLowerCase().includes(searchRegister.value.toLowerCase())
-  )
+  const posId = activePos.value?.id
+  if (!posId) return []
+
+  let filtered = cashRegisters.value
+
+  // Filter by search query
+  if (searchRegister.value) {
+    const query = searchRegister.value.toLowerCase()
+    filtered = filtered.filter(r => r.name.toLowerCase().includes(query))
+  }
+
+  // Filter by active POS
+  return filtered.filter(r => (r.point_of_sale_id || r.point_of_sale?.id) === posId)
 })
+
 const cashRegisters = ref([])
 const registerStatuses = ref({})
 const registerOwners = ref({})
@@ -359,11 +347,6 @@ const connectButtonDisabled = computed(() => {
 })
 
 // ========== FONCTIONS UTILITAIRES ==========
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error("Token d'authentification manquant")
-  return { Authorization: `Bearer ${token}` }
-}
 
 const statusBadgeClass = (registerId) => {
   const text = statusBadgeText(registerId)
@@ -444,7 +427,7 @@ const fetchCashRegisters = async () => {
   loadingRegisters.value = true
   errorMessage.value = ''
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-registers`, { headers: getAuthHeaders() })
+    const { data } = await apiClient.get('/cash-registers')
     let registers = []
     if (Array.isArray(data)) registers = data
     else if (data?.data && Array.isArray(data.data)) registers = data.data
@@ -848,12 +831,33 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ... vos styles existants ... */
 .selected {
   border-color: #4f46e5 !important;
   background-color: #eef2ff !important;
   box-shadow: 0 0 0 2px #4f46e5;
   transition: all 0.2s ease;
+}
+
+/* Scrollbar pour la liste des caisses */
+.max-h-\[400px\]::-webkit-scrollbar {
+  width: 8px;
+}
+.max-h-\[400px\]::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.max-h-\[400px\]::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.max-h-\[400px\]::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Style de focus pour la recherche */
+input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .summary-overlay {
@@ -1034,5 +1038,27 @@ onMounted(async () => {
     width: 100%;
     min-width: 0;
   }
+  /* Scrollbar pour la liste des caisses */
+      .max-h-\[400px\]::-webkit-scrollbar {
+        width: 8px;
+      }
+      .max-h-\[400px\]::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+      }
+      .max-h-\[400px\]::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .max-h-\[400px\]::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Style de focus pour la recherche */
+      input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+      }
+
 }
 </style>
