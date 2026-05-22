@@ -8,6 +8,8 @@ use App\Models\SalePayment;
 use App\Services\SalePaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Response;
 
 class SalePaymentController extends Controller
 {
@@ -23,9 +25,9 @@ class SalePaymentController extends Controller
     public function store(Request $request, $saleId)
     {
         try {
-            $user = auth()->guard('api')->user();
+            $user = Auth::user();
 
-            if (!auth()->guard('api')->check()) {
+            if (!Auth::check()) {
                 return response()->json(['message' => 'Unauthorized'], 403);
             }
 
@@ -38,11 +40,26 @@ class SalePaymentController extends Controller
 
             $sale = Sale::findOrFail($saleId);
 
-            // Vérification pour les caissiers
-            if ($user->hasRole('caissier', 'api') && $user->point_of_sale_id !== $sale->point_of_sale_id) {
-                return response()->json([
-                    'message' => 'Vous ne pouvez ajouter des paiements que sur votre point de vente.'
-                ], 403);
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            // Non-admin specific checks
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json([
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json([
+                        'message' => 'Accès refusé pour ce point de vente.'
+                    ], 403);
+                }
+                if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                    return response()->json([
+                        'message' => 'La vente n\'appartient pas à votre point de vente actif.'
+                    ], 403);
+                }
             }
 
             // Gérants ne peuvent pas ajouter de paiements
@@ -131,24 +148,43 @@ class SalePaymentController extends Controller
     /**
      * Lister les paiements d'une vente
      */
-    public function index($saleId)
+    public function index($saleId, Request $request)
     {
-        $user = auth()->guard('api')->user();
+        $user = Auth::user();
 
         // ✅ Vérification de permission
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('view.sale_payments', 'api')) {
+        if (!Auth::check() || !$user->hasPermissionTo('view.sale_payments', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
 
         $sale = Sale::with('payments.payment')->findOrFail($saleId);
 
-        // Vérification selon le rôle
-        if ($user->hasRole('gerant', 'api') && $user->point_of_sale_id !== $sale->point_of_sale_id) {
-            abort(403, 'Vous ne pouvez voir que les paiements de votre point de vente.');
-        }
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
-        if ($user->hasRole('caissier', 'api') && $user->id !== $sale->user_id) {
-            abort(403, 'Vous ne pouvez voir que vos propres paiements.');
+        // Non-admin specific checks
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json([
+                    'message' => 'La vente n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+            // Caissier can only see their own sales
+            if ($user->hasRole('caissier', 'api') && $user->id !== $sale->user_id) {
+                return response()->json([
+                    'message' => 'Vous ne pouvez voir que vos propres paiements.'
+                ], 403);
+            }
         }
 
         $totalPaid = $sale->amount_received ?? 0;
@@ -165,12 +201,12 @@ class SalePaymentController extends Controller
     /**
      * Voir un paiement spécifique
      */
-    public function show($saleId, $paymentId)
+    public function show($saleId, $paymentId, Request $request)
     {
-        $user = auth()->guard('api')->user();
+        $user = Auth::user();
 
         // ✅ Vérification de permission
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('view.sale_payments', 'api')) {
+        if (!Auth::check() || !$user->hasPermissionTo('view.sale_payments', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
 
@@ -181,13 +217,32 @@ class SalePaymentController extends Controller
 
         $sale = $salePayment->sale;
 
-        // Vérification selon le rôle
-        if ($user->hasRole('gerant', 'api') && $user->point_of_sale_id !== $sale->point_of_sale_id) {
-            abort(403, 'Vous ne pouvez voir que les paiements de votre point de vente.');
-        }
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
-        if ($user->hasRole('caissier', 'api') && $user->id !== $sale->user_id) {
-            abort(403, 'Vous ne pouvez voir que vos propres paiements.');
+        // Non-admin specific checks
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json([
+                    'message' => 'La vente n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+            // Caissier can only see their own sales
+            if ($user->hasRole('caissier', 'api') && $user->id !== $sale->user_id) {
+                return response()->json([
+                    'message' => 'Vous ne pouvez voir que vos propres paiements.'
+                ], 403);
+            }
         }
 
         return response()->json($salePayment);
@@ -198,16 +253,47 @@ class SalePaymentController extends Controller
      */
     public function update(Request $request, $saleId, $paymentId)
     {
-        $user = auth()->guard('api')->user();
+        $user = Auth::user();
 
         // ✅ Vérification de permission
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('update.sale_payments', 'api')) {
+        if (!Auth::check() || !$user->hasPermissionTo('update.sale_payments', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
 
         $salePayment = SalePayment::where('sale_id', $saleId)
             ->where('id', $paymentId)
             ->firstOrFail();
+
+        $sale = $salePayment->sale; // Access sale through salePayment
+
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
+
+        // Non-admin specific checks
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json([
+                    'message' => 'La vente n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+            // Caissier can only modify their own sales
+            if ($user->hasRole('caissier', 'api') && $user->id !== $sale->user_id) {
+                return response()->json([
+                    'message' => 'Vous ne pouvez modifier que vos propres paiements.'
+                ], 403);
+            }
+        }
+
 
         $validated = $request->validate([
             'amount' => 'sometimes|numeric|min:0.01',
@@ -218,7 +304,6 @@ class SalePaymentController extends Controller
         $salePayment->update($validated);
 
         // Recalculer le total payé et mettre à jour la vente
-        $sale = $salePayment->sale;
         $totalPaid = $sale->payments()->sum('amount');
         $sale->update([
             'amount_received' => $totalPaid,
@@ -236,12 +321,12 @@ class SalePaymentController extends Controller
     /**
      * Supprimer un paiement
      */
-    public function destroy($saleId, $paymentId)
+    public function destroy($saleId, $paymentId, Request $request)
     {
-        $user = auth()->guard('api')->user();
+        $user = Auth::user();
 
         // ✅ Vérification de permission
-        if (!auth()->guard('api')->check() || !$user->hasPermissionTo('delete.sale_payments', 'api')) {
+        if (!Auth::check() || !$user->hasPermissionTo('delete.sale_payments', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
 
@@ -249,7 +334,35 @@ class SalePaymentController extends Controller
             ->where('id', $paymentId)
             ->firstOrFail();
 
-        $sale = $salePayment->sale;
+        $sale = $salePayment->sale; // Access sale through salePayment
+
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
+
+        // Non-admin specific checks
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json([
+                    'message' => 'La vente n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+            // Caissier can only delete payments from their own sales
+            if ($user->hasRole('caissier', 'api') && $user->id !== $sale->user_id) {
+                return response()->json([
+                    'message' => 'Vous ne pouvez supprimer que vos propres paiements.'
+                ], 403);
+            }
+        }
 
         // Supprimer le paiement
         $salePayment->delete();
