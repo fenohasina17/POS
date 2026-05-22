@@ -11,26 +11,11 @@ use App\Models\User;
 
 class PointOfSaleController extends Controller
 {
-    public function getProductsByPointOfSale($pointOfSaleId)
-    {
-        $pointOfSale = PointOfSale::with(['pricings.product'])
-            ->findOrFail($pointOfSaleId);
-
-        $productsWithPrices = $pointOfSale->pricings->map(function ($pricing) {
-            return [
-                'name' => $pricing->product->name,
-                'price' => $pricing->price,
-                'category_name' => $pricing->product->category ? $pricing->product->category->name : null, // Vérifier si la catégorie existe
-            ];
-        });
-
-        return response()->json($productsWithPrices);
-    }
     // Liste tous les points de vente
-
     public function index()
     {
-        $pointOfSales = PointOfSale::with('users')->get();
+        // Eager load assigned users to reflect many-to-many relationship
+        $pointOfSales = PointOfSale::with('assignedUsers')->get();
 
         return response()->json($pointOfSales);
     }
@@ -56,7 +41,8 @@ class PointOfSaleController extends Controller
     // Affiche un point de vente
     public function show($id)
     {
-        $pointOfSale = PointOfSale::with('users')->find($id);
+        // Eager load assigned users to reflect many-to-many relationship
+        $pointOfSale = PointOfSale::with('assignedUsers')->find($id);
 
         if (!$pointOfSale) {
             return response()->json(['message' => 'Point de vente non trouvé'], 404);
@@ -102,11 +88,7 @@ class PointOfSaleController extends Controller
         // Dissocier l'utilisateur via la table pivot
         $pointOfSale->assignedUsers()->detach($user->id);
 
-        // Si l'utilisateur avait ce POS comme POS par défaut, on le met à null
-        if ($user->point_of_sale_id === $pointOfSale->id) {
-            $user->point_of_sale_id = $user->pointsOfSale()->first()?->id;
-            $user->save();
-        }
+        // Logic for default point_of_sale_id removed as it no longer exists
 
         return response()->json([
             'message' => 'Utilisateur retiré du point de vente avec succès.',
@@ -121,11 +103,7 @@ class PointOfSaleController extends Controller
         // Associer l'utilisateur au point de vente via la table pivot
         $pointOfSale->assignedUsers()->syncWithoutDetaching([$user->id]);
 
-        // Si l'utilisateur n'avait pas de POS par défaut, on lui assigne celui-ci
-        if ($user->point_of_sale_id === null) {
-            $user->point_of_sale_id = $pointOfSale->id;
-            $user->save();
-        }
+        // Logic for default point_of_sale_id removed as it no longer exists
 
         return response()->json([
             'message' => 'Utilisateur associé au point de vente avec succès.',
