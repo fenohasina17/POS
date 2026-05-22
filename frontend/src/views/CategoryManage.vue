@@ -151,10 +151,12 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import CategoryCreateModal from './CategoryCreateModal.vue'
 import CategoryEditModal from './CategoryEditModal.vue'
 import { API_BASE_URL } from '@/utils/api'
+import { useAuth } from '@/composables/useAuth'
 
 // =============================================
 // ÉTATS RÉACTIFS
 // =============================================
+const { activePos } = useAuth()
 const categories = ref([])
 const searchQuery = ref('')
 const loading = ref(true)
@@ -180,12 +182,14 @@ const isDeleting = ref(false)
 const fetchCategories = async () => {
   try {
     loading.value = true
-    const user = JSON.parse(localStorage.getItem('user'))
+    const posId = activePos.value?.id
+    if (!posId) throw new Error('Point de vente non configuré')
+    
     const token = localStorage.getItem('token');
     const response = await axios.get(`${API_BASE_URL}/categories`, {
       params: {
         'with_products': 1,
-        'point_of_sale_id': user.point_of_sale_id,
+        'point_of_sale_id': posId,
         'with_pricing': 1,
       },
       headers: {
