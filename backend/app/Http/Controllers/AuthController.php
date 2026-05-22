@@ -33,7 +33,7 @@ class AuthController extends BaseController
             return response()->json([
                 'message' => 'Utilisateur enregistré avec succès',
                 'token' => $token,
-                'user' => $user,
+                'user' => $user->load('pointsOfSale'), // Load pointsOfSale here
             ], 201);
         } catch (ValidationException $e) {
             return response()->json([
@@ -68,7 +68,7 @@ class AuthController extends BaseController
             return response()->json([
                 'message' => 'Connexion réussie',
                 'token' => $token,
-                'user' => $user,
+                'user' => $user->load('pointsOfSale'), // Load pointsOfSale here
             ]);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
@@ -107,8 +107,7 @@ class AuthController extends BaseController
                         'id' => $user->id,
                         'name' => $user->name,
                         'email' => $user->email,
-                        'point_of_sale_id' => $user->point_of_sale_id,
-                        'point_of_sale_name' => $user->pointOfSale->name ?? 'Non attribué'
+                        'points_of_sale' => $user->pointsOfSale->map(fn($p) => ['id' => $p->id, 'name' => $p->name]), // Return plural
                     ]
                 ], 200);
             }
