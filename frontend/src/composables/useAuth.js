@@ -5,9 +5,17 @@ import { storage } from '@/utils/storage'
 export function useAuth() {
   const authState = ref(storage.getAuth())
 
+  const activePos = ref(storage.getActivePos())
+
   const user = computed(() => authState.value?.user || null)
   const roles = computed(() => authState.value?.user?.roles || [])
   const permissions = computed(() => authState.value?.user?.permissions || [])
+  const pointsOfSale = computed(() => authState.value?.user?.points_of_sale || [])
+
+  const setActivePos = (pos) => {
+    activePos.value = pos
+    storage.setActivePos(pos)
+  }
 
   const isAuthenticated = computed(() => {
     return !!authState.value?.token
@@ -64,6 +72,9 @@ export function useAuth() {
     user,
     roles,
     permissions,
+    pointsOfSale,
+    activePos,
+    setActivePos,
     isAuthenticated,
     hasRole,
     hasPermission,
