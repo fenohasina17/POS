@@ -155,6 +155,9 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
+import { useAuth } from '@/composables/useAuth'
+
+const { activePos } = useAuth()
 
 const props = defineProps({
   isOpen: Boolean
@@ -180,18 +183,16 @@ const saveError = ref('')
 // Récupération des catégories avec gestion de la réponse
 const fetchCategories = async () => {
   try {
-    const token = localStorage.getItem('token')
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const pointOfSaleId = user?.point_of_sale_id
-
-    if (!pointOfSaleId) {
-      console.warn('Point de vente non trouvé pour l’utilisateur')
+    const posId = activePos.value?.id
+    if (!posId) {
+      console.warn('Point de vente non configuré pour l’utilisateur')
       categories.value = []
       return
     }
 
+    const token = localStorage.getItem('token')
     const response = await axios.get(`${API_BASE_URL}/categories`, {
-      params: { point_of_sale_id: pointOfSaleId },
+      params: { point_of_sale_id: posId },
       headers: { Authorization: `Bearer ${token}` }
     })
 
