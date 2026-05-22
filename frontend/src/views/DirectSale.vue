@@ -688,46 +688,6 @@ const openPaymentModal = () => {
 }
 </script>
 
-<style scoped>
-.direct-sale-layout {
-  min-height: calc(100vh - 5rem);
-  min-height: calc(100dvh - 5rem);
-}
-
-@media (min-width: 1024px) {
-  .direct-sale-layout {
-    height: calc(100vh - 5.5rem);
-    height: calc(100dvh - 5.5rem);
-    max-height: calc(100vh - 5.5rem);
-    max-height: calc(100dvh - 5.5rem);
-    overflow: hidden;
-  }
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.overflow-y-auto::-webkit-scrollbar {
-  width: 4px;
-}
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
-}
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-}
-
-erflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
-}
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-}
+<style>
+@import '@/assets/styles/DirectSale.css';
 </style>
