@@ -22,7 +22,7 @@ class CashRegisterSessionController extends Controller
     protected $discrepancyService;
 
     public function __construct(
-        CashRegisterSessionSummaryService $summaryService, 
+        CashRegisterSessionSummaryService $summaryService,
         SessionDiscrepancyService $discrepancyService
     ) {
         $this->summaryService = $summaryService;
@@ -55,18 +55,38 @@ class CashRegisterSessionController extends Controller
 
         $isManager = $this->userIsManager($user);
         $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
-        if (!$isAdmin && $isManager) {
-            $pointOfSaleId = $user->point_of_sale_id;
-            if ($pointOfSaleId) {
-                $query->whereHas('cashRegister', function ($q) use ($pointOfSaleId) {
-                    $q->where('point_of_sale_id', $pointOfSaleId);
-                });
-            } else {
+        // Admin can see all or filter by query param
+        if ($isAdmin) {
+            $requestedPosId = $request->query('point_of_sale_id');
+            if ($requestedPosId) {
+                $query->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $requestedPosId));
+            }
+        }
+        // Managers (gerant) and regular users are restricted by their active POS or user_id
+        else {
+            if (!$activePosId) {
+                // For non-admins, an active POS is mandatory
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            // Check if user is assigned to the active POS
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            // Filter by active POS
+            $query->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $activePosId));
+            
+            // Further restrict non-managers to their own sessions if they are not admin
+            if (!$isAdmin && !$isManager) {
                 $query->where('user_id', $user->id);
             }
-        } elseif (!$isAdmin) {
-            $query->where('user_id', $user->id);
         }
 
         if ($request->boolean('with_trashed')) {
@@ -112,13 +132,28 @@ class CashRegisterSessionController extends Controller
             abort(403, 'Les gérants ne peuvent pas créer de session de caisse.');
         }
 
+        $activePosId = $request->attributes->get('activePosId');
+
+        if (!$activePosId) {
+             return response()->json([
+                'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+            ], 403);
+        }
+        // Check if user is assigned to the active POS
+        if (!$user->pointsOfSale->contains($activePosId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé pour ce point de vente.'
+            ], 403);
+        }
+
         // 3. Validation stricte
         $validated = $request->validate([
             'cash_register_id' => [
                 'required',
-                // On vérifie que la caisse existe ET appartient au même Point de Vente que l'utilisateur
-                Rule::exists('cash_registers', 'id')->where(function ($query) use ($user) {
-                    $query->where('point_of_sale_id', $user->point_of_sale_id);
+                // On vérifie que la caisse existe ET appartient au même Point de Vente actif de l'utilisateur
+                Rule::exists('cash_registers', 'id')->where(function ($query) use ($activePosId) {
+                    $query->where('point_of_sale_id', $activePosId);
                 }),
             ],
             'starting_amount' => 'required|numeric|min:0',
@@ -182,17 +217,32 @@ public function show($id, Request $request)
 
         $isManager = $this->userIsManager($user);
         $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
-        if (!$isAdmin && $isManager) {
-            $pointOfSaleId = $user->point_of_sale_id;
-            if ($pointOfSaleId && optional($session->cashRegister)->point_of_sale_id !== $pointOfSaleId) {
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            // Check if user is assigned to the active POS
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            // Ensure session belongs to the active POS
+            if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+            // Further restrict non-managers to their own sessions
+            if (!$isManager && $session->user_id !== $user->id) {
                 abort(403, 'This action is unauthorized.');
             }
-            if (!$pointOfSaleId && $session->user_id !== $user->id) {
-                abort(403, 'This action is unauthorized.');
-            }
-        } elseif (!$isAdmin && $session->user_id !== $user->id) {
-            abort(403, 'This action is unauthorized.');
         }
         return response()->json($session);
     } catch (\Exception $e) {
@@ -220,12 +270,34 @@ public function show($id, Request $request)
             abort(401, 'Unauthenticated.');
         }
 
-        // Autorisation : Admin peut tout faire, le caissier peut modifier SA propre session, 
+        // Autorisation : Admin peut tout faire, le caissier peut modifier SA propre session,
         // le gérant est bloqué par la restriction métier plus bas.
         $isOwner = $session->user_id === $user->id;
         $hasUpdatePerm = $user->hasPermissionTo('update.cash_register_sessions', 'api');
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
-        if (!$user->hasRole('admin', 'api')) {
+
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            // Check if user is assigned to the active POS
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            // Ensure session belongs to the active POS
+            if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
             if (!$hasUpdatePerm && !$isOwner) {
                 abort(403, 'This action is unauthorized.');
             }
@@ -310,7 +382,7 @@ public function show($id, Request $request)
     /**
      * Soft delete the specified cash register session.
      */
-    public function destroy($id)
+    public function destroy($id, Request $request)
     {
         $session = CashRegisterSession::find($id);
 
@@ -327,6 +399,31 @@ public function show($id, Request $request)
             abort(403, 'Les gérants ne peuvent pas supprimer une session de caisse.');
         }
 
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
+
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            // Check if user is assigned to the active POS
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            // Ensure session belongs to the active POS
+            if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+        }
+
         $session->delete();
 
         return response()->json(['message' => 'Cash register session deleted successfully.']);
@@ -335,7 +432,7 @@ public function show($id, Request $request)
     /**
      * Reopen a closed cash register session.
      */
-    public function reopen($id)
+    public function reopen($id, Request $request)
     {
         $session = CashRegisterSession::find($id);
 
@@ -350,6 +447,31 @@ public function show($id, Request $request)
         }
         if (!$user->hasRole('admin', 'api') && $this->userIsManager($user)) {
             abort(403, 'Les gérants ne peuvent pas rouvrir une session de caisse.');
+        }
+
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
+
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            // Check if user is assigned to the active POS
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            // Ensure session belongs to the active POS
+            if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
         }
 
         if (!$session->is_closed) {
@@ -381,6 +503,30 @@ public function show($id, Request $request)
             abort(403, 'This action is unauthorized.');
         }
 
+        // Apply active POS filtering for non-admins
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
+
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+        }
+
         return response()->json($session->discrepancies);
     }
 
@@ -399,6 +545,30 @@ public function show($id, Request $request)
         if (!$user->hasPermissionTo('update.cash_register_sessions', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
+        
+        // Apply active POS filtering for non-admins
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
+
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
+                ], 403);
+            }
+        }
 
         $validated = $request->validate([
             'description' => 'required|string',
@@ -406,8 +576,8 @@ public function show($id, Request $request)
         ]);
 
         $discrepancy = $this->discrepancyService->recordDiscrepancy(
-            $session, 
-            $validated['amount'], 
+            $session,
+            $validated['amount'],
             $validated['description']
         );
 
@@ -417,7 +587,7 @@ public function show($id, Request $request)
     /**
      * Get a summary report of the cash register session.
      */
-    public function summary($id)
+    public function summary($id, Request $request)
     {
         // 1. Chargement de la session avec sa caisse pour connaître son POS
         $session = CashRegisterSession::with(['cashRegister', 'transactions', 'discrepancies', 'user'])
@@ -436,13 +606,27 @@ public function show($id, Request $request)
         }
 
         // 3. LOGIQUE DE FILTRAGE PAR POINT DE VENTE (POS)
-        if (!$user->hasRole('admin', 'api')) {
-            // Si c'est un gérant, on vérifie que le POS de la caisse est le sien
-            $userPosId = $user->point_of_sale_id;
-            $sessionPosId = $session->cashRegister ? $session->cashRegister->point_of_sale_id : null;
+        $isAdmin = $user->hasRole('admin', 'api');
+        $activePosId = $request->attributes->get('activePosId');
 
-            if ($userPosId !== $sessionPosId) {
-                abort(403, 'Accès refusé : Vous ne pouvez voir que les ventes de votre propre point de vente.');
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json([
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+            // Ensure session belongs to the active POS
+            if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
+                 return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
+                ], 403);
             }
         }
         // Si c'est un Admin, le code continue sans bloquer (Accès total)
@@ -466,7 +650,7 @@ public function show($id, Request $request)
     /**
      * Get the status of a specific cash register session.
      */
-    public function status($cashRegisterId)
+    public function status($cashRegisterId, Request $request)
     {
         try {
             // Vérifier que l'utilisateur est authentifié
@@ -477,6 +661,33 @@ public function show($id, Request $request)
                     'message' => 'Non authentifié'
                 ], 401);
             }
+
+            // Apply active POS filtering for non-admins
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json([
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès refusé pour ce point de vente.'
+                    ], 403);
+                }
+                // Ensure the cash register belongs to the active POS
+                $cashRegister = \App\Models\CashRegister::find($cashRegisterId); // Fetch to get POS ID
+                if (!$cashRegister || $cashRegister->point_of_sale_id !== $activePosId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès refusé : la caisse n\'appartient pas à votre point de vente actif.'
+                    ], 403);
+                }
+            }
+
 
             // Rechercher la session ouverte pour cette caisse
             $session = CashRegisterSession::where('cash_register_id', $cashRegisterId)
@@ -512,7 +723,7 @@ public function show($id, Request $request)
     /**
      * Get the active session for the current user.
      */
-    public function myActiveSession()
+    public function myActiveSession(Request $request)
     {
         try {
             $user = Auth::user();
@@ -523,9 +734,24 @@ public function show($id, Request $request)
                 ], 401);
             }
 
-            // Rechercher la session active pour l'utilisateur connecté
+            $activePosId = $request->attributes->get('activePosId');
+            if (!$activePosId) {
+                return response()->json([
+                    'data' => null,
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                ], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
+
+            // Rechercher la session active pour l'utilisateur connecté dans le POS actif
             $session = CashRegisterSession::where('user_id', $user->id)
                 ->where('is_closed', false)
+                ->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $activePosId))
                 ->with(['cashRegister', 'user'])
                 ->first();
 
@@ -554,10 +780,24 @@ public function show($id, Request $request)
     public function openSessions(Request $request)
     {
         $user = $request->user();
-        $pointOfSaleId = $user->point_of_sale_id; // l'utilisateur a un point de vente associé
+        $activePosId = $request->attributes->get('activePosId');
+
+        if (!$activePosId) {
+             return response()->json([
+                'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+            ], 403);
+        }
+        // Check if user is assigned to the active POS
+        if (!$user->pointsOfSale->contains($activePosId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé pour ce point de vente.'
+            ], 403);
+        }
+
         $sessions = CashRegisterSession::whereNull('closed_at')
-            ->whereHas('cashRegister', function ($q) use ($pointOfSaleId) {
-                $q->where('point_of_sale_id', $pointOfSaleId);
+            ->whereHas('cashRegister', function ($q) use ($activePosId) {
+                $q->where('point_of_sale_id', $activePosId);
             })
             ->with(['cashRegister', 'user'])
             ->get();
