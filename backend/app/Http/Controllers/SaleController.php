@@ -1250,12 +1250,35 @@ class SaleController extends Controller
     public function removeFromPendingOrder(Request $request, $saleId)
     {
         try {
+            $user = auth()->guard('api')->user();
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
+            }
+
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                }
+            }
+
             $validated = $request->validate([
                 'order_line_ids' => 'required|array|min:1',
                 'order_line_ids.*' => 'required|exists:order_lines,id',
             ]);
 
             $sale = Sale::findOrFail($saleId);
+
+            // Ensure sale belongs to the active POS for non-admins
+            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+                return response()->json(['message' => 'Cette commande n\'appartient pas à votre point de vente actif.'], 403);
+            }
+
             $updatedSale = $this->saleService->removeFromPendingOrder($sale, $validated['order_line_ids']);
 
             return response()->json($updatedSale, 200);
