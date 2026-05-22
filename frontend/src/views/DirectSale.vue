@@ -302,9 +302,11 @@ const searchQuery = ref('')
 const user = ref(null)
 const selectedDiscount = ref(0)
 const isLoading = ref(false)
+import { useCart } from '@/composables/useCart'
 import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
 
 // ...
+const { cart, totalPrice, addToCart, removeFromCart, clearCart } = useCart()
 const { isSessionBilleted, checkActiveSession } = useCashRegisterSession()
 // ...
 const canSell = computed(() => {
