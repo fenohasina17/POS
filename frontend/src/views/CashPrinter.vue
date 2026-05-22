@@ -241,7 +241,7 @@ import AmountModal from './AmountModal.vue'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
+const { isAdmin, user: currentUser, hasRole, loadUserData, activePos } = useAuth()
 
 // ========== ÉTATS ==========
 const debugMode = ref(window.location.search.includes('debug=true'))
