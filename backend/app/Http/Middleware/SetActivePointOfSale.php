@@ -27,19 +27,6 @@ class SetActivePointOfSale
                 // Vérifier si l'utilisateur est associé à ce point de vente
                 if ($user->pointsOfSale->contains($activePosId)) {
                     $request->attributes->set('activePosId', $activePosId);
-                    // Stocker également dans la session pour les cas où le header n'est pas toujours envoyé (ex: formulaires web)
-                    $request->session()->put('activePosId', $activePosId);
-                } else {
-                    // Si le POS n'est pas valide pour cet utilisateur, on peut décider de rejeter
-                    // ou d'ignorer le header. Pour l'instant, on l'ignorera silencieusement.
-                    // Ou bien, on pourrait retourner un 403:
-                    // return response()->json(['message' => 'Accès refusé pour ce point de vente'], 403);
-                }
-            } else {
-                // Si pas de header, tenter de récupérer depuis la session
-                $sessionActivePosId = $request->session()->get('activePosId');
-                if ($sessionActivePosId && $user->pointsOfSale->contains($sessionActivePosId)) {
-                    $request->attributes->set('activePosId', $sessionActivePosId);
                 }
             }
         }
