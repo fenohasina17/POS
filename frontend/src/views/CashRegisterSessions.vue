@@ -239,14 +239,14 @@ import CashRegisterEditModal from './CashRegisterEditModal.vue'
 
 library.add(faCashRegister, faPlus, faRotate, faTrash, faPen, faXmark, faFilter, faTriangleExclamation, faCircleCheck)
 
-const { isAdmin, user: currentUser } = useAuth()
+const { isAdmin, user: currentUser, pointsOfSale, activePos } = useAuth()
 
 const loading = ref(false)
 const saving = ref(false)
 const showCreateForm = ref(false)
 const showEditModal = ref(false)
 const registers = ref([])
-const pointsOfSale = ref([])
+// pointsOfSale is now from useAuth, so no need for local ref
 const selectedPosFilter = ref(null)
 const selectedRegister = ref(null)
 
@@ -258,8 +258,8 @@ const form = ref({
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const userPointOfSaleId = computed(() => currentUser.value?.point_of_sale_id)
-const userPointOfSaleName = computed(() => currentUser.value?.point_of_sale?.name || 'Point de vente non défini')
+// Computed: Use activePos.value.id instead of userPointOfSaleId
+const userPointOfSaleName = computed(() => activePos.value?.name || 'Point de vente non défini')
 
 const filteredRegisters = computed(() => {
   if (selectedPosFilter.value === null) return registers.value
@@ -272,17 +272,7 @@ const getAuthHeaders = () => {
 }
 
 const fetchPointsOfSale = async () => {
-  try {
-    if (isAdmin.value) {
-      const { data } = await axios.get(`${API_BASE_URL}/point-of-sales`, { headers: getAuthHeaders() })
-      pointsOfSale.value = data?.data || data || []
-    } else if (currentUser.value?.points_of_sale) {
-      // Si c'est un gérant, on utilise les sites qui lui sont assignés (déjà chargés dans le profil)
-      pointsOfSale.value = currentUser.value.points_of_sale
-    }
-  } catch (err) {
-    console.error('Erreur sites:', err)
-  }
+  // pointsOfSale is already available via useAuth()
 }
 
 const fetchRegisters = async () => {
@@ -302,7 +292,7 @@ const fetchRegisters = async () => {
 const createRegister = async () => {
   if (!form.value.name.trim()) return
   
-  const posId = isAdmin.value ? form.value.point_of_sale_id : userPointOfSaleId.value
+  const posId = isAdmin.value ? form.value.point_of_sale_id : activePos.value?.id
   if (!posId) {
     errorMessage.value = 'Veuillez sélectionner un point de vente.'
     return
@@ -368,14 +358,13 @@ const handleEditSubmit = async (formData) => {
 
 const resetForm = () => {
   showCreateForm.value = false
-  form.value = { name: '', point_of_sale_id: isAdmin.value ? null : userPointOfSaleId.value }
+  form.value = { name: '', point_of_sale_id: isAdmin.value ? null : activePos.value?.id }
 }
 
 onMounted(() => {
-  fetchPointsOfSale()
   fetchRegisters()
   if (!isAdmin.value) {
-    form.value.point_of_sale_id = userPointOfSaleId.value
+    form.value.point_of_sale_id = activePos.value?.id
   }
 })
 </script>
