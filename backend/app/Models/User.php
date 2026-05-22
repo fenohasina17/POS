@@ -27,7 +27,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'point_of_sale_id',
     ];
     protected $guard_name = 'api';
 
@@ -52,10 +51,6 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
-    }
-    public function pointOfSale()
-    {
-        return $this->belongsTo(PointOfSale::class);
     }
     public function pointsOfSale()
     {
