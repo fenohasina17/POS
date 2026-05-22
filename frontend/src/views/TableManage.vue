@@ -294,105 +294,103 @@
   </div>
 </template>
 
-<script>
-import Profile from './Profile.vue'
+<script setup>
+import { ref, onMounted, computed, watch } from 'vue'
 import { API_BASE_URL } from '@/utils/api'
+import { useAuth } from '@/composables/useAuth'
+import Profile from './Profile.vue'
 
-export default {
-  name: 'TableManage',
-  components: {
-    Profile
-  },
-  props: {
+const { isAdmin, pointsOfSale, activePos } = useAuth()
+
+const props = defineProps({
     embedded: {
-      type: Boolean,
-      default: false
+        type: Boolean,
+        default: false
     }
-  },
-  data() {
-    return {
-      tables: [],
-      statistics: {
-        total_tables: 0,
-        available_tables: 0,
-        occupied_tables: 0,
-        reserved_tables: 0,
-        out_of_order_tables: 0,
-        occupancy_rate: 0
-      },
-      searchQuery: '',
-      activeFilters: [],
-      statusFilters: [
-        { value: 'available', label: 'Disponibles', icon: 'fas fa-check-circle' },
-        { value: 'occupied', label: 'Occupées', icon: 'fas fa-users' },
-        { value: 'reserved', label: 'Réservées', icon: 'fas fa-calendar-check' },
-        { value: 'out_of_order', label: 'Hors service', icon: 'fas fa-wrench' }
-      ],
-      showModal: false,
-      showDeleteModal: false,
-      isEditing: false,
-      loading: false,
-      loadingTableId: null,
-      tableToDelete: null,
-      editingTableId: null,
-      form: {
-        table_number: '',
-        name: '',
-        capacity: 4,
-        status: 'available',
-        description: '',
-        location: { x: null, y: null }
-      },
-      errors: {}
-    }
-  },
-  computed: {
-    filteredTables() {
-      let filtered = this.tables
+})
 
-      // Filter by search query
-      if (this.searchQuery) {
-        const query = this.searchQuery.toLowerCase()
+const tables = ref([])
+const statistics = ref({
+    total_tables: 0,
+    available_tables: 0,
+    occupied_tables: 0,
+    reserved_tables: 0,
+    out_of_order_tables: 0,
+    occupancy_rate: 0
+})
+const searchQuery = ref('')
+const activeFilters = ref([])
+const statusFilters = [
+    { value: 'available', label: 'Disponibles', icon: 'fas fa-check-circle' },
+    { value: 'occupied', label: 'Occupées', icon: 'fas fa-users' },
+    { value: 'reserved', label: 'Réservées', icon: 'fas fa-calendar-check' },
+    { value: 'out_of_order', label: 'Hors service', icon: 'fas fa-wrench' }
+]
+const showModal = ref(false)
+const showDeleteModal = ref(false)
+const isEditing = ref(false)
+const loading = ref(false)
+const loadingTableId = ref(null)
+const tableToDelete = ref(null)
+const editingTableId = ref(null)
+const form = ref({
+    table_number: '',
+    name: '',
+    capacity: 4,
+    status: 'available',
+    description: '',
+    location: { x: null, y: null }
+})
+const errors = ref({})
+
+const filteredTables = computed(() => {
+    let filtered = tables.value
+
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase()
         filtered = filtered.filter(table =>
-          table.table_number.toLowerCase().includes(query) ||
-          (table.name && table.name.toLowerCase().includes(query)) ||
-          (table.description && table.description.toLowerCase().includes(query))
+            table.table_number.toLowerCase().includes(query) ||
+            (table.name && table.name.toLowerCase().includes(query)) ||
+            (table.description && table.description.toLowerCase().includes(query))
         )
-      }
-
-      // Filter by status
-      if (this.activeFilters.length > 0) {
-        filtered = filtered.filter(table => this.activeFilters.includes(table.status))
-      }
-
-      return filtered
     }
-  },
-  async mounted() {
-    await this.loadTables()
-  },
-  methods: {
-    async loadTables() {
-      try {
+
+    if (activeFilters.value.length > 0) {
+        filtered = filtered.filter(table => activeFilters.value.includes(table.status))
+    }
+
+    return filtered
+})
+
+const loadTables = async () => {
+    try {
+        const posId = activePos.value?.id
+        if (!posId) {
+            console.warn('Point de vente actif non configuré')
+            tables.value = []
+            return
+        }
+
         const token = localStorage.getItem('token')
-        const response = await fetch(`${API_BASE_URL}/tables`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await fetch(`${API_BASE_URL}/tables?point_of_sale_id=${posId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         })
 
         if (response.ok) {
-          const payload = await response.json()
-          this.tables = this.normalizeTables(payload)
-          this.refreshStatisticsFromTables()
+            const payload = await response.json()
+            tables.value = normalizeTables(payload)
+            refreshStatisticsFromTables()
         } else {
-          console.error('Erreur lors du chargement des tables')
+            console.error('Erreur lors du chargement des tables')
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Erreur:', error)
-      }
-    },
+    }
+}
+// ... (rest of methods converted to standard functions)
 
     toggleStatusFilter(status) {
       const index = this.activeFilters.indexOf(status)
