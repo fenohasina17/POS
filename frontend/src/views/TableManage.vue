@@ -390,262 +390,19 @@ const loadTables = async () => {
         console.error('Erreur:', error)
     }
 }
-// ... (rest of methods converted to standard functions)
 
-    toggleStatusFilter(status) {
-      const index = this.activeFilters.indexOf(status)
-      if (index > -1) {
-        this.activeFilters.splice(index, 1)
-      } else {
-        this.activeFilters.push(status)
-      }
-    },
-
-    getTableCardClass(table) {
-      return {
-        'table-card': true,
-        'available': table.status === 'available',
-        'occupied': table.status === 'occupied',
-        'reserved': table.status === 'reserved',
-        'out-of-order': table.status === 'out_of_order'
-      }
-    },
-
-    getStatusIcon(status) {
-      const icons = {
-        'available': 'fas fa-check-circle',
-        'occupied': 'fas fa-users',
-        'reserved': 'fas fa-calendar-check',
-        'out_of_order': 'fas fa-wrench'
-      }
-      return icons[status] || 'fas fa-question-circle'
-    },
-
-    getStatusText(status) {
-      const texts = {
-        'available': 'Disponible',
-        'occupied': 'Occupée',
-        'reserved': 'Réservée',
-        'out_of_order': 'Hors service'
-      }
-      return texts[status] || 'Inconnu'
-    },
-
-    getToggleIcon(status) {
-      return status === 'available' ? 'fas fa-pause' : 'fas fa-play'
-    },
-
-    selectTable(table) {
-      // Pour sélectionner une table (futur usage)
-      console.log('Table sélectionnée:', table)
-    },
-
-    openCreateModal() {
-      this.isEditing = false
-      this.resetForm()
-      this.showModal = true
-    },
-
-    editTable(table) {
-      this.isEditing = true
-      this.editingTableId = table.id
-      this.form = {
-        table_number: table.table_number,
-        name: table.name || '',
-        capacity: table.capacity,
-        status: table.status,
-        description: table.description || '',
-        location: this.normalizeLocation(table.location)
-      }
-      this.showModal = true
-    },
-
-    resetForm() {
-      this.form = {
-        table_number: '',
-        name: '',
-        capacity: 4,
-        status: 'available',
-        description: '',
-        location: { x: null, y: null }
-      }
-      this.errors = {}
-      this.editingTableId = null
-    },
-
-    closeModal() {
-      this.showModal = false
-      this.resetForm()
-    },
-
-    async saveTable() {
-      this.loading = true
-      this.errors = {}
-
-      try {
-        const token = localStorage.getItem('token')
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
-        const url = this.isEditing
-          ? `${API_BASE_URL}/tables/${this.editingTableId}`
-          : `${API_BASE_URL}/tables`
-
-        const method = this.isEditing ? 'PUT' : 'POST'
-
-        const formData = {
-          table_number: String(this.form.table_number || '').trim(),
-          name: String(this.form.name || '').trim() || null,
-          capacity: Number(this.form.capacity) || 0,
-          status: this.normalizeStatus(this.form.status),
-          description: String(this.form.description || '').trim() || null
-        }
-
-        const location = this.prepareLocationPayload(this.form.location)
-        if (location) {
-          formData.location = location
-        }
-
-        const pointOfSaleId = Number(currentUser?.point_of_sale_id ?? 0)
-        if (Number.isFinite(pointOfSaleId) && pointOfSaleId > 0) {
-          formData.point_of_sale_id = pointOfSaleId
-        }
-
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData)
-        })
-
-        const rawText = await response.text()
-        let data = {}
-
-        try {
-          data = rawText ? JSON.parse(rawText) : {}
-        } catch (parseError) {
-          data = { message: rawText }
-        }
-
-        if (response.ok) {
-          await this.loadTables()
-          this.closeModal()
-        } else {
-          if (response.status === 422) {
-            this.errors = data.errors || {}
-          } else {
-            console.error('Erreur creation/modification table:', response.status, data)
-            alert(data.error || data.message || 'Erreur lors de la sauvegarde')
-          }
-        }
-      } catch (error) {
-        console.error('Erreur:', error)
-        alert('Erreur de connexion')
-      } finally {
-        this.loading = false
-      }
-    },
-
-    toggleTableStatus(table) {
-      const newStatus = table.status === 'available' ? 'out_of_order' : 'available'
-      this.updateTableStatus(table.id, newStatus)
-    },
-
-    handleStatusChange(table, event) {
-      const newStatus = this.normalizeStatus(event.target.value)
-      if (newStatus === table.status) return
-      this.updateTableStatus(table.id, newStatus)
-    },
-
-    async updateTableStatus(tableId, status) {
-      this.loadingTableId = tableId
-      try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`${API_BASE_URL}/tables/${tableId}/status`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ status })
-        })
-
-        if (response.ok) {
-          await this.loadTables()
-        } else {
-          const data = await response.json()
-          alert(data.error || 'Erreur lors de la mise à jour du statut')
-        }
-      } catch (error) {
-        console.error('Erreur:', error)
-        alert('Erreur de connexion')
-      } finally {
-        this.loadingTableId = null
-      }
-    },
-
-    deleteTable(table) {
-      this.tableToDelete = table
-      this.showDeleteModal = true
-    },
-
-    closeDeleteModal() {
-      this.showDeleteModal = false
-      this.tableToDelete = null
-    },
-
-    async confirmDelete() {
-      if (!this.tableToDelete) return
-
-      this.loading = true
-
-      try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`${API_BASE_URL}/tables/${this.tableToDelete.id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-
-        if (response.ok) {
-          await this.loadTables()
-          this.closeDeleteModal()
-        } else {
-          const data = await response.json()
-          alert(data.error || 'Erreur lors de la suppression')
-        }
-      } catch (error) {
-        console.error('Erreur:', error)
-        alert('Erreur de connexion')
-      } finally {
-        this.loading = false
-      }
-    },
-
-    getEmptyStateMessage() {
-      if (this.searchQuery) {
-        return 'Aucune table ne correspond à votre recherche.'
-      }
-      if (this.activeFilters.length > 0) {
-        return 'Aucune table ne correspond aux filtres sélectionnés.'
-      }
-      return 'Commencez par créer votre première table.'
-    },
-
-    normalizeTables(payload) {
-      const rawTables = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : []
-      return rawTables.map((table) => ({
+const normalizeTables = (payload) => {
+    const rawTables = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : []
+    return rawTables.map((table) => ({
         ...table,
-        status: this.normalizeStatus(table.status),
-        location: this.normalizeLocation(table.location)
-      }))
-    },
+        status: normalizeStatus(table.status),
+        location: normalizeLocation(table.location)
+    }))
+}
 
-    normalizeStatus(status) {
-      const normalized = String(status || 'available').trim().toLowerCase()
-      const aliases = {
+const normalizeStatus = (status) => {
+    const normalized = String(status || 'available').trim().toLowerCase()
+    const aliases = {
         disponible: 'available',
         available: 'available',
         occupee: 'occupied',
@@ -658,80 +415,313 @@ const loadTables = async () => {
         horsservice: 'out_of_order',
         out_of_order: 'out_of_order',
         outoforder: 'out_of_order'
-      }
+    }
 
-      return aliases[normalized] || normalized
-    },
+    return aliases[normalized] || normalized
+}
 
-    normalizeLocation(location) {
-      if (!location || typeof location !== 'object') {
+const normalizeLocation = (location) => {
+    if (!location || typeof location !== 'object') {
         return { x: null, y: null }
-      }
+    }
 
-      const x = Number(location.x ?? location.pos_x ?? location.left ?? null)
-      const y = Number(location.y ?? location.pos_y ?? location.top ?? null)
+    const x = Number(location.x ?? location.pos_x ?? location.left ?? null)
+    const y = Number(location.y ?? location.pos_y ?? location.top ?? null)
 
-      return {
+    return {
         x: Number.isFinite(x) ? x : null,
         y: Number.isFinite(y) ? y : null
-      }
-    },
+    }
+}
 
-    prepareLocationPayload(location) {
-      const normalized = this.normalizeLocation(location)
-      if (normalized.x === null && normalized.y === null) {
+const prepareLocationPayload = (location) => {
+    const normalized = normalizeLocation(location)
+    if (normalized.x === null && normalized.y === null) {
         return null
-      }
+    }
 
-      return normalized
-    },
+    return normalized
+}
 
-    normalizeStatistics(payload) {
-      const source = payload?.data && !Array.isArray(payload.data) ? payload.data : payload
-      const totalTables = Number(source?.total_tables ?? source?.total ?? source?.tables_count ?? 0) || 0
-      const availableTables = Number(source?.available_tables ?? source?.available ?? 0) || 0
-      const occupiedTables = Number(source?.occupied_tables ?? source?.occupied ?? 0) || 0
-      const reservedTables = Number(source?.reserved_tables ?? source?.reserved ?? 0) || 0
-      const outOfOrderTables = Number(source?.out_of_order_tables ?? source?.out_of_order ?? 0) || 0
-      const occupancyRate = Number(source?.occupancy_rate ?? source?.occupation_rate ?? 0) || 0
+const normalizeStatistics = (payload) => {
+    const source = payload?.data && !Array.isArray(payload.data) ? payload.data : payload
+    const totalTables = Number(source?.total_tables ?? source?.total ?? source?.tables_count ?? 0) || 0
+    const availableTables = Number(source?.available_tables ?? source?.available ?? 0) || 0
+    const occupiedTables = Number(source?.occupied_tables ?? source?.occupied ?? 0) || 0
+    const reservedTables = Number(source?.reserved_tables ?? source?.reserved ?? 0) || 0
+    const outOfOrderTables = Number(source?.out_of_order_tables ?? source?.out_of_order ?? 0) || 0
+    const occupancyRate = Number(source?.occupancy_rate ?? source?.occupation_rate ?? 0) || 0
 
-      return {
+    return {
         total_tables: totalTables,
         available_tables: availableTables,
         occupied_tables: occupiedTables,
         reserved_tables: reservedTables,
         out_of_order_tables: outOfOrderTables,
         occupancy_rate: occupancyRate
-      }
-    },
+    }
+}
 
-    refreshStatisticsFromTables() {
-      const total = this.tables.length
-      const available = this.tables.filter((table) => table.status === 'available').length
-      const occupied = this.tables.filter((table) => table.status === 'occupied').length
-      const reserved = this.tables.filter((table) => table.status === 'reserved').length
-      const outOfOrder = this.tables.filter((table) => table.status === 'out_of_order').length
+const refreshStatisticsFromTables = () => {
+    const total = tables.value.length
+    const available = tables.value.filter((table) => table.status === 'available').length
+    const occupied = tables.value.filter((table) => table.status === 'occupied').length
+    const reserved = tables.value.filter((table) => table.status === 'reserved').length
+    const outOfOrder = tables.value.filter((table) => table.status === 'out_of_order').length
 
-      this.statistics = {
+    statistics.value = {
         total_tables: total,
         available_tables: available,
         occupied_tables: occupied,
         reserved_tables: reserved,
         out_of_order_tables: outOfOrder,
         occupancy_rate: total > 0 ? Math.round((occupied / total) * 100) : 0
-      }
-    },
-
-    formatLocation(table) {
-      const location = this.normalizeLocation(table?.location)
-      if (location.x === null && location.y === null) {
-        return ''
-      }
-
-      return `X: ${location.x ?? '-'} | Y: ${location.y ?? '-'}`
     }
-  }
 }
+
+const formatLocation = (table) => {
+    const location = normalizeLocation(table?.location)
+    if (location.x === null && location.y === null) {
+        return ''
+    }
+
+    return `X: ${location.x ?? '-'} | Y: ${location.y ?? '-'}`
+}
+
+const toggleStatusFilter = (status) => {
+    const index = activeFilters.value.indexOf(status)
+    if (index > -1) {
+        activeFilters.value.splice(index, 1)
+    } else {
+        activeFilters.value.push(status)
+    }
+}
+
+const getTableCardClass = (table) => {
+    return {
+        'table-card': true,
+        'available': table.status === 'available',
+        'occupied': table.status === 'occupied',
+        'reserved': table.status === 'reserved',
+        'out-of-order': table.status === 'out_of_order'
+    }
+}
+
+const getStatusIcon = (status) => {
+    const icons = {
+        'available': 'fas fa-check-circle',
+        'occupied': 'fas fa-users',
+        'reserved': 'fas fa-calendar-check',
+        'out_of_order': 'fas fa-wrench'
+    }
+    return icons[status] || 'fas fa-question-circle'
+}
+
+const getStatusText = (status) => {
+    const texts = {
+        'available': 'Disponible',
+        'occupied': 'Occupée',
+        'reserved': 'Réservée',
+        'out_of_order': 'Hors service'
+    }
+    return texts[status] || 'Inconnu'
+}
+
+const getToggleIcon = (status) => {
+    return status === 'available' ? 'fas fa-pause' : 'fas fa-play'
+}
+
+const selectTable = (table) => {
+    console.log('Table sélectionnée:', table)
+}
+
+const openCreateModal = () => {
+    isEditing.value = false
+    resetForm()
+    showModal.value = true
+}
+
+const editTable = (table) => {
+    isEditing.value = true
+    editingTableId.value = table.id
+    form.value = {
+        table_number: table.table_number,
+        name: table.name || '',
+        capacity: table.capacity,
+        status: table.status,
+        description: table.description || '',
+        location: normalizeLocation(table.location)
+    }
+    showModal.value = true
+}
+
+const closeModal = () => {
+    showModal.value = false
+    resetForm()
+}
+
+const saveTable = async () => {
+    loading.value = true
+    errors.value = {}
+
+    try {
+        const token = localStorage.getItem('token')
+        const posId = activePos.value?.id
+        
+        if (!posId) {
+            alert('Point de vente actif non défini')
+            return
+        }
+
+        const url = isEditing.value
+            ? `${API_BASE_URL}/tables/${editingTableId.value}`
+            : `${API_BASE_URL}/tables`
+
+        const method = isEditing.value ? 'PUT' : 'POST'
+
+        const formData = {
+            table_number: String(form.value.table_number || '').trim(),
+            name: String(form.value.name || '').trim() || null,
+            capacity: Number(form.value.capacity) || 0,
+            status: normalizeStatus(form.value.status),
+            description: String(form.value.description || '').trim() || null,
+            point_of_sale_id: posId
+        }
+
+        const location = prepareLocationPayload(form.value.location)
+        if (location) {
+            formData.location = location
+        }
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+
+        const rawText = await response.text()
+        let data = {}
+
+        try {
+            data = rawText ? JSON.parse(rawText) : {}
+        } catch (parseError) {
+            data = { message: rawText }
+        }
+
+        if (response.ok) {
+            await loadTables()
+            closeModal()
+        } else {
+            if (response.status === 422) {
+                errors.value = data.errors || {}
+            } else {
+                console.error('Erreur creation/modification table:', response.status, data)
+                alert(data.error || data.message || 'Erreur lors de la sauvegarde')
+            }
+        }
+    } catch (error) {
+        console.error('Erreur:', error)
+        alert('Erreur de connexion')
+    } finally {
+        loading.value = false
+    }
+}
+
+const toggleTableStatus = (table) => {
+    const newStatus = table.status === 'available' ? 'out_of_order' : 'available'
+    updateTableStatus(table.id, newStatus)
+}
+
+const handleStatusChange = (table, event) => {
+    const newStatus = normalizeStatus(event.target.value)
+    if (newStatus === table.status) return
+    updateTableStatus(table.id, newStatus)
+}
+
+const updateTableStatus = async (tableId, status) => {
+    loadingTableId.value = tableId
+    try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${API_BASE_URL}/tables/${tableId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status })
+        })
+
+        if (response.ok) {
+            await loadTables()
+        } else {
+            const data = await response.json()
+            alert(data.error || 'Erreur lors de la mise à jour du statut')
+        }
+    } catch (error) {
+        console.error('Erreur:', error)
+        alert('Erreur de connexion')
+    } finally {
+        loadingTableId.value = null
+    }
+}
+
+const deleteTable = (table) => {
+    tableToDelete.value = table
+    showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+    showDeleteModal.value = false
+    tableToDelete.value = null
+}
+
+const confirmDelete = async () => {
+    if (!tableToDelete.value) return
+
+    loading.value = true
+
+    try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${API_BASE_URL}/tables/${tableToDelete.value.id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        })
+
+        if (response.ok) {
+            await loadTables()
+            closeDeleteModal()
+        } else {
+            const data = await response.json()
+            alert(data.error || 'Erreur lors de la suppression')
+        }
+    } catch (error) {
+        console.error('Erreur:', error)
+        alert('Erreur de connexion')
+    } finally {
+        loading.value = false
+    }
+}
+
+const getEmptyStateMessage = () => {
+    if (searchQuery.value) {
+        return 'Aucune table ne correspond à votre recherche.'
+    }
+    if (activeFilters.value.length > 0) {
+        return 'Aucune table ne correspond aux filtres sélectionnés.'
+    }
+    return 'Commencez par créer votre première table.'
+}
+
+onMounted(async () => {
+    await loadTables()
+})
+</script>
 </script>
 
 <style scoped>
