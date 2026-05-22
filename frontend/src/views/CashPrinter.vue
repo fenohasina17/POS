@@ -241,7 +241,9 @@ import AmountModal from './AmountModal.vue'
 import { useAuth } from '@/composables/useAuth'
 
 const router = useRouter()
-const { isAdmin, user: currentUser, hasRole, loadUserData, activePos } = useAuth()
+const auth = useAuth()
+const { isAdmin, user: currentUser, hasRole, loadUserData } = auth
+const activePos = auth.activePos
 
 // ========== ÉTATS ==========
 const debugMode = ref(window.location.search.includes('debug=true'))
@@ -473,7 +475,7 @@ const fetchCashRegisters = async () => {
 
 const fetchMyActiveSession = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/my-active-session`, { headers: getAuthHeaders() })
+    const { data } = await apiClient.get('/my-active-session')
 
     if (data?.has_active_session === false || !data?.data) {
       activeSession.value = null
@@ -515,9 +517,7 @@ const fetchMyActiveSession = async () => {
 
 const getCurrentSessionForRegister = async (registerId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-registers/${registerId}/current-session`, {
-      headers: getAuthHeaders()
-    })
+    const { data } = await apiClient.get(`/cash-registers/${registerId}/current-session`)
     return data?.data || null
   } catch (error) {
     console.error('Erreur récupération session:', error)
@@ -527,7 +527,7 @@ const getCurrentSessionForRegister = async (registerId) => {
 
 const fetchSessionSummary = async (sessionId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${sessionId}/summary`, { headers: getAuthHeaders() })
+    const { data } = await apiClient.get(`/cash-register-sessions/${sessionId}/summary`)
     return data?.data || data || null
   } catch (error) {
     if (error.response?.status === 409) {
@@ -619,9 +619,7 @@ const sendFondDeCaisse = async ({ amount, ticketNumber, note }) => {
       start_ticket_number: ticketNumber ?? null
     }
 
-    const { data } = await axios.post(`${API_BASE_URL}/cash-register-sessions`, payload, {
-      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }
-    })
+    const { data } = await apiClient.post('/cash-register-sessions', payload)
 
     const createdSession = data?.data || data || null
     if (createdSession) {
@@ -797,10 +795,9 @@ const onConnectButtonClick = async () => {
 
   if (status === 'connected') {
     try {
-      const { data } = await axios.get(`${API_BASE_URL}/cash-registers/${registerId}/current-session`, {
-        headers: getAuthHeaders()
-      })
+      const { data } = await apiClient.get(`/cash-registers/${registerId}/current-session`)
       const session = data?.data
+
       if (session && session.id) {
         await openSummaryModalForSession(session.id)
       } else {
