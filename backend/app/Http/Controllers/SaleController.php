@@ -947,7 +947,7 @@ class SaleController extends Controller
      *         - 403 : Permission refusée
      *         - 404 : Vente non trouvée
      */
-    public function show($id)
+    public function show($id, Request $request)
     {
         try {
             if ($id === 'current-session') {
@@ -966,23 +966,32 @@ class SaleController extends Controller
             }
 
             $isAdmin = $user->hasRole('admin', 'api');
-            $isManager = $user->hasAnyRole(['gerant', 'gérant'], 'api');
+            $activePosId = $request->attributes->get('activePosId');
 
+            // Non-admin users are restricted by their active POS or user_id
             if (!$isAdmin) {
-                if ($isManager) {
-                    $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-                    if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+                if (!$activePosId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                // Check if user is assigned to the active POS
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès refusé pour ce point de vente.'
+                    ], 403);
+                }
+                // Ensure sale belongs to the active POS
+                if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                    return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
+                }
 
-                    if (!empty($assignedPosIds) && !in_array((int)$sale->point_of_sale_id, $assignedPosIds)) {
-                        return response()->json(['message' => 'Cette vente n\'appartient pas à vos points de vente.'], 403);
-                    }
-                    if (empty($assignedPosIds) && (int) $sale->user_id !== (int) $user->id) {
-                        return response()->json(['message' => 'Action non autorisée.'], 403);
-                    }
-                } else {
-                    if ((int) $sale->user_id !== (int) $user->id) {
-                        return response()->json(['message' => 'Action non autorisée.'], 403);
-                    }
+                // Further restrict non-managers to their own sales
+                $isManager = $this->userIsManager($user);
+                if (!$isManager && (int)$sale->user_id !== (int)$user->id) {
+                    return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
                 }
             }
 
