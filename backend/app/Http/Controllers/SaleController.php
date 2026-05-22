@@ -1089,21 +1089,47 @@ class SaleController extends Controller
     {
         try {
             $user = $request->user();
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Utilisateur non authentifié'
+                ], 401);
+            }
+
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin) {
+                if (!$activePosId) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Point de vente actif non défini pour l\'utilisateur.'
+                    ], 403);
+                }
+                if (!$user->pointsOfSale->contains($activePosId)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Accès refusé pour ce point de vente.'
+                    ], 403);
+                }
+            }
 
             $currentSession = CashRegisterSession::where('user_id', $user->id)
                 ->where('is_closed', false)
+                ->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $activePosId)) // Filter by active POS
                 ->latest('opened_at')
                 ->first();
 
             if (!$currentSession) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Aucune session de caisse ouverte trouvée pour cet utilisateur.'
+                    'message' => 'Aucune session de caisse ouverte trouvée pour cet utilisateur dans le POS actif.'
                 ], 404);
             }
 
             $sales = Sale::with(['orderLines.product', 'payments.payment'])
                 ->where('cash_register_session_id', $currentSession->id)
+                ->where('point_of_sale_id', $activePosId) // Ensure sales are from the active POS
                 ->orderByDesc('created_at')
                 ->get();
 
