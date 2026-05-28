@@ -54,27 +54,30 @@ spec:
           ports:
             - containerPort: 8080
             - containerPort: 50000
+          env:
+            - name: JAVA_OPTS
+              value: "-Xmx1500m -Xms512m -XX:+UseG1GC"
           resources:
             requests:
-              memory: "512Mi"
+              memory: "1Gi"
               cpu: "500m"
             limits:
-              memory: "1500Mi"
-              cpu: "1000m"
+              memory: "2500Mi"
+              cpu: "1500m"
           livenessProbe:
             httpGet:
               path: /login
               port: 8080
-            initialDelaySeconds: 90
-            periodSeconds: 10
-            failureThreshold: 5
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 10
           readinessProbe:
             httpGet:
               path: /login
               port: 8080
-            initialDelaySeconds: 60
-            periodSeconds: 10
-            failureThreshold: 3
+            initialDelaySeconds: 90
+            periodSeconds: 15
+            failureThreshold: 5
           volumeMounts:
             - name: jenkins-data
               mountPath: /var/jenkins_home

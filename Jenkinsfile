@@ -81,7 +81,8 @@ pipeline {
                     docker run --rm ${BACKEND_IMAGE}:${IMAGE_TAG} \
                         bash -c "
                             find /var/www/app -name '*.php' \
-                            | xargs -I{} php -l {} \
+                                -not -path '*/vendor/*' \
+                            | xargs -P4 -I{} php -l {} \
                             | grep -v 'No syntax errors' \
                             || true
                         "
