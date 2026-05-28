@@ -113,6 +113,12 @@ pipeline {
                         -e POSTGRES_USER=postgres \
                         -e POSTGRES_PASSWORD=postgres_test \
                         postgres:15-alpine
+
+                    # Lancer Redis pour les tests (requis par les migrations de permissions)
+                    docker run -d \
+                        --name redis-test-${BUILD_NUMBER} \
+                        --network test-net-${BUILD_NUMBER} \
+                        redis:7-alpine
                 """
                 // BUILD_NUMBER dans le nom du container et du réseau
                 // Permet plusieurs builds en parallèle sans conflits
@@ -151,6 +157,8 @@ pipeline {
                         -e DB_DATABASE=testing \
                         -e DB_USERNAME=postgres \
                         -e DB_PASSWORD=postgres_test \
+                        -e REDIS_HOST=redis-test-${BUILD_NUMBER} \
+                        -e REDIS_PORT=6379 \
                         ${BACKEND_IMAGE}:${IMAGE_TAG} \
                         php vendor/bin/phpunit --testdox \
                         > /tmp/phpunit-${BUILD_NUMBER}.txt 2>&1 || true
@@ -167,6 +175,7 @@ pipeline {
                     echo "Nettoyage des containers de test..."
                     sh """
                         docker rm -f pg-test-${BUILD_NUMBER} || true
+                        docker rm -f redis-test-${BUILD_NUMBER} || true
                         docker network rm test-net-${BUILD_NUMBER} || true
                     """
                 }
