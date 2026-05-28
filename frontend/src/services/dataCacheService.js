@@ -2,87 +2,59 @@ import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 
 /**
- * DataCacheService implements the Proxy Pattern to handle data fetching.
- * It provides a cache layer using localStorage to avoid redundant API calls.
+ * DataCacheService - Sans cache, appels API directs uniquement
  */
 class DataCacheService {
   constructor() {
-    this.CACHE_KEY = 'pos_categories_data'
-    this.TTL = 1000 * 60 * 15 // 15 minutes
+    this.CACHE_KEY = 'pos_app_cache'
+    this.TTL = 0 // Cache désactivé
   }
 
-  /**
-   * Gets categories from cache or fetches from API if cache is expired or missing.
-   * @param {number} pointOfSaleId
-   * @param {string} token
-   * @param {boolean} forceRefresh
-   */
-  async getCategories(pointOfSaleId, token, forceRefresh = false) {
-    if (!forceRefresh) {
-      const cached = this._getCache(pointOfSaleId)
-      if (cached) {
-        console.log('DataCacheService: Returning data from cache')
-        return cached
-      }
-    }
-
-    console.log('DataCacheService: Fetching data from API')
+  async getCategories(posId, token, forceRefresh = false) {
+    console.log(`DataCacheService: Fetching categories from API`)
     const response = await axios.get(`${API_BASE_URL}/categories`, {
-      params: {
-        'with_products': 1,
-        'point_of_sale_id': pointOfSaleId,
-        'with_pricing': 1,
-      },
+      params: { 'with_products': 1, 'with_pricing': 1 },
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        Authorization: `Bearer ${token}`,
+        ...(posId ? { 'X-Active-POS-ID': posId } : {})
       }
     })
-    console.log('=== Réponse API complète ===', response);
-console.log('Status:', response.status);
-console.log('Headers:', response.headers);
-console.log('Données brutes:', response.data);
-
-    const data = Array.isArray(response.data) ? response.data : response.data.data || []
-    this._setCache(pointOfSaleId, data)
-    return data
+    return Array.isArray(response.data) ? response.data : (response.data?.data || [])
   }
 
-  _getCache(pointOfSaleId) {
-    const raw = localStorage.getItem(this.CACHE_KEY)
-    if (!raw) return null
-
-    try {
-      const cache = JSON.parse(raw)
-      if (cache.pointOfSaleId !== pointOfSaleId) return null
-
-      const now = new Date().getTime()
-      if (now > cache.expiry) {
-        localStorage.removeItem(this.CACHE_KEY)
-        return null
+  async getTables(posId, token, forceRefresh = false) {
+    console.log(`DataCacheService: Fetching tables from API`)
+    const response = await axios.get(`${API_BASE_URL}/tables`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(posId ? { 'X-Active-POS-ID': posId } : {})
       }
-
-      return cache.data
-    } catch (e) {
-      console.error('DataCacheService: Error parsing cache', e)
-      return null
-    }
+    })
+    return Array.isArray(response.data) ? response.data : (response.data?.data || [])
   }
 
-  _setCache(pointOfSaleId, data) {
-    const expiry = new Date().getTime() + this.TTL
-    const cache = {
-      pointOfSaleId,
-      expiry,
-      data
-    }
-    localStorage.setItem(this.CACHE_KEY, JSON.stringify(cache))
+  async getPendingOrders(tableId, posId, token, forceRefresh = false) {
+    console.log(`DataCacheService: Fetching pending orders from API. tableId: ${tableId}`)
+    const isAll = tableId === 'all'
+    const apiPath = isAll ? 'sales/pending' : `tables/${tableId}/pending-orders`
+
+    const response = await axios.get(`${API_BASE_URL}/${apiPath}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(posId ? { 'X-Active-POS-ID': posId } : {})
+      }
+    })
+
+    return Array.isArray(response.data) ? response.data : (response.data?.data || [])
   }
 
-  clearCache() {
-    localStorage.removeItem(this.CACHE_KEY)
+  invalidatePendingOrders(id) {
+    // Plus nécessaire mais gardé pour compatibilité
+    console.log(`invalidatePendingOrders called for ${id}`)
   }
 }
 
-// Singleton instance
 export const dataCacheService = new DataCacheService()

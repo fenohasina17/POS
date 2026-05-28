@@ -21,6 +21,7 @@ use App\Services\SaleService;
 use App\Services\PrintGroupingService;
 use App\Services\CashTransactionService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class SaleController extends Controller
 {
@@ -196,8 +197,8 @@ class SaleController extends Controller
                         return response()->json(['message' => 'Utilisateur non trouvé ou accès non autorisé.'], 403);
                     }
                     // Pour les non-managers, s'assurer que l'utilisateur cible est l'utilisateur connecté
-                    if (!$isManager && (int)$userId !== (int)$user->id) {
-                         return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
+                    if (!$isManager && (int) $userId !== (int) $user->id) {
+                        return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
                     }
                     $sales->where('user_id', $userId);
                 }
@@ -214,9 +215,6 @@ class SaleController extends Controller
                 // Admin can filter by point_of_sale_id in query
                 $requestedPosId = $request->query('point_of_sale_id');
                 if ($requestedPosId) {
-                    if (!$user->pointsOfSale->contains($requestedPosId)) {
-                        return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                    }
                     $sales->where('point_of_sale_id', $requestedPosId);
                 } elseif ($activePosId) {
                     // If no requested POS, filter by active POS if set
@@ -268,7 +266,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
             }
             // Ensure the requested pointOfSale matches the active POS
-            if ((int)$pointOfSale->id !== (int)$activePosId) {
+            if ((int) $pointOfSale->id !== (int) $activePosId) {
                 return response()->json(['message' => 'Accès refusé : Ce point de vente ne correspond pas à votre point de vente actif.'], 403);
             }
         }
@@ -367,7 +365,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
             }
             // Ensure the requested pointOfSale matches the active POS
-            if ((int)$pointOfSaleId !== (int)$activePosId) {
+            if ((int) $pointOfSaleId !== (int) $activePosId) {
                 return response()->json(['message' => 'Accès refusé : Ce point de vente ne correspond pas à votre point de vente actif.'], 403);
             }
         }
@@ -631,7 +629,7 @@ class SaleController extends Controller
         }
 
         $activePosId = $request->attributes->get('activePosId');
-        
+
         // Non-admins must have an active POS set by middleware
         if (!$user->hasRole('admin', 'api') && !$activePosId) {
             return response()->json([
@@ -678,7 +676,11 @@ class SaleController extends Controller
                         $isAdmin = $user->hasRole('admin', 'api');
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
-                             $query->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $targetPosId));
+                            $query->whereIn('cash_register_id', function ($sub) use ($targetPosId) {
+                                $sub->select('id')
+                                    ->from('cash_registers')
+                                    ->where('point_of_sale_id', $targetPosId);
+                            });
                         }
                     }),
                 ],
@@ -690,10 +692,14 @@ class SaleController extends Controller
                 'items.*.product_id' => [
                     'required',
                     Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                         $isAdmin = $user->hasRole('admin', 'api');
-                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        $isAdmin = $user->hasRole('admin', 'api');
+                        $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
-                            $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
+                            $query->whereIn('id', function ($sub) use ($targetPosId) {
+                                $sub->select('product_id')
+                                    ->from('point_of_sale_product')
+                                    ->where('point_of_sale_id', $targetPosId);
+                            });
                         }
                     }),
                 ],
@@ -727,12 +733,8 @@ class SaleController extends Controller
             $isAdmin = $user->hasRole('admin', 'api');
             $targetPointOfSaleId = $validated['point_of_sale_id'];
 
-            // For admin, if point_of_sale_id is provided, check if admin is assigned to it.
-            if ($isAdmin && $targetPointOfSaleId && !$user->pointsOfSale->contains($targetPointOfSaleId)) {
-                return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-            }
             // For non-admin, ensure the validated point_of_sale_id matches the active POS ID
-            if (!$isAdmin && (int)$targetPointOfSaleId !== (int)$activePosId) {
+            if (!$isAdmin && (int) $targetPointOfSaleId !== (int) $activePosId) {
                 return response()->json(['message' => 'Vous ne pouvez créer des ventes que sur votre point de vente actif.'], 403);
             }
 
@@ -764,25 +766,6 @@ class SaleController extends Controller
             $sale = DB::transaction(function () use ($saleData, $user, $request, $validated) {
                 $sale = $this->saleService->createSale($saleData, $user);
 
-                // Normalisation des paiements
-                $payments = $request->has('payments')
-                    ? $validated['payments']
-                    : [['payment_id' => $validated['payment_id'], 'amount' => $validated['amount_received'], 'reference' => null]];
-
-                foreach ($payments as $payment) {
-                    $paymentMethod = Payment::find($payment['payment_id']);
-                    if ($paymentMethod && strtolower($paymentMethod->name) === 'espèce') {
-                        $this->cashTransactionService->createTransaction([
-                            'session_id' => $validated['cash_register_session_id'],
-                            'sale_id' => $sale->id, // Add this line
-                            'type' => 'sale',
-                            'amount' => $payment['amount'],
-                            'description' => "Vente n°{$sale->id} - Paiement espèces",
-                            'reference' => $payment['reference'] ?? 'VENTE_' . $sale->id,
-                            'created_by' => $user->id,
-                        ]);
-                    }
-                }
 
                 return $sale;
             });
@@ -880,10 +863,14 @@ class SaleController extends Controller
                 'cash_register_session_id' => [
                     'required',
                     Rule::exists('cash_register_sessions', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                         $isAdmin = $user->hasRole('admin', 'api');
-                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        $isAdmin = $user->hasRole('admin', 'api');
+                        $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
-                            $query->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $targetPosId));
+                            $query->whereIn('cash_register_id', function ($sub) use ($targetPosId) {
+                                $sub->select('id')
+                                    ->from('cash_registers')
+                                    ->where('point_of_sale_id', $targetPosId);
+                            });
                         }
                     }),
                 ],
@@ -892,26 +879,34 @@ class SaleController extends Controller
                 'order_lines.*.product_id' => [
                     'required',
                     Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                         $isAdmin = $user->hasRole('admin', 'api');
-                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                        $isAdmin = $user->hasRole('admin', 'api');
+                        $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
-                            $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
+                            $query->whereIn('id', function ($sub) use ($targetPosId) {
+                                $sub->select('product_id')
+                                    ->from('point_of_sale_product')
+                                    ->where('point_of_sale_id', $targetPosId);
+                            });
                         }
                     }),
                 ],
                 'order_lines.*.quantity' => 'required|integer|min:1',
                 'order_lines.*.price' => 'required|numeric|min:0',
             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed for createPendingOrder: ' . json_encode($e->errors()));
+            throw $e;
+        }
 
-            $targetPointOfSaleId = $validated['point_of_sale_id'];
-            $isAdmin = $user->hasRole('admin', 'api');
+        $targetPointOfSaleId = $validated['point_of_sale_id'];
+        $isAdmin = $user->hasRole('admin', 'api');
 
-            // For admin, if point_of_sale_id is provided, check if admin is assigned to it.
+        try {
             if ($isAdmin && $targetPointOfSaleId && !$user->pointsOfSale->contains($targetPointOfSaleId)) {
                 return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
             }
             // For non-admin, ensure the validated point_of_sale_id matches the active POS ID
-            if (!$isAdmin && (int)$targetPointOfSaleId !== (int)$activePosId) {
+            if (!$isAdmin && (int) $targetPointOfSaleId !== (int) $activePosId) {
                 return response()->json(['message' => 'Vous ne pouvez créer des commandes que sur votre point de vente actif.'], 403);
             }
 
@@ -984,13 +979,13 @@ class SaleController extends Controller
                     ], 403);
                 }
                 // Ensure sale belongs to the active POS
-                if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                if ((int) $sale->point_of_sale_id !== (int) $activePosId) {
                     return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
                 }
 
                 // Further restrict non-managers to their own sales
                 $isManager = $this->userIsManager($user);
-                if (!$isManager && (int)$sale->user_id !== (int)$user->id) {
+                if (!$isManager && (int) $sale->user_id !== (int) $user->id) {
                     return response()->json(['message' => 'Vous ne pouvez voir que vos propres ventes.'], 403);
                 }
             }
@@ -1051,7 +1046,7 @@ class SaleController extends Controller
             $sale = Sale::findOrFail($id);
 
             // Ensure sale belongs to the active POS for non-admins
-            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+            if (!$isAdmin && (int) $sale->point_of_sale_id !== (int) $activePosId) {
                 return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
             }
 
@@ -1194,17 +1189,27 @@ class SaleController extends Controller
                 }
             }
 
+            $isAdmin = $user->hasRole('admin', 'api');
+            $activePosId = $request->attributes->get('activePosId');
+
             $validated = $request->validate([
                 'order_lines' => 'required|array|min:1',
                 'order_lines.*.product_id' => [
                     'required',
-                    Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $user, $request) {
+                    function ($attribute, $value, $fail) use ($activePosId, $user, $request) {
                         $isAdmin = Auth::user()->hasRole('admin', 'api');
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+
+                        $query = \App\Models\Product::where('id', $value);
+                        
                         if ($targetPosId) {
                             $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
                         }
-                    }),
+
+                        if (!$query->exists()) {
+                            $fail('Le produit sélectionné n\'est pas disponible dans ce point de vente.');
+                        }
+                    },
                 ],
                 'order_lines.*.quantity' => 'required|integer|min:1',
                 'order_lines.*.price' => 'required|numeric|min:0',
@@ -1213,7 +1218,7 @@ class SaleController extends Controller
             $sale = Sale::findOrFail($saleId);
 
             // Ensure sale belongs to the active POS for non-admins
-            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+            if (!$isAdmin && (int) $sale->point_of_sale_id !== (int) $activePosId) {
                 return response()->json(['message' => 'Cette commande n\'appartient pas à votre point de vente actif.'], 403);
             }
 
@@ -1226,7 +1231,8 @@ class SaleController extends Controller
         } catch (ValidationException $e) {
             return response()->json(['error' => 'Erreur de validation', 'details' => $e->errors()], 422);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            \Log::error('Erreur addProductsToPendingOrder: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json(['error' => 'Erreur serveur interne', 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -1275,7 +1281,7 @@ class SaleController extends Controller
             $sale = Sale::findOrFail($saleId);
 
             // Ensure sale belongs to the active POS for non-admins
-            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+            if (!$isAdmin && (int) $sale->point_of_sale_id !== (int) $activePosId) {
                 return response()->json(['message' => 'Cette commande n\'appartient pas à votre point de vente actif.'], 403);
             }
 
@@ -1336,7 +1342,7 @@ class SaleController extends Controller
             $sale = Sale::findOrFail($saleId);
 
             // Ensure sale belongs to the active POS for non-admins
-            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+            if (!$isAdmin && (int) $sale->point_of_sale_id !== (int) $activePosId) {
                 return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
             }
 
@@ -1409,11 +1415,11 @@ class SaleController extends Controller
                     ], 403);
                 }
                 // Ensure sale belongs to the active POS
-                if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                if ((int) $sale->point_of_sale_id !== (int) $activePosId) {
                     return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
                 }
             }
-            
+
             $formattedData = $this->saleService->getFormattedSaleData($sale);
 
             return response()->json([
@@ -1488,11 +1494,11 @@ class SaleController extends Controller
                     ], 403);
                 }
                 // Ensure sale belongs to the active POS
-                if ((int)$sale->point_of_sale_id !== (int)$activePosId) {
+                if ((int) $sale->point_of_sale_id !== (int) $activePosId) {
                     return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
                 }
             }
-            
+
             $categories = $this->saleService->getItemsGroupedByCategory($sale);
 
             return response()->json([
@@ -1539,6 +1545,21 @@ class SaleController extends Controller
         }
     }
 
+    public function getAllPendingOrders()
+    {
+        try {
+            $orders = Sale::with(['order_lines.product', 'user', 'table'])
+                ->where('status', 'pending')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return response()->json($orders);
+        } catch (\Exception $e) {
+            \Log::error('Erreur getAllPendingOrders: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     // ========== MÉTHODES PRIVÉES ==========
 
     /**
@@ -1553,7 +1574,7 @@ class SaleController extends Controller
             return false;
         return $user->hasAnyRole(['gerant', 'gérant'], 'api');
     }
-       /**
+    /**
      * PUT /api/sales/{sale}/order-lines
      * Remplace complètement les lignes de commande (utilisé par EditSaleModal)
      */
@@ -1564,7 +1585,7 @@ class SaleController extends Controller
             if (!$user) {
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
-            
+
             $isAdmin = $user->hasRole('admin', 'api');
             $activePosId = $request->attributes->get('activePosId');
 
@@ -1578,7 +1599,7 @@ class SaleController extends Controller
             }
 
             // Ensure sale belongs to the active POS for non-admins
-            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+            if (!$isAdmin && (int) $sale->point_of_sale_id !== (int) $activePosId) {
                 return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
             }
 
@@ -1593,8 +1614,8 @@ class SaleController extends Controller
                         }
                     }),
                 ],
-                'orderlines.*.quantity'   => 'required|integer|min:1',
-                'orderlines.*.price'      => 'required|numeric|min:0',
+                'orderlines.*.quantity' => 'required|integer|min:1',
+                'orderlines.*.price' => 'required|numeric|min:0',
             ]);
 
             // Optionnel : Restreindre la modification aux ventes "pending" ou aux admins
@@ -1611,9 +1632,9 @@ class SaleController extends Controller
             foreach ($request->orderlines as $line) {
                 $sale->orderlines()->create([
                     'product_id' => $line['product_id'],
-                    'quantity'   => $line['quantity'],
-                    'price'      => $line['price'],
-                    'total'      => $line['quantity'] * $line['price'],
+                    'quantity' => $line['quantity'],
+                    'price' => $line['price'],
+                    'total' => $line['quantity'] * $line['price'],
                 ]);
             }
 
@@ -1671,7 +1692,7 @@ class SaleController extends Controller
             $sale = Sale::findOrFail($id);
 
             // Ensure sale belongs to the active POS for non-admins
-            if (!$isAdmin && (int)$sale->point_of_sale_id !== (int)$activePosId) {
+            if (!$isAdmin && (int) $sale->point_of_sale_id !== (int) $activePosId) {
                 return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
             }
 
@@ -1711,9 +1732,9 @@ class SaleController extends Controller
                 foreach ($validated['orderlines'] as $line) {
                     $sale->orderlines()->create([
                         'product_id' => $line['product_id'],
-                        'quantity'   => $line['quantity'],
-                        'price'      => $line['price'],
-                        'total'      => $line['quantity'] * $line['price'],
+                        'quantity' => $line['quantity'],
+                        'price' => $line['price'],
+                        'total' => $line['quantity'] * $line['price'],
                     ]);
                 }
             }
@@ -1737,8 +1758,8 @@ class SaleController extends Controller
             DB::rollBack();
             return response()->json(['error' => $e->getMessage()], 500);
         }
-    }
 
+        try {
             $sale->refresh();
             $sale->updateTotalAmount();
 

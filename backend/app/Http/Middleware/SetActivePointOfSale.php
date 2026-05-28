@@ -24,8 +24,8 @@ class SetActivePointOfSale
             if ($activePosId) {
                 $activePosId = (int) $activePosId;
 
-                // Vérifier si l'utilisateur est associé à ce point de vente
-                if ($user->pointsOfSale->contains($activePosId)) {
+                // Vérifier si l'utilisateur est associé à ce point de vente (ou s'il est admin)
+                if ($user->hasRole('admin') || $user->pointsOfSale->contains($activePosId)) {
                     $request->attributes->set('activePosId', $activePosId);
                 }
             }
