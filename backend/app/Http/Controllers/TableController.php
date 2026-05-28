@@ -71,10 +71,7 @@ class TableController extends Controller
                 return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
             }
 
-            $cacheKey = "tables_pos_{$targetPosId}_admin_{$isAdmin}";
-            $tables = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($query) {
-                return $query->orderBy('table_number')->get();
-            });
+            $tables = $query->orderBy('table_number')->get();
 
             return response()->json($tables);
         } catch (\Exception $e) {

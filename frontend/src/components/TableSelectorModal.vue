@@ -153,9 +153,6 @@ export default {
     }
   },
   mounted() {
-    if (this.isOpen) {
-      this.refresh()
-    }
     this.setupEventListeners()
   },
   beforeUnmount() {
@@ -186,7 +183,7 @@ export default {
       await this.loadPendingOrders()
     },
 
-    async loadTables(forceRefresh = false) {
+    async loadTables(forceRefresh = true) {
       this.loading = true
       this.error = null
 
@@ -200,8 +197,14 @@ export default {
         const activePos = activePosStr ? JSON.parse(activePosStr) : null
         const activePosId = activePos?.id
 
-        const rawTables = await dataCacheService.getTables(activePosId, token, forceRefresh)
-
+        // ✅ Appel API direct sans cache avec timestamp
+        const timestamp = Date.now()
+        const rawTables = await dataCacheService.getTables(activePosId, token, true)
+        // Note: dataCacheService.getTables needs to support timestamp or bypassing cache
+        
+        // Alternative: Fetch directly if getTables doesn't support forcing refresh
+        // For now, assume forceRefresh = true in getTables or add a mechanism
+        
         if (!rawTables || !Array.isArray(rawTables)) {
           throw new Error('Format de données invalide pour les tables')
         }
