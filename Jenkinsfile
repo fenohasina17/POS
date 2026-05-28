@@ -78,14 +78,13 @@ pipeline {
             steps {
                 echo "Vérification de la syntaxe PHP..."
                 sh """
-                    docker run --rm ${BACKEND_IMAGE}:${IMAGE_TAG} \
-                        bash -c "
-                            find /var/www/app -name '*.php' \
-                                -not -path '*/vendor/*' \
-                            | xargs -P4 -I{} php -l {} \
-                            | grep -v 'No syntax errors' \
-                            || true
-                        "
+                    docker run --rm --entrypoint bash ${BACKEND_IMAGE}:${IMAGE_TAG} -c "
+                        find /var/www/app -name '*.php' \
+                            -not -path '*/vendor/*' \
+                        | xargs -P4 -I{} php -l {} \
+                        | grep -v 'No syntax errors' \
+                        || true
+                    "
                 """
                 // || true = ne pas faire échouer le stage si grep
                 // ne trouve rien (grep retourne 1 si aucun résultat)
