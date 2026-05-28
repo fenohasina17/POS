@@ -11,24 +11,24 @@
           </h1>
           <p class="text-slate-500 font-medium">Gestion du service en salle et disponibilité des tables</p>
         </div>
-        
+
         <div class="flex items-center gap-3">
-          <button 
+          <button
             @click="refreshData"
             class="group flex h-12 w-12 items-center justify-center rounded-2xl bg-white border border-slate-200 text-slate-600 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-600 active:scale-95"
           >
             <font-awesome-icon icon="fa-solid fa-rotate" :class="{'fa-spin': loading}" />
           </button>
-          
+
           <div class="flex items-center gap-2 rounded-2xl bg-slate-900 p-1.5 shadow-lg shadow-slate-900/10">
-            <button 
-              v-for="status in ['all', 'available', 'occupied', 'reserved']" 
+            <button
+              v-for="status in ['all', 'available', 'occupied', 'reserved']"
               :key="status"
               @click="statusFilter = status === 'all' ? '' : status"
               class="rounded-xl px-4 py-2 text-xs font-bold transition-all"
               :class="[
                 (statusFilter === status || (status === 'all' && !statusFilter))
-                  ? 'bg-white text-slate-900 shadow-sm' 
+                  ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-white/40 hover:text-white/70'
               ]"
             >
@@ -58,7 +58,7 @@
           class="group relative overflow-hidden rounded-[2rem] border border-white bg-white p-6 shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-100"
         >
           <!-- Indicateur Statut -->
-          <div 
+          <div
             class="absolute right-0 top-0 h-24 w-24 translate-x-12 -translate-y-12 rotate-45 transition-transform group-hover:scale-110"
             :class="getStatusBgClass(table.status)"
           ></div>
@@ -68,7 +68,7 @@
               <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                 <font-awesome-icon icon="fa-solid fa-table" class="text-xl" />
               </div>
-              <span 
+              <span
                 class="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest"
                 :class="getStatusTextClass(table.status)"
               >
@@ -90,14 +90,14 @@
                 <font-awesome-icon icon="fa-solid fa-plus" />
                 COMMANDER
               </button>
-              
+
               <button
                 @click="viewTableDetails(table)"
                 class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-600"
               >
                 <font-awesome-icon icon="fa-solid fa-eye" />
               </button>
-              
+
               <button
                 @click="printTableBill(table)"
                 class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-all hover:bg-emerald-50 hover:text-emerald-600"
@@ -113,7 +113,7 @@
     <!-- Modal Détails Premium -->
     <div v-if="showTableDetails" class="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="closeTableDetails"></div>
-      
+
       <div class="relative w-full max-w-md overflow-hidden rounded-[2.5rem] bg-white shadow-2xl transition-all">
         <header class="relative h-32 bg-slate-900 p-8">
           <div class="flex items-center justify-between text-white">
@@ -135,10 +135,10 @@
               <span class="text-xs font-bold uppercase tracking-wider text-slate-400">{{ label }}</span>
               <span class="font-black text-slate-700">{{ val }}</span>
             </div>
-            
+
             <div class="flex items-center justify-between rounded-2xl bg-slate-50 p-4 border border-slate-100">
               <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Statut actuel</span>
-              <span 
+              <span
                 class="rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-sm"
                 :class="getStatusTextClass(selectedTable?.status)"
               >
@@ -147,7 +147,7 @@
             </div>
           </div>
 
-          <button 
+          <button
             @click="closeTableDetails"
             class="mt-8 w-full rounded-2xl bg-slate-900 py-4 font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 active:scale-95"
           >
@@ -160,17 +160,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 import Profile from './Profile.vue'
+import { useAuth } from '@/composables/useAuth'
 
 const props = defineProps({
   embedded: { type: Boolean, default: false }
 })
 
 const router = useRouter()
+const { activePos, pointsOfSale, setActivePos } = useAuth()  // Récupérer le POS actif
 
 // ========== ÉTATS ==========
 const tables = ref([])
@@ -221,9 +223,21 @@ const getStatusTextClass = (status) => {
   return classes[status] || 'bg-slate-100 text-slate-500'
 }
 
+// Filtrer les tables par point de vente actif ET par statut
 const filteredTables = computed(() => {
-  if (!statusFilter.value) return tables.value
-  return tables.value.filter(t => t.status === statusFilter.value)
+  let result = tables.value
+
+  // Filtrer par point de vente actif
+  if (activePos.value && activePos.value.id) {
+    result = result.filter(t => t.point_of_sale_id === activePos.value.id)
+  }
+
+  // Filtrer par statut
+  if (statusFilter.value) {
+    result = result.filter(t => t.status === statusFilter.value)
+  }
+
+  return result
 })
 
 const getDetailRows = () => {
@@ -231,18 +245,29 @@ const getDetailRows = () => {
   return {
     'Numéro': `#${selectedTable.value.table_number}`,
     'Identification': selectedTable.value.name || 'Sans nom',
-    'Capacité': `${selectedTable.value.capacity} pers.`
+    'Capacité': `${selectedTable.value.capacity} pers.`,
+    'Point de vente': activePos.value?.name || 'Non défini'
   }
 }
 
 // ========== ACTIONS ==========
 const loadTables = async () => {
+  // Vérifier qu'un point de vente est sélectionné
+  if (!activePos.value || !activePos.value.id) {
+    console.warn('Aucun point de vente sélectionné')
+    tables.value = []
+    return
+  }
+
   loading.value = true
   try {
     const token = localStorage.getItem('token')
+    // Option 1: Si l'API supporte le filtrage par point_of_sale_id
     const response = await axios.get(`${API_BASE_URL}/tables`, {
+      params: { point_of_sale_id: activePos.value.id },  // Filtrer côté API
       headers: { Authorization: `Bearer ${token}` }
     })
+
     const rawTables = Array.isArray(response.data) ? response.data : response.data.data || []
     tables.value = rawTables.map(t => ({
       ...t,
@@ -250,6 +275,7 @@ const loadTables = async () => {
     }))
   } catch (error) {
     console.error('Erreur chargement tables:', error)
+    tables.value = []
   } finally {
     loading.value = false
   }
@@ -261,7 +287,8 @@ const startTableService = (table) => {
   if (table.status === 'out_of_order') return
   router.push({
     name: 'dashboard-table-order',
-    params: { tableId: table.id }
+    params: { tableId: table.id },
+    query: { posId: activePos.value?.id }  // Passer le POS à la vue commande
   })
 }
 
@@ -276,10 +303,24 @@ const closeTableDetails = () => {
 }
 
 const printTableBill = (table) => {
-  console.log('Impression facture table:', table.table_number)
+  console.log('Impression facture table:', table.table_number, 'POS:', activePos.value?.name)
 }
 
-onMounted(() => loadTables())
+// Surveiller les changements de point de vente actif
+watch(activePos, (newPos, oldPos) => {
+  if (newPos?.id !== oldPos?.id) {
+    loadTables()  // Recharger les tables quand le POS change
+  }
+}, { deep: true })
+
+// Montrer un message si aucun POS n'est sélectionné
+const hasActivePos = computed(() => !!activePos.value?.id)
+
+onMounted(() => {
+  if (hasActivePos.value) {
+    loadTables()
+  }
+})
 </script>
 
 <style scoped>

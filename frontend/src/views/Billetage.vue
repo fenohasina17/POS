@@ -326,7 +326,7 @@
 <script setup>
 import { reactive, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import Keyboard from '../components/tools/Keyboard.vue'
 import NumericKeypad from '@/components/NumericKeypad.vue'
 import { API_BASE_URL } from '@/utils/api'
@@ -418,13 +418,12 @@ const fetchAllSalesFast = async (sessionId) => {
   let lastPage = 1
   try {
     do {
-      const { data } = await axios.get(`${API_BASE_URL}/sales`, {
+      const { data } = await apiClient.get('/sales', {
         params: {
           cash_register_session_id: sessionId,
           page: currentPage,
           per_page: 250
-        },
-        headers: authHeaders()
+        }
       })
       let items = []
       if (Array.isArray(data)) items = data
@@ -456,7 +455,7 @@ const loadMissingLines = async (sales, concurrency = 5) => {
     const batch = missing.slice(i, i + concurrency)
     await Promise.all(batch.map(async (sale) => {
       try {
-        const { data } = await axios.get(`${API_BASE_URL}/sales/${sale.id}`, { headers: authHeaders() })
+        const { data } = await apiClient.get(`/sales/${sale.id}`)
         const details = data?.data || data
         const index = results.findIndex(s => s.id === sale.id)
         if (index !== -1) results[index] = { ...sale, order_lines: details.order_lines || [] }
@@ -491,7 +490,7 @@ const loadSessionSales = async (sessionId) => {
 
 const fetchCashTransactions = async (sessionId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-transactions/session/${sessionId}`, { headers: authHeaders() })
+    const { data } = await apiClient.get(`/cash-transactions/session/${sessionId}`)
     if (Array.isArray(data)) cashTransactions.value = data
     else if (data?.in && data?.out) cashTransactions.value = [...data.in, ...data.out]
     else cashTransactions.value = []
@@ -505,7 +504,7 @@ const fetchSessionData = async (id) => {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${id}`, { headers: authHeaders() })
+    const { data } = await apiClient.get(`/cash-register-sessions/${id}`)
     const session = data?.data || data
     if (!session?.id) throw new Error('Session introuvable')
 
@@ -538,7 +537,7 @@ const fetchSessionData = async (id) => {
 
 const fetchOpenSessions = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/open`, { headers: authHeaders() })
+    const { data } = await apiClient.get('/cash-register-sessions/open')
     openSessions.value = Array.isArray(data) ? data : data?.data || []
     if (openSessions.value.length) {
       selectedSessionId.value = openSessions.value[0].id
@@ -638,17 +637,16 @@ const submit = async () => {
 
   isSubmitting.value = true
   try {
-    await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
+    await apiClient.put(`/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: actualTotal.value,
       is_bill_checked: true
-
-    }, { headers: authHeaders() })
+    })
 
     if (varianceAmount.value !== 0 && discrepancyExplanation.value.trim()) {
-      await axios.post(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}/discrepancies`, {
+      await apiClient.post(`/cash-register-sessions/${sessionId.value}/discrepancies`, {
         description: discrepancyExplanation.value,
         amount: varianceAmount.value
-      }, { headers: authHeaders() })
+      })
     }
 
     successMessage.value = 'Billetage et justification enregistrés avec succès.'
@@ -672,11 +670,11 @@ const closeSession = async () => {
 
   isSubmitting.value = true
   try {
-    await axios.put(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}`, {
+    await apiClient.put(`/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: actualTotal.value,
       is_closed: true,
       closed_at: new Date().toISOString()
-    }, { headers: authHeaders() })
+    })
     successMessage.value = 'Session clôturée avec succès.'
     const closedSessionId = sessionId.value
     sessionClosed.value = true

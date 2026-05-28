@@ -1,5 +1,4 @@
 <template>
-
   <div class="table-selector">
     <div class="selector-header">
       <h3>Sélectionner une table</h3>
@@ -9,7 +8,24 @@
     </div>
 
     <div class="selector-content">
-      <div class="tables-section">
+      <!-- Loading state -->
+      <div v-if="loading" class="loading-state">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Chargement des tables...</p>
+      </div>
+
+      <!-- Error state -->
+      <div v-else-if="error" class="error-state">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>{{ error }}</p>
+        <button @click="loadTables(true)" class="btn-retry">
+          <i class="fas fa-redo"></i>
+          Réessayer
+        </button>
+      </div>
+
+      <!-- Tables list -->
+      <div v-else class="tables-section">
         <h4 class="section-title">
           <i class="fas fa-th"></i>
           Toutes les tables ({{ tables.length }})
@@ -52,10 +68,18 @@
                   </div>
                 </td>
                 <td class="table-pending-cell">
-                  <div v-if="getPendingCount(table.id) > 0" class="pending-badge">
+                  <div v-if="loadingPending" class="pending-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Chargement...</span>
+                  </div>
+                  <div v-else-if="getPendingCount(table.id) > 0" class="pending-badge">
+                    <i class="fas fa-clock"></i>
                     {{ getPendingCount(table.id) }} en attente
                   </div>
-                  <div v-else class="no-pending">Aucune</div>
+                  <div v-else class="no-pending">
+                    <i class="fas fa-check-circle"></i>
+                    Aucune
+                  </div>
                 </td>
                 <td class="table-actions-cell">
                   <button
@@ -85,7 +109,12 @@
     <!-- Quick Actions -->
     <div class="selector-actions">
       <button @click="$emit('close')" class="btn-secondary">
+        <i class="fas fa-times"></i>
         Fermer
+      </button>
+      <button @click="loadTables(true)" class="btn-refresh" :disabled="loading">
+        <i class="fas fa-sync-alt" :class="{ 'fa-spin': loading }"></i>
+        Rafraîchir
       </button>
     </div>
   </div>
@@ -93,6 +122,7 @@
 
 <script>
 import { API_BASE_URL } from '@/utils/api'
+import { dataCacheService } from '@/services/dataCacheService'
 
 export default {
   name: 'TableSelector',
@@ -106,7 +136,9 @@ export default {
     return {
       tables: [],
       pendingOrders: {},
-      loading: false
+      loading: false,
+      loadingPending: false,
+      error: null
     }
   },
   computed: {
@@ -117,13 +149,14 @@ export default {
   watch: {
     isOpen(newVal) {
       if (newVal) {
-        this.loadTables()
+        // Toujours forcer le rafraîchissement à chaque ouverture pour garantir des données fraîches
+        this.loadTables(true)
       }
     }
   },
   mounted() {
     if (this.isOpen) {
-      this.loadTables()
+      this.loadTables(true)
     }
   },
   methods: {
@@ -148,45 +181,72 @@ export default {
       return aliases[normalized] || normalized
     },
 
-    async loadTables() {
-      this.loading = true
+    async loadPendingOrders() {
+      this.loadingPending = true
       try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`${API_BASE_URL}/tables`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+        const activePosStr = localStorage.getItem('active_pos')
+        const activePos = activePosStr ? JSON.parse(activePosStr) : null
+        const activePosId = activePos?.id
 
-        if (!response.ok) {
-          console.error('Erreur lors du chargement des tables')
-          this.tables = []
-          return
+        const allPending = await dataCacheService.getPendingOrders('all', activePosId, token, false)
+
+        // Map pending orders by table_id for fast lookup
+        this.pendingOrders = allPending.reduce((acc, order) => {
+          if (!acc[order.table_id]) acc[order.table_id] = []
+          acc[order.table_id].push(order)
+          return acc
+        }, {})
+      } catch (error) {
+        console.error('Erreur chargement commandes:', error)
+        this.pendingOrders = {}
+      } finally {
+        this.loadingPending = false
+      }
+    },
+
+    async loadTables(forceRefresh = false) {
+      this.loading = true
+      this.error = null
+      console.log('TableSelector: Loading tables, forceRefresh:', forceRefresh)
+
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          throw new Error('Token non trouvé. Veuillez vous reconnecter.')
         }
 
-        const payload = await response.json()
-        const normalizedTables = Array.isArray(payload)
-          ? payload
-          : Array.isArray(payload?.data)
-            ? payload.data
-            : Array.isArray(payload?.data?.data)
-              ? payload.data.data
-              : []
+        const activePosStr = localStorage.getItem('active_pos')
+        const activePos = activePosStr ? JSON.parse(activePosStr) : null
+        const activePosId = activePos?.id
 
-        this.tables = normalizedTables.map((table) => ({
-          ...table,
-          status: this.normalizeStatus(table.status)
-        }))
+        // Fetch tables with error handling
+        const rawTables = await dataCacheService.getTables(activePosId, token, forceRefresh)
 
-        // Réinitialiser les commandes en attente avant de recharger les données
-        this.pendingOrders = {}
+        if (!rawTables || !Array.isArray(rawTables)) {
+          throw new Error('Format de données invalide pour les tables')
+        }
 
-        await Promise.all(
-          this.tables.map((table) => this.loadPendingOrdersForTable(table.id))
-        )
+        // Process tables
+        this.tables = rawTables
+          .filter(table => !activePosId || (table.point_of_sale_id == activePosId))
+          .map((table) => ({
+            ...table,
+            status: this.normalizeStatus(table.status)
+          }))
+
+        if (this.tables.length === 0) {
+          console.warn('Aucune table trouvée pour ce point de vente')
+        }
+
+        // Load pending orders (non-blocking)
+        await this.loadPendingOrders()
+
       } catch (error) {
-        console.error('Erreur:', error)
+        console.error('Erreur lors du chargement des données:', error)
+        this.error = error.message || 'Erreur lors du chargement des tables. Veuillez réessayer.'
+        this.tables = []
+        this.pendingOrders = {}
       } finally {
         this.loading = false
       }
@@ -194,46 +254,6 @@ export default {
 
     selectTable(table) {
       this.$emit('table-selected', table)
-    },
-
-    async loadPendingOrdersForTable(tableId) {
-      try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`${API_BASE_URL}/tables/${tableId}/pending-orders`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-
-        if (response.ok) {
-          const orders = await response.json()
-          const normalizedOrders = Array.isArray(orders)
-            ? orders
-            : Array.isArray(orders?.data)
-              ? orders.data
-              : Array.isArray(orders?.data?.data)
-                ? orders.data.data
-                : []
-
-          this.pendingOrders = {
-            ...this.pendingOrders,
-            [tableId]: normalizedOrders
-          }
-          return
-        }
-
-        this.pendingOrders = {
-          ...this.pendingOrders,
-          [tableId]: []
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des commandes en attente:', error)
-        this.pendingOrders = {
-          ...this.pendingOrders,
-          [tableId]: []
-        }
-      }
     },
 
     getPendingCount(tableId) {
@@ -310,6 +330,54 @@ export default {
   flex: 1;
   overflow-y: auto;
   padding: 1rem;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.loading-state i,
+.error-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.loading-state i {
+  color: #3b82f6;
+}
+
+.error-state i {
+  color: #ef4444;
+}
+
+.error-state p {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.btn-retry {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-retry:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
 }
 
 .tables-section {
@@ -395,15 +463,6 @@ export default {
   opacity: 0.4;
 }
 
-.table-number-cell,
-.table-name-cell,
-.table-capacity-cell,
-.table-status-cell,
-.table-pending-cell,
-.table-actions-cell {
-  position: relative;
-}
-
 .table-number {
   font-size: 1.25rem;
   font-weight: 700;
@@ -475,15 +534,38 @@ export default {
   opacity: 0.8;
 }
 
+.pending-loading {
+  color: #f59e0b;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pending-loading i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .pending-badge {
-  background: #f59e0b;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
   font-weight: 600;
   text-align: center;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
 }
 
@@ -491,6 +573,9 @@ export default {
   color: #9ca3af;
   font-size: 0.75rem;
   font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .btn-select-table {
@@ -538,10 +623,8 @@ export default {
   gap: 0.75rem;
 }
 
-.btn-secondary {
-  background: #f8fafc;
-  color: #374151;
-  border: 1px solid #d1d5db;
+.btn-secondary,
+.btn-refresh {
   padding: 0.5rem 1rem;
   border-radius: 6px;
   font-weight: 600;
@@ -552,8 +635,30 @@ export default {
   gap: 0.5rem;
 }
 
+.btn-secondary {
+  background: #f8fafc;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
 .btn-secondary:hover {
   background: #f1f5f9;
+}
+
+.btn-refresh {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
@@ -591,14 +696,17 @@ export default {
   }
 
   .btn-select-table,
-  .btn-disabled {
+  .btn-disabled,
+  .btn-secondary,
+  .btn-refresh {
     font-size: 0.7rem;
     padding: 0.4rem 0.8rem;
   }
 
-  .pending-badge {
+  .pending-badge,
+  .pending-loading,
+  .no-pending {
     font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
   }
 }
 </style>

@@ -100,11 +100,60 @@
 
         <!-- Grid Produits -->
         <div class="mt-5 flex-1 overflow-hidden">
-            <ProductCatalog 
-                :products="filteredProducts" 
-                :active-category-id="activeCategoryId"
-                @add="addToCart" 
-            />
+          <div
+            v-if="filteredProducts.length"
+            class="grid h-full grid-cols-2 gap-4 overflow-y-auto pr-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+          >
+            <button
+              v-for="product in filteredProducts"
+              :key="product.id"
+              type="button"
+              class="group relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-3 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-2xl hover:shadow-indigo-100/50 active:scale-95"
+              @click="addToCart(product)"
+            >
+              <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-50">
+                <img
+                  :src="getProductImageUrl(product)"
+                  class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  @error="handleImageError"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+              </div>
+
+              <div class="mt-3 w-full space-y-1">
+                <p class="truncate text-sm font-bold text-slate-800">{{ product.name }}</p>
+                <div class="flex items-center justify-center gap-1.5">
+                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                  <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    {{ product.category_name || 'Divers' }}
+                  </p>
+                </div>
+                <div class="pt-1">
+                  <span class="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-black text-indigo-600">
+                    {{ formatPrice(product.price) }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Badge flottant "Plus" -->
+              <div class="absolute right-2 top-2 scale-0 rounded-full bg-indigo-600 p-1.5 text-white shadow-lg transition-transform group-hover:scale-100">
+                <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[10px]" />
+              </div>
+            </button>
+          </div>
+
+          <!-- Empty State -->
+          <div
+            v-else
+            class="flex h-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/30 py-20"
+          >
+            <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm">
+              <FontAwesomeIcon icon="fa-solid fa-boxes" class="text-3xl text-slate-200" />
+            </div>
+            <p class="text-base font-bold text-slate-400">Aucun produit trouvé</p>
+            <p class="text-sm text-slate-300">Essayez une autre catégorie ou recherche</p>
+          </div>
         </div>
       </section>
 
@@ -215,20 +264,19 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, shallowRef, onMounted, computed, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router' // 👈 AJOUTER useRoute
-import axios from 'axios'
+import { useAuth } from '@/composables/useAuth'
+import { useRoute } from 'vue-router'
+import apiClient from '@/services/apiClient'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
 import { storage } from '@/utils/storage'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faBoxes, faSearch, faShoppingCart,
-  faTrash, faMinus, faPlus, faCheck, faXmark, faLock
-} from '@fortawesome/free-solid-svg-icons'
+import { faBoxes, faSearch, faShoppingCart, faTrash, faMinus, faPlus, faCheck, faXmark, faLock } from '@fortawesome/free-solid-svg-icons'
+const { activePos } = useAuth()
+const route = useRoute()
 
 import PaymentModal from './PaymentModal.vue'
 import InvoiceModal from './InvoiceModal.vue'
@@ -245,7 +293,11 @@ const currentInvoiceNumber = ref('')
 const currentPaymentMethod = ref('')
 const paymentsList = ref([])
 
-const cart = ref([])
+import { useCart } from '@/composables/useCart'
+import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
+
+const { cart, totalPrice, addToCart, removeFromCart, clearCart } = useCart()
+
 const categories = ref([])
 const products = shallowRef([])
 const activeCategoryId = ref(null)
@@ -253,14 +305,7 @@ const searchQuery = ref('')
 const user = ref(null)
 const selectedDiscount = ref(0)
 const isLoading = ref(false)
-import { useCart } from '@/composables/useCart'
-import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
-import ProductCatalog from '@/components/ProductCatalog.vue'
-
-// ...
-const { cart, totalPrice, addToCart, removeFromCart, clearCart } = useCart()
 const { isSessionBilleted, checkActiveSession } = useCashRegisterSession()
-// ...
 const canSell = computed(() => {
   return !isSessionBilleted.value || isAdmin.value
 })
@@ -365,7 +410,8 @@ const shouldBypassSession = computed(() => {
 // ========== MÉTHODES ==========
 const formatPrice = (price) => {
   const value = Number.parseFloat(price) || 0
-  return `${value.toLocaleString('fr-FR')} Ar`
+  // Always show two decimal places for currency clarity
+  return `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar`
 }
 
 const getProductImageUrl = (product) => {
@@ -385,37 +431,19 @@ const handleImageError = (event) => {
 }
 
 // Gestion du panier
-const addToCart = (product) => {
-  const uniqueId = product.id || product.product_id;
-  const existing = cart.value.find(p => (p.id || p.product_id) === uniqueId);
-
-  if (existing) {
-    existing.quantity++;
-  } else {
-    cart.value.push({
-      ...product,
-      id: uniqueId,
-      quantity: 1,
-      price: Number(product.price) || 0,
-      category: product.category || { name: product.category_name },
-      printer: product.printer || product.category?.printer || null
-    });
-  }
-}
-
+// Use composable's addToCart, removeFromCart, and clearCart directly
+// Increment and decrement adjust quantity on the composable's cart items
 const incrementQuantity = (item) => { item.quantity++ }
 const decrementQuantity = (item) => {
   if (item.quantity > 1) item.quantity--
-  else removeItem(item)
+  else removeFromCart(item.id)
 }
 
 const removeItem = (item) => {
-  cart.value = cart.value.filter(i => i.id !== item.id)
+  removeFromCart(item.id)
 }
 
-const clearCart = () => {
-  cart.value = []
-}
+// clearCart already imported from useCart; no extra implementation needed
 
 const setActiveCategory = (categoryId) => {
   activeCategoryId.value = categoryId
@@ -430,10 +458,8 @@ const processData = (data) => {
       category_id: category.id,
       category_name: category.name,
       printer: category.printer,
-      price: product.pricing?.[0]?.price
-        ? Number.parseFloat(product.pricing[0].price)
-        : 0,
-    }))
+      // Use 'pricings' (plural) as returned by the API; if missing, omit price
+      ...(product.pricings?.[0]?.price ? { price: Number.parseFloat(product.pricings[0].price) } : {})    }))
   ))
 }
 
@@ -475,35 +501,19 @@ const checkActiveSessionAndRedirect = async () => {
         const parsed = JSON.parse(localSession)
         if (parsed.is_admin_session === true && parsed.cash_register_id) {
           if (auth.user) {
-            auth.user.point_of_sale_id = parsed.cash_register_id
             user.value = auth.user
           }
         }
       } catch (e) {}
     }
 
-    // Si toujours pas de point_of_sale_id, essayer d'en charger un
-    if (!user.value?.point_of_sale_id && auth.user) {
-      const savedPos = localStorage.getItem('lastUsedPointOfSale')
-      if (savedPos) {
-        auth.user.point_of_sale_id = parseInt(savedPos)
-        user.value = auth.user
-      } else if (auth.user.point_of_sale_id) {
-        user.value = auth.user
-      } else {
-        // Optionnel: définir un point de vente par défaut
-        console.warn('Admin: Aucun point de vente configuré')
-      }
-    }
 
     return true
   }
 
   // 👤 Caissier normal : vérifier la session active
   try {
-    const response = await axios.get(`${API_BASE_URL}/my-active-session`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
+    const response = await apiClient.get('/my-active-session')
 
     const isAdminVirtualSession = (
       localStorage.getItem('cashRegisterSession') &&
@@ -570,12 +580,12 @@ onMounted(async () => {
   const sessionOk = await checkActiveSessionAndRedirect()
   if (!sessionOk) return
 
-  // Chargement des données si point_of_sale_id disponible
-  if (user.value?.point_of_sale_id) {
+  // Chargement des données si point de vente actif disponible
+  if (activePos.value?.id) {
     await loadData(false)
     setTimeout(() => loadData(true), 1000)
   } else if (isAdmin.value) {
-    console.warn('Admin: Aucun point_of_sale_id trouvé, certaines fonctionnalités peuvent être limitées')
+    console.warn('Admin: Aucun point de vente actif trouvé, certaines fonctionnalités peuvent être limitées')
   }
 })
 

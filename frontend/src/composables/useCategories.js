@@ -30,11 +30,8 @@ export function useCategories() {
         return
       }
 
-      console.log('loadCategories : récupération des catégories (cache ou API)')
       const rawCategories = await dataCacheService.getCategories(activePos.value.id, token, forceRefresh)
-      
       console.log('loadCategories : catégories reçues :', rawCategories.length, 'catégories')
-
       const categoryPrinterMap = { ...categoryPrinterTypes.value }
       const aggregatedProducts = []
 
@@ -59,12 +56,17 @@ export function useCategories() {
           })
         }
       })
-      console.log('loadCategories : nombre de produits agrégés :', aggregatedProducts.length)
+      console.log('loadCategories : aggregatedProducts count', aggregatedProducts.length)
 
-      categories.value = rawCategories
+
+      console.log('loadCategories : categories set', categories.value.map(c=>c.id))
+      console.log('loadCategories : products set', products.value.length)
+
       categoryPrinterTypes.value = categoryPrinterMap
       products.value = aggregatedProducts
       filteredProducts.value = aggregatedProducts
+      console.log('loadCategories : filteredProducts set', filteredProducts.value.length)
+
 
       console.log('loadCategories : exécution terminée avec succès')
     } catch (error) {
@@ -75,49 +77,51 @@ export function useCategories() {
     }
   }
 
-  const loadProducts = (category = null) => {
-    activeCategory.value = category;
+const loadProducts = (category = null) => {
+  console.log('loadProducts : called with category', category);
+  activeCategory.value = category;
 
-    let productsToProcess = [];
-    if (category && category.id) {
-        productsToWeProcess = products.value.filter(p => p.category_id === category.id);
-    } else {
-        productsToProcess = products.value;
-    }
-    
-    const fallbackPrinterTypeId = resolveCategoryPrinterTypeId(category); 
-
-    filteredProducts.value = productsToProcess.map(product => {
-      const categoryId = product.category_id ?? category?.id ?? null; 
-      const printerTypeId = product.printer_type_id ?? resolveProductPrinterTypeId(product, category) ?? fallbackPrinterTypeId;
-      
-      const price = Number(
-        product.price ??
-        (Array.isArray(product.pricing) && product.pricing.length ? parseFloat(product.pricing[0].price) : 0)
-      ) || 0;
-      
-      const stock = resolveProductStock(product);
-
-      const normalized = {
-        ...product,
-        category_id: categoryId,
-        printer_type_id: printerTypeId,
-        price,
-        stock,
-      };
-
-      normalized.isAvailable = checkProductAvailability(normalized);
-
-      registerProduct(normalized, {
-        category,
-        category_id: categoryId,
-        printer_type_id: printerTypeId,
-        price
-      });
-
-      return normalized;
-    });
+  let productsToProcess = [];
+  if (category && category.id) {
+    productsToProcess = products.value.filter(p => p.category_id === category.id);
+  } else {
+    productsToProcess = products.value;
   }
+
+  const fallbackPrinterTypeId = resolveCategoryPrinterTypeId(category);
+
+  filteredProducts.value = productsToProcess.map(product => {
+    const categoryId = product.category_id ?? category?.id ?? null;
+    const printerTypeId = product.printer_type_id ?? resolveProductPrinterTypeId(product, category) ?? fallbackPrinterTypeId;
+
+    const price = Number(
+      product.price ??
+      (Array.isArray(product.pricing) && product.pricing.length ? parseFloat(product.pricing[0].price) : 0)
+    ) || 0;
+
+    const stock = resolveProductStock(product);
+
+    const normalized = {
+      ...product,
+      category_id: categoryId,
+      printer_type_id: printerTypeId,
+      price,
+      stock,
+    };
+
+    normalized.isAvailable = checkProductAvailability(normalized);
+
+    registerProduct(normalized, {
+      category,
+      category_id: categoryId,
+      printer_type_id: printerTypeId,
+      price,
+    });
+
+    console.log('loadProducts : normalized product', normalized);
+    return normalized;
+  });
+};
 
   const resolveCategoryPrinterTypeId = (category) => {
     if (!category) return null

@@ -167,7 +167,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import { API_BASE_URL } from '@/utils/api'
 import Profile from './Profile.vue'
 import { useCashTransactionStore } from '@/stores/cashTransactionStore'
@@ -212,12 +212,6 @@ const sales = ref([])
 const loading = ref(true)
 const isRefreshing = ref(false)
 const lastUpdated = ref('—')
-
-const authHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Token manquant pour l\'authentification')
-  return { Authorization: `Bearer ${token}` }
-}
 
 const formatCurrency = (value) => {
   const amount = Number(value || 0)
@@ -297,9 +291,7 @@ const goTo = (routeName) => {
 
 const fetchActiveSession = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-session/my-active-session`, {
-      headers: authHeaders()
-    })
+    const { data } = await apiClient.get('/my-active-session')
     session.value = data?.data || data || null
   } catch (error) {
     console.error('Erreur lors de la récupération de la session active:', error.response?.data || error.message)
@@ -314,11 +306,10 @@ const fetchSales = async () => {
   }
 
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/sales/current-session`, {
+    const { data } = await apiClient.get('/sales/current-session', {
       params: {
         cash_register_session_id: session.value.id
-      },
-      headers: authHeaders()
+      }
     })
     const sessionSales = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : []
     const userSales = sessionSales.filter((sale) => String(getSaleUserId(sale) ?? '') === String(user.value.id))

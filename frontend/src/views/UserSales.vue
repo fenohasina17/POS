@@ -226,7 +226,7 @@
 <script setup>
 // (le script reste identique, aucun changement nécessaire)
 import { computed, onMounted, ref } from 'vue'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import { API_BASE_URL } from '@/utils/api'
 import EditSaleModal from './EditSaleModal.vue'
 import Profile from './Profile.vue'
@@ -260,12 +260,6 @@ const lastPage = ref(1)
 const total = ref(0)
 
 // Headers API
-const authHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Token manquant')
-  return { Authorization: `Bearer ${token}` }
-}
-
 const fetchAllSales = async () => {
   try {
     const userRaw = localStorage.getItem('user')
@@ -276,9 +270,8 @@ const fetchAllSales = async () => {
       cash_register_session_id: sessionId.value,
       user_id: user.id,
     }
-    const { data } = await axios.get(`${API_BASE_URL}/sales`, {
+    const { data } = await apiClient.get('/sales', {
       params,
-      headers: authHeaders(),
     })
 
     let items = []
@@ -316,9 +309,7 @@ const changePage = (newPage) => {
 
 const fetchCurrentSession = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/my-active-session`, {
-      headers: authHeaders(),
-    })
+    const { data } = await apiClient.get('/my-active-session')
     return data?.data || data || null
   } catch (error) {
     console.error('Erreur session:', error)
@@ -328,9 +319,7 @@ const fetchCurrentSession = async () => {
 
 const fetchSaleDetails = async (saleId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/sales/${saleId}`, {
-      headers: authHeaders(),
-    })
+    const { data } = await apiClient.get(`/sales/${saleId}`)
     return data?.data || data
   } catch (error) {
     console.error('Erreur détails vente:', error)
@@ -397,9 +386,7 @@ const printDuplicateSale = async (sale) => {
 
 const deleteSale = async (sale) => {
   try {
-    await axios.delete(`${API_BASE_URL}/sales/${sale.id}`, {
-      headers: authHeaders(),
-    })
+    await apiClient.delete(`/sales/${sale.id}`)
     await loadSales()
     if (selectedSale.value?.id === sale.id) selectedSale.value = null
   } catch (error) {
@@ -433,9 +420,7 @@ const saveSale = async (updatedSale) => {
       })).filter(item => item.product_id)
     }
 
-    await axios.put(`${API_BASE_URL}/sales/${updatedSale.id}`, payload, {
-      headers: { 'Content-Type': 'application/json', ...authHeaders() }
-    })
+    await apiClient.put(`/sales/${updatedSale.id}`, payload)
 
     await loadSales()
     if (selectedSale.value?.id === updatedSale.id) {

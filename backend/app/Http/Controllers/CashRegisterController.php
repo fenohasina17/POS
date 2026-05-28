@@ -150,10 +150,7 @@ class CashRegisterController extends Controller
                 ], 403);
             }
 
-            // Vérifier que l'admin est associé à ce POS s'il le spécifie
-            if ($isAdmin && $targetPointOfSaleId && !$user->pointsOfSale->contains($targetPointOfSaleId)) {
-                return response()->json(['error' => 'Accès refusé pour ce point de vente.'], 403);
-            }
+
             
             $cashRegister = CashRegister::create([
                 'name' => $validated['name'],
@@ -213,10 +210,7 @@ class CashRegisterController extends Controller
             }
             $cashRegister = $cashRegister->findOrFail($id);
 
-            // Vérifier que l'admin est associé à ce POS s'il le spécifie
-            if ($isAdmin && isset($validated['point_of_sale_id']) && $validated['point_of_sale_id'] && !$user->pointsOfSale->contains($validated['point_of_sale_id'])) {
-                return response()->json(['error' => 'Accès refusé pour ce point de vente.'], 403);
-            }
+
 
             if (array_key_exists('name', $validated)) {
                 $cashRegister->name = $validated['name'] ?? $cashRegister->name;

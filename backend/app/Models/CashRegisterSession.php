@@ -120,7 +120,7 @@ class CashRegisterSession extends Model
             ->sum('amount');
             
         $out = $this->cashTransactions()
-            ->where('type', 'out')
+            ->whereIn('type', ['out', 'refund'])
             ->sum('amount');
         
         return (float) ($this->starting_amount + $in - $out);

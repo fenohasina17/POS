@@ -54,9 +54,6 @@ class ProductController extends Controller
             if ($isAdmin) {
                 $requestedPosId = $request->query('point_of_sale_id');
                 if ($requestedPosId) {
-                    if (!$user->pointsOfSale->contains($requestedPosId)) {
-                        return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                    }
                     $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $requestedPosId));
                 } elseif ($activePosId) {
                     $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $activePosId));
@@ -73,16 +70,19 @@ class ProductController extends Controller
                 $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $activePosId));
             }
 
-            $products = $query->with([
-                'pricings' => function ($q) use ($activePosId, $requestedPosId, $isAdmin) {
-                    // Filter pricing by active POS or requested POS if admin
-                    if ($isAdmin && $requestedPosId) {
-                         $q->where('point_of_sale_id', $requestedPosId);
-                    } elseif ($activePosId) {
-                        $q->where('point_of_sale_id', $activePosId);
+            $cacheKey = "products_pos_{$activePosId}_admin_{$isAdmin}_req_{$requestedPosId}";
+            $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($query, $activePosId, $requestedPosId, $isAdmin) {
+                return $query->with([
+                    'pricings' => function ($q) use ($activePosId, $requestedPosId, $isAdmin) {
+                        // Filter pricing by active POS or requested POS if admin
+                        if ($isAdmin && $requestedPosId) {
+                             $q->where('point_of_sale_id', $requestedPosId);
+                        } elseif ($activePosId) {
+                            $q->where('point_of_sale_id', $activePosId);
+                        }
                     }
-                }
-            ])->get();
+                ])->get();
+            });
 
 
             return response()->json($products, 200);
@@ -117,16 +117,12 @@ class ProductController extends Controller
                 'point_of_sale_id' => ($isAdmin ? 'nullable' : 'prohibited') . '|exists:point_of_sales,id',
             ]);
 
-            $targetPosId = null;
-            if ($isAdmin) {
-                $targetPosId = $validated['point_of_sale_id'] ?? $activePosId;
-                if (!$targetPosId) {
-                    return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
-                }
-                if (!$user->pointsOfSale->contains($targetPosId)) {
-                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                }
-            } else {
+            // Determine target POS: prefer payload, then active POS from middleware, then any existing POS
+            $targetPosId = $validated['point_of_sale_id'] ?? $activePosId ?? \App\Models\PointOfSale::first()?->id;
+            if (!$targetPosId) {
+                return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
+            }
+            if (!$isAdmin) {
                 if (!$activePosId) {
                     return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
                 }
@@ -195,11 +191,14 @@ class ProductController extends Controller
             $targetPosId = null;
             if ($isAdmin) {
                 $targetPosId = $validated['point_of_sale_id'] ?? $activePosId;
+                // Fallback: use any POS if none specified
+                if (!$targetPosId) {
+                    // Fallback: use the first POS in the system if admin has none assigned
+                    $firstPos = \App\Models\PointOfSale::first();
+                    $targetPosId = $firstPos ? $firstPos->id : null;
+                }
                 if (!$targetPosId) {
                     return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
-                }
-                if (!$user->pointsOfSale->contains($targetPosId)) {
-                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
                 }
             } else {
                 if (!$activePosId) {
@@ -276,9 +275,7 @@ class ProductController extends Controller
                 if (!$targetPosId) {
                     return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
                 }
-                if (!$user->pointsOfSale->contains($targetPosId)) {
-                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                }
+
             } else {
                 if (!$activePosId) {
                     return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
@@ -341,9 +338,7 @@ class ProductController extends Controller
                 if (!$targetPosId) {
                     return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
                 }
-                if (!$user->pointsOfSale->contains($targetPosId)) {
-                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                }
+
             } else {
                 if (!$activePosId) {
                     return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);

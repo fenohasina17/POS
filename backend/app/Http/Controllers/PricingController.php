@@ -47,9 +47,6 @@ class PricingController extends Controller
                 // Admin can optionally filter by a specific point_of_sale_id from query, otherwise use activePosId
                 $requestedPosId = $request->query('point_of_sale_id');
                 if ($requestedPosId) {
-                    if (!$user->pointsOfSale->contains($requestedPosId)) {
-                        return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                    }
                     $query->where('point_of_sale_id', $requestedPosId);
                 } elseif ($activePosId) {
                     $query->where('point_of_sale_id', $activePosId);
@@ -99,9 +96,6 @@ class PricingController extends Controller
                 // Admin can optionally filter by a specific point_of_sale_id from query
                 $requestedPosId = $request->query('point_of_sale_id');
                 if ($requestedPosId) {
-                    if (!$user->pointsOfSale->contains($requestedPosId)) {
-                        return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                    }
                     $query->where('point_of_sale_id', $requestedPosId);
                 } elseif ($activePosId) {
                     $query->where('point_of_sale_id', $activePosId);
@@ -152,9 +146,7 @@ class PricingController extends Controller
                 if (!$targetPosId) { // Admin must specify POS or have an active one
                      return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
                 }
-                if (!$user->pointsOfSale->contains($targetPosId)) {
-                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                }
+
             } else {
                 if (!$activePosId) {
                     return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
@@ -238,9 +230,7 @@ class PricingController extends Controller
                 if (!$targetPosIdForQuery) { // Admin must specify POS or have an active one
                      return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
                 }
-                if (!$user->pointsOfSale->contains($targetPosIdForQuery)) {
-                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                }
+
             } else {
                 $targetPosIdForQuery = $activePosId;
             }
@@ -257,10 +247,6 @@ class PricingController extends Controller
             }
   
             // Met à jour l'enregistrement de pricing avec la nouvelle valeur de "price"
-            // If admin is updating point_of_sale_id, ensure they have access to it.
-            if ($isAdmin && isset($validated['point_of_sale_id']) && $validated['point_of_sale_id'] && !$user->pointsOfSale->contains($validated['point_of_sale_id'])) {
-                 return response()->json(['message' => 'Accès refusé pour le point de vente cible.'], 403);
-            }
 
             $pricing->update([
                 'price' => $validated['price'],

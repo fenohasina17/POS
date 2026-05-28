@@ -97,24 +97,25 @@ class SaleService
      * @param string $type Type de transaction ('sale' par défaut)
      * @return CashTransaction|null Transaction créée ou null si non-espèces ou déjà existante
      */
-    protected function createCashTransaction(Sale $sale, CashRegisterSession $session, string $type = 'sale'): ?CashTransaction
+    protected function createCashTransactions(Sale $sale, CashRegisterSession $session, string $type = 'sale'): void
     {
-        $paymentId = $this->getMainPaymentId($sale);
-        if (!$this->isCashPayment($paymentId))
-            return null;
-        if ($sale->cashTransaction()->exists())
-            return null;
+        // On supprime d'éventuelles transactions existantes pour cette vente pour éviter les doublons
+        CashTransaction::where('sale_id', $sale->id)->where('type', $type)->delete();
 
-        return CashTransaction::create([
-            'session_id' => $session->id,
-            'sale_id' => $sale->id,
-            'type' => $type,
-            'amount' => $sale->final_amount,
-            'description' => "Vente #{$sale->ticket_number}",
-            'reference' => $sale->ticket_number,
-            'created_by' => $sale->user_id,
-            'notes' => "Vente validée le " . now()->format('d/m/Y H:i'),
-        ]);
+        foreach ($sale->payments as $salePayment) {
+            if ($this->isCashPayment($salePayment->payment_id)) {
+                CashTransaction::create([
+                    'session_id' => $session->id,
+                    'sale_id' => $sale->id,
+                    'type' => $type,
+                    'amount' => $salePayment->amount,
+                    'description' => "Vente #{$sale->ticket_number}",
+                    'reference' => $sale->ticket_number,
+                    'created_by' => $sale->user_id,
+                    'notes' => "Vente validée le " . now()->format('d/m/Y H:i'),
+                ]);
+            }
+        }
     }
 
     /**
@@ -268,7 +269,7 @@ class SaleService
 
                 if ($sale->status === 'completed') {
                     $session->increment('total_sales', $sale->final_amount);
-                    $this->createCashTransaction($sale, $session, 'sale');
+                    $this->createCashTransactions($sale, $session, 'sale');
                 }
 
                 return $sale->load(['orderlines.product', 'payments.payment', 'table', 'user', 'cashTransaction']);
@@ -505,8 +506,8 @@ class SaleService
                 $session = $sale->cashRegisterSession;
                 if ($session) {
                     $session->increment('total_sales', $finalAmount);
-                    // Création de la transaction cash si nécessaire
-                    $this->createCashTransaction($sale, $session, 'sale');
+                    // Création des transactions cash si nécessaire
+                    $this->createCashTransactions($sale, $session, 'sale');
                 }
 
                 if ($sale->table) {
@@ -543,14 +544,11 @@ class SaleService
                 if ($sale->status === 'completed') {
                     $session->decrement('total_sales', $sale->final_amount);
 
-                    $cashTransaction = CashTransaction::where('sale_id', $sale->id)->first();
-                    if ($cashTransaction) {
-                        $cashTransaction->update([
-                            'type' => 'refund',
-                            'description' => "Remboursement vente #{$sale->ticket_number} - ANNULÉE",
-                            'notes' => "Annulation: " . ($reason ?? 'Sans raison')
-                        ]);
-                    }
+                    CashTransaction::where('sale_id', $sale->id)->update([
+                        'type' => 'refund',
+                        'description' => "Remboursement vente #{$sale->ticket_number} - ANNULÉE",
+                        'notes' => "Annulation: " . ($reason ?? 'Sans raison')
+                    ]);
                 }
 
                 $sale->update([

@@ -124,6 +124,7 @@
 import { ref, watch, reactive, onMounted, computed } from 'vue'
 import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
+import { useAuth } from '@/composables/useAuth'
 
 const props = defineProps({
   isOpen: Boolean,
@@ -149,8 +150,8 @@ const imageError = ref('')
 const fetchCategories = async () => {
   try {
     const token = localStorage.getItem('token')
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const pointOfSaleId = user?.point_of_sale_id
+    const { activePos } = useAuth()
+    const pointOfSaleId = activePos.value?.id
 
     console.log('🔍 pointOfSaleId utilisé:', pointOfSaleId)
 
@@ -252,7 +253,13 @@ const saveProduct = async () => {
     const response_1 = await axios.put(
       `${API_BASE_URL}/products/${localProduct.id}`,
       payload_1,
-      { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          'Content-Type': 'application/json',
+          'X-Active-POS-ID': activePos.value?.id || ''
+        } 
+      }
     )
     const payload_2 = {
 
@@ -262,7 +269,13 @@ const saveProduct = async () => {
       const response_2 = await axios.put(
         `${API_BASE_URL}/pricings/${localProduct.id}`,
         payload_2,
-        { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        { 
+          headers: { 
+            Authorization: `Bearer ${token}`, 
+            'Content-Type': 'application/json',
+            'X-Active-POS-ID': activePos.value?.id || ''
+          } 
+        }
       );
     } catch (error) {
       console.error('Erreur lors de la mise à jour du prix:', error.response?.data || error);

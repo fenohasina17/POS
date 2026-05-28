@@ -67,12 +67,14 @@ class TableController extends Controller
             $query = Table::with(['pointOfSale']);
             if ($targetPosId) {
                 $query->where('point_of_sale_id', $targetPosId);
-            } elseif (!$isAdmin) { // Non-admin without active POS is blocked by getAuthorizedPosId
-                 // This case should not be reached due to getAuthorizedPosId
+            } elseif (!$isAdmin) {
                 return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
             }
 
-            $tables = $query->orderBy('table_number')->get();
+            $cacheKey = "tables_pos_{$targetPosId}_admin_{$isAdmin}";
+            $tables = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($query) {
+                return $query->orderBy('table_number')->get();
+            });
 
             return response()->json($tables);
         } catch (\Exception $e) {
