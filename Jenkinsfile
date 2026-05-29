@@ -96,74 +96,79 @@ pipeline {
         // Volume /tmp partagé pour récupérer le rapport JUnit XML
         stage('Tests') {
             steps {
-                echo "Lancement des tests PHPUnit..."
-                sh """
-                    docker network create test-net-${BUILD_NUMBER} || true
-
-                    docker run -d \
-                        --name pg-test-${BUILD_NUMBER} \
-                        --network test-net-${BUILD_NUMBER} \
-                        -e POSTGRES_DB=testing \
-                        -e POSTGRES_USER=postgres \
-                        -e POSTGRES_PASSWORD=postgres_test \
-                        postgres:15-alpine
-
-                    docker run -d \
-                        --name redis-test-${BUILD_NUMBER} \
-                        --network test-net-${BUILD_NUMBER} \
-                        redis:7-alpine
-                """
-
-                sh """
-                    echo "Attente que Postgres soit prêt..."
-                    docker run --rm \
-                        --network test-net-${BUILD_NUMBER} \
-                        --entrypoint sh \
-                        postgres:15-alpine \
-                        -c "
-                            until pg_isready -h pg-test-${BUILD_NUMBER} -U postgres; do
-                                echo 'Postgres pas encore prêt, attente...'
-                                sleep 2
-                            done
-                            echo 'Postgres est prêt !'
-                        "
-                """
-
-                withCredentials([string(credentialsId: 'app-key', variable: 'APP_KEY_TEST')]) {
+                // catchError garantit que toute erreur infra (docker, réseau, credentials)
+                // passe en UNSTABLE plutôt qu'en FAILURE — les stages de déploiement
+                // s'exécutent toujours ; seul un vrai échec de build les stoppe
+                catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE') {
+                    echo "Lancement des tests PHPUnit..."
                     sh """
-                        docker run --rm \
-                            --network test-net-${BUILD_NUMBER} \
-                            -v /tmp:/tmp \
-                            -e APP_ENV=testing \
-                            -e APP_KEY="\${APP_KEY_TEST}" \
-                            -e DB_CONNECTION=pgsql \
-                            -e DB_HOST=pg-test-${BUILD_NUMBER} \
-                            -e DB_PORT=5432 \
-                            -e DB_DATABASE=testing \
-                            -e DB_USERNAME=postgres \
-                            -e DB_PASSWORD=postgres_test \
-                            -e REDIS_HOST=redis-test-${BUILD_NUMBER} \
-                            -e REDIS_PORT=6379 \
-                            ${BACKEND_IMAGE}:${IMAGE_TAG} \
-                            php vendor/bin/phpunit \
-                                --testdox \
-                                --log-junit /tmp/phpunit-${BUILD_NUMBER}.xml \
-                            > /tmp/phpunit-${BUILD_NUMBER}.txt 2>&1 || true
+                        docker network create test-net-${BUILD_NUMBER} || true
 
-                        cat /tmp/phpunit-${BUILD_NUMBER}.txt
+                        docker run -d \
+                            --name pg-test-${BUILD_NUMBER} \
+                            --network test-net-${BUILD_NUMBER} \
+                            -e POSTGRES_DB=testing \
+                            -e POSTGRES_USER=postgres \
+                            -e POSTGRES_PASSWORD=postgres_test \
+                            postgres:15-alpine
+
+                        docker run -d \
+                            --name redis-test-${BUILD_NUMBER} \
+                            --network test-net-${BUILD_NUMBER} \
+                            redis:7-alpine
                     """
 
-                    // Tests échoués = build UNSTABLE (orange), pas FAILURE (rouge)
-                    // Le déploiement continue — rollback possible via kubectl rollout undo
-                    // ou en relançant un build précédent depuis Jenkins
-                    script {
-                        def hasFailures = sh(
-                            script: "grep -qE 'Failures: [1-9]|Errors: [1-9]' /tmp/phpunit-${BUILD_NUMBER}.txt",
-                            returnStatus: true
-                        ) == 0
+                    sh """
+                        echo "Attente que Postgres soit prêt..."
+                        docker run --rm \
+                            --network test-net-${BUILD_NUMBER} \
+                            --entrypoint sh \
+                            postgres:15-alpine \
+                            -c "
+                                until pg_isready -h pg-test-${BUILD_NUMBER} -U postgres; do
+                                    echo 'Postgres pas encore prêt, attente...'
+                                    sleep 2
+                                done
+                                echo 'Postgres est prêt !'
+                            "
+                    """
 
-                        if (hasFailures) {
-                            unstable('⚠️ Des tests ont échoué — déploiement maintenu, corriger côté développeurs')
+                    withCredentials([string(credentialsId: 'app-key', variable: 'APP_KEY_TEST')]) {
+                        sh """
+                            docker run --rm \
+                                --network test-net-${BUILD_NUMBER} \
+                                -v /tmp:/tmp \
+                                -e APP_ENV=testing \
+                                -e APP_KEY="\${APP_KEY_TEST}" \
+                                -e DB_CONNECTION=pgsql \
+                                -e DB_HOST=pg-test-${BUILD_NUMBER} \
+                                -e DB_PORT=5432 \
+                                -e DB_DATABASE=testing \
+                                -e DB_USERNAME=postgres \
+                                -e DB_PASSWORD=postgres_test \
+                                -e REDIS_HOST=redis-test-${BUILD_NUMBER} \
+                                -e REDIS_PORT=6379 \
+                                ${BACKEND_IMAGE}:${IMAGE_TAG} \
+                                php vendor/bin/phpunit \
+                                    --testdox \
+                                    --log-junit /tmp/phpunit-${BUILD_NUMBER}.xml \
+                                > /tmp/phpunit-${BUILD_NUMBER}.txt 2>&1 || true
+
+                            cat /tmp/phpunit-${BUILD_NUMBER}.txt
+                        """
+
+                        // Tests échoués = build UNSTABLE (orange), pas FAILURE (rouge)
+                        // Le déploiement continue — rollback possible via kubectl rollout undo
+                        // ou en relançant un build précédent depuis Jenkins
+                        script {
+                            def hasFailures = sh(
+                                script: "grep -qE 'Failures: [1-9]|Errors: [1-9]' /tmp/phpunit-${BUILD_NUMBER}.txt",
+                                returnStatus: true
+                            ) == 0
+
+                            if (hasFailures) {
+                                unstable('⚠️ Des tests ont échoué — déploiement maintenu, corriger côté développeurs')
+                            }
                         }
                     }
                 }
