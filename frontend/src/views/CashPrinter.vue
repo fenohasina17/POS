@@ -102,9 +102,9 @@
                 v-for="register in filteredRegisters"
                 :key="register.id"
                 type="button"
-                class="flex flex-col items-start p-4 bg-white rounded-xl border border-slate-200 hover:bg-indigo-50 transition-all disabled:cursor-not-allowed text-left"
+                class="cash-register-card flex flex-col items-start p-4 bg-white rounded-xl border border-slate-200 hover:bg-indigo-50 transition-all disabled:cursor-not-allowed text-left"
                 :class="{
-                  'border-indigo-400 bg-indigo-50': selectedCashRegister === register.id,
+                  'selected': selectedCashRegister === register.id,
                   'opacity-60 pointer-events-none bg-slate-100': isRegisterLocked(register.id) && !isAdmin
                 }"
                 :disabled="isRegisterLocked(register.id) && !isAdmin"
@@ -117,7 +117,7 @@
                   <div class="flex-1 min-w-0">
                     <p class="font-semibold text-slate-900 truncate">{{ register.name }}</p>
                     <p class="text-xs text-slate-400 mt-0.5 truncate">{{ register.point_of_sale?.name || 'Sans point de vente' }}</p>
-                    <p v-if="register.current_session?.user?.name" class="text-xs text-indigo-600 mt-1">👤 Occupé par: {{ register.current_session.user.name }}</p>
+                    <p v-if="register.current_session?.user?.name" class="text-xs text-indigo-600 mt-1">👤{{ register.current_session.user.name }}</p>
                   </div>
                   <span
                     v-if="statusBadgeText(register.id)"
@@ -258,13 +258,16 @@ const filteredRegisters = computed(() => {
 
   let filtered = cashRegisters.value
 
-  // Filter by search query
+  // 🔒 CAISSIER DÉJÀ CONNECTÉ : Ne voit que SA caisse
+  if (!isAdmin.value && isSelfConnected.value && activeRegisterId.value) {
+    return filtered.filter(r => r.id === activeRegisterId.value)
+  }
+
   if (searchRegister.value) {
     const query = searchRegister.value.toLowerCase()
     filtered = filtered.filter(r => r.name.toLowerCase().includes(query))
   }
 
-  // Filter by active POS
   return filtered.filter(r => (r.point_of_sale_id || r.point_of_sale?.id) === posId)
 })
 
@@ -273,7 +276,6 @@ const registerStatuses = ref({})
 const registerOwners = ref({})
 const selectedCashRegister = ref(null)
 
-// ⚡ CHARGEMENT IMMÉDIAT POUR VERROUILLAGE INSTANTANÉ
 const getStoredSession = () => {
   try {
     const s = localStorage.getItem('cashRegisterSession') || localStorage.getItem('cash_register_session')
@@ -315,7 +317,6 @@ const hasActiveSession = computed(() => isSessionOpen(activeSession.value))
 const activeRegisterId = computed(() => hasActiveSession.value ? activeSession.value.cash_register_id : null)
 const isSelfConnected = computed(() => hasActiveSession.value && activeSession.value?.user_id === currentUserId.value)
 
-// 🔒 Vérifier si la session actuelle de l'utilisateur est déjà billetée
 const isSessionBilleted = computed(() => {
   const session = activeSession.value
   if (!session) return false
@@ -390,11 +391,9 @@ const statusBadgeText = (registerId) => {
     const userId = currentUserId.value
     const userName = currentUserName.value
 
-    const isOwn = (typeof owner === 'number' && owner === userId) ||
-                  (typeof owner === 'string' && owner === userName)
+    const isOwn = (typeof owner === 'string' && owner === userName)
 
-    if (isOwn) return 'Occupée (vous)'
-    return owner ? `Occupée par ${owner}` : 'Occupée'
+
   }
 
   if (status === 'error') return 'Erreur'
@@ -464,6 +463,13 @@ const fetchCashRegisters = async () => {
     })
     registerStatuses.value = newStatuses
     registerOwners.value = newOwners
+
+    // Auto-select first available
+    const firstAvailable = registers.find(r => newStatuses[r.id] === 'available')
+    if (firstAvailable) {
+        selectedCashRegister.value = firstAvailable.id
+    }
+
   } catch (error) {
     console.error('Erreur chargement caisses:', error)
     errorMessage.value = error.response?.data?.message || 'Impossible de charger les caisses'
@@ -472,7 +478,6 @@ const fetchCashRegisters = async () => {
     loadingRegisters.value = false
   }
 }
-
 const fetchMyActiveSession = async () => {
   try {
     const { data } = await apiClient.get('/my-active-session')
@@ -539,24 +544,22 @@ const fetchSessionSummary = async (sessionId) => {
 
 // ========== GESTION DES SESSIONS ADMIN ==========
 const createAdminSupervisionSession = (registerId, occupantSession, selectedRegister) => {
-  // Récupérer les informations du caissier occupant
   const occupantId = occupantSession.user_id || occupantSession.user?.id
   const occupantName = occupantSession.user?.name || occupantSession.user_name
-  const realSessionId = occupantSession.id // 🔥 C'est ça qu'on veut pour cash_register_session_id
+  const realSessionId = occupantSession.id
 
   console.log('👤 Session supervision - Détails:', {
-    real_session_id: realSessionId,    // ID de la session réelle (ex: 1)
-    occupant_user_id: occupantId,       // ID du caissier (ex: 2)
+    real_session_id: realSessionId,
+    occupant_user_id: occupantId,
     occupant_name: occupantName
   })
 
   const adminSession = {
-    // 🔥 Pour les requêtes SQL, on utilise l'ID de la session réelle
-    id: realSessionId,  // ⚠️ Changement: utiliser realSessionId au lieu de occupantId
+    id: realSessionId,
     cash_register_id: registerId,
-    admin_user_id: currentUserId.value,    // Qui est l'admin (ex: 1)
-    original_user_id: occupantId,          // Caissier d'origine (ex: 2)
-    original_session_id: realSessionId,    // Session réelle (ex: 1)
+    admin_user_id: currentUserId.value,
+    original_user_id: occupantId,
+    original_session_id: realSessionId,
     user_name: currentUserName.value,
     occupant_name: occupantName,
     is_closed: false,
@@ -570,9 +573,9 @@ const createAdminSupervisionSession = (registerId, occupantSession, selectedRegi
   localStorage.setItem('cash_register_session', JSON.stringify(adminSession))
 
   console.log('✅ Session supervision créée:', {
-    cash_register_session_id: adminSession.id,  // Sera 1 (ID session réelle)
-    admin_id: adminSession.admin_user_id,       // Sera 1 (ID admin)
-    occupant_id: adminSession.original_user_id  // Sera 2 (ID caissier)
+    cash_register_session_id: adminSession.id,
+    admin_id: adminSession.admin_user_id,
+    occupant_id: adminSession.original_user_id
   })
 
   return adminSession
@@ -751,7 +754,6 @@ const initializeSessions = async () => {
 const onConnectButtonClick = async () => {
   if (isProcessing.value) return
 
-  // ADMIN
   if (isAdmin.value) {
     if (!selectedCashRegister.value) {
       alert('Veuillez sélectionner une caisse')
@@ -778,7 +780,6 @@ const onConnectButtonClick = async () => {
     return
   }
 
-  // CAISSIER
   if (!selectedCashRegister.value) {
     alert('Sélectionnez une caisse')
     return
@@ -828,26 +829,57 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.selected {
+/* ========== STYLES POUR LA CARTE SELECTIONNÉE ========== */
+.cash-register-card {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+
+.cash-register-card.selected {
   border-color: #4f46e5 !important;
-  background-color: #eef2ff !important;
-  box-shadow: 0 0 0 2px #4f46e5;
-  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25), 0 0 0 2px rgba(79, 70, 229, 0.1);
+  transform: scale(1.02);
+}
+
+.cash-register-card.selected .text-slate-900 {
+  color: #1e1b4b !important;
+}
+
+.cash-register-card.selected .bg-slate-100 {
+  background-color: #4f46e5 !important;
+  color: white !important;
+}
+
+.cash-register-card.selected .fas {
+  color: white !important;
+}
+
+/* Hover effect */
+.cash-register-card:hover:not(.selected):not(.opacity-60) {
+  border-color: #c7d2fe;
+  background-color: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.15);
 }
 
 /* Scrollbar pour la liste des caisses */
-.max-h-\[400px\]::-webkit-scrollbar {
+.grid::-webkit-scrollbar {
   width: 8px;
 }
-.max-h-\[400px\]::-webkit-scrollbar-track {
+
+.grid::-webkit-scrollbar-track {
   background: #f1f5f9;
   border-radius: 4px;
 }
-.max-h-\[400px\]::-webkit-scrollbar-thumb {
+
+.grid::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
-.max-h-\[400px\]::-webkit-scrollbar-thumb:hover {
+
+.grid::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
@@ -857,6 +889,7 @@ input:focus {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
+/* ========== STYLES POUR LE MODAL RÉSUMÉ ========== */
 .summary-overlay {
   position: fixed;
   inset: 0;
@@ -1016,6 +1049,7 @@ input:focus {
   color: rgb(15 23 42);
 }
 
+/* Responsive */
 @media (max-width: 640px) {
   .summary-overlay {
     padding: 0.85rem;
@@ -1035,27 +1069,5 @@ input:focus {
     width: 100%;
     min-width: 0;
   }
-  /* Scrollbar pour la liste des caisses */
-      .max-h-\[400px\]::-webkit-scrollbar {
-        width: 8px;
-      }
-      .max-h-\[400px\]::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 4px;
-      }
-      .max-h-\[400px\]::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
-        border-radius: 4px;
-      }
-      .max-h-\[400px\]::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
-      }
-
-      /* Style de focus pour la recherche */
-      input:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-      }
-
 }
 </style>

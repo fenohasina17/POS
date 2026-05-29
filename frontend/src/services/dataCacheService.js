@@ -1,45 +1,39 @@
-import axios from 'axios'
-import { API_BASE_URL } from '@/utils/api'
+import apiClient from './apiClient'
 
 /**
  * DataCacheService - Service d'accès direct aux données
- * Utilise Cache-Control: no-cache pour garantir des données fraîches
+ * Utilise apiClient pour profiter des intercepteurs (auth + POS header)
  */
 class DataCacheService {
   async getCategories(posId, token, forceRefresh = false) {
     console.log(`📡 Appel API: GET /categories`)
-
-    const response = await axios.get(`${API_BASE_URL}/categories`, {
+    
+    const response = await apiClient.get(`/categories`, {
       params: { 'with_products': 1, 'with_pricing': 1 },
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        'Cache-Control': 'no-cache',
-        ...(posId ? { 'X-Active-POS-ID': posId } : {})
+        'Cache-Control': 'no-cache'
       },
       timeout: 10000
     })
-
+    
     return Array.isArray(response.data) ? response.data : (response.data?.data || [])
   }
 
   async getTables(posId, token) {
     try {
       console.log('📡 Appel API: GET /tables')
-
-      const response = await axios.get(`${API_BASE_URL}/tables`, {
+      
+      const response = await apiClient.get(`/tables`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          ...(posId ? { 'X-Active-POS-ID': posId } : {})
+          'Cache-Control': 'no-cache'
         },
-          })
-          console.log('📡 API response received for /tables:', response)
-
+        timeout: 10000 // 10 secondes timeout
+      })
+      
       const tables = response.data?.data || response.data || []
       console.log(`✅ ${tables.length} tables récupérées`)
       return tables
-
+      
     } catch (error) {
       console.error('❌ Erreur getTables:', error.message)
       throw error
@@ -50,28 +44,26 @@ class DataCacheService {
     try {
       const isAll = tableId === 'all'
       const apiPath = isAll ? 'sales/pending' : `tables/${tableId}/pending-orders`
-
+      
       console.log(`📡 Appel API: GET /${apiPath}`)
-
-      const response = await axios.get(`${API_BASE_URL}/${apiPath}`, {
+      
+      const response = await apiClient.get(`/${apiPath}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-          ...(posId ? { 'X-Active-POS-ID': posId } : {})
+          'Cache-Control': 'no-cache'
         },
         timeout: 10000
       })
-
+      
       const orders = response.data?.data || response.data || []
       console.log(`✅ ${orders.length} commandes en attente récupérées`)
       return orders
-
+      
     } catch (error) {
       console.error('❌ Erreur getPendingOrders:', error.message)
       return []
     }
   }
+
 
   invalidatePendingOrders(id) {
     // Cache désactivé - rien à faire

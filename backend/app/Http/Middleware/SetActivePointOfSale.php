@@ -20,13 +20,21 @@ class SetActivePointOfSale
 
         if ($user) {
             $activePosId = $request->header('X-Active-POS-ID');
+            $queryPosId = $request->query('point_of_sale_id');
+            
+            \Log::info("SetActivePointOfSale DEBUG: User: {$user->id}, Header X-Active-POS-ID: " . ($activePosId ?? 'NULL') . ", Query point_of_sale_id: " . ($queryPosId ?? 'NULL'));
 
-            if ($activePosId) {
-                $activePosId = (int) $activePosId;
+            // Prioritize header, fallback to query param for compatibility if middleware allows
+            $posId = $activePosId ?? $queryPosId;
 
-                // Vérifier si l'utilisateur est associé à ce point de vente (ou s'il est admin)
-                if ($user->hasRole('admin') || $user->pointsOfSale->contains($activePosId)) {
-                    $request->attributes->set('activePosId', $activePosId);
+            if ($posId) {
+                $posId = (int) $posId;
+
+                // Vérifier si l'utilisateur est associé à ce point de vente
+                if ($user->hasRole('admin') || $user->pointsOfSale->contains($posId)) {
+                    $request->attributes->set('activePosId', $posId);
+                } else {
+                    \Log::warning("SetActivePointOfSale: User {$user->id} not associated with POS {$posId}");
                 }
             }
         }

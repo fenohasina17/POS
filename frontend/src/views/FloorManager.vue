@@ -51,58 +51,58 @@
         <p class="text-lg font-bold text-slate-400">Aucune table ne correspond</p>
       </div>
 
-      <div v-else class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
         <article
           v-for="table in filteredTables"
           :key="table.id"
-          class="group relative overflow-hidden rounded-[2rem] border border-white bg-white p-6 shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-100"
+          class="group relative overflow-hidden rounded-[1rem] border border-white bg-white p-3 shadow-md shadow-slate-200/50 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-50"
         >
           <!-- Indicateur Statut -->
           <div
-            class="absolute right-0 top-0 h-24 w-24 translate-x-12 -translate-y-12 rotate-45 transition-transform group-hover:scale-110"
+            class="absolute right-0 top-0 h-12 w-12 translate-x-6 -translate-y-6 rotate-45 transition-transform group-hover:scale-110"
             :class="getStatusBgClass(table.status)"
           ></div>
 
           <div class="relative z-10">
-            <div class="mb-4 flex items-center justify-between">
-              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                <font-awesome-icon icon="fa-solid fa-table" class="text-xl" />
+            <div class="mb-2 flex items-center justify-between">
+              <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                <font-awesome-icon icon="fa-solid fa-table" class="text-[10px]" />
               </div>
               <span
-                class="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest"
+                class="rounded-full px-1.5 py-0 text-[7px] font-black uppercase tracking-widest"
                 :class="getStatusTextClass(table.status)"
               >
                 {{ getStatusText(table.status) }}
               </span>
             </div>
 
-            <h3 class="text-2xl font-black text-slate-800">Table {{ table.table_number }}</h3>
-            <p v-if="table.name" class="text-sm font-bold text-slate-400">{{ table.name }}</p>
-            <p class="mt-1 text-xs font-medium text-slate-300">{{ table.capacity }} places disponibles</p>
+            <h3 class="text-sm font-black text-slate-800">Table {{ table.table_number }}</h3>
+            <p v-if="table.name" class="text-[8px] font-bold text-slate-400 truncate">{{ table.name }}</p>
+            <p class="mt-0.5 text-[8px] font-medium text-slate-300">{{ table.capacity }} places</p>
 
             <!-- Actions Rapides -->
-            <div class="mt-8 flex items-center gap-2">
+            <div class="mt-3 flex items-center gap-1">
               <button
                 @click="startTableService(table)"
                 :disabled="table.status === 'out_of_order'"
-                class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-bold text-white transition-all hover:bg-indigo-600 active:scale-95 disabled:opacity-30"
+                class="flex flex-1 items-center justify-center gap-1 rounded-md bg-slate-900 py-1.5 text-[8px] font-bold text-white transition-all hover:bg-indigo-600 active:scale-95 disabled:opacity-30"
               >
                 <font-awesome-icon icon="fa-solid fa-plus" />
-                COMMANDER
+                CMD
               </button>
 
               <button
                 @click="viewTableDetails(table)"
-                class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-600"
+                class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-600"
               >
-                <font-awesome-icon icon="fa-solid fa-eye" />
+                <font-awesome-icon icon="fa-solid fa-eye" class="text-[8px]" />
               </button>
 
               <button
                 @click="printTableBill(table)"
-                class="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-400 transition-all hover:bg-emerald-50 hover:text-emerald-600"
+                class="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-400 transition-all hover:bg-emerald-50 hover:text-emerald-600"
               >
-                <font-awesome-icon icon="fa-solid fa-print" />
+                <font-awesome-icon icon="fa-solid fa-print" class="text-[8px]" />
               </button>
             </div>
           </div>

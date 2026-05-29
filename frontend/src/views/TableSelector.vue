@@ -220,8 +220,13 @@ export default {
         const activePos = activePosStr ? JSON.parse(activePosStr) : null
         const activePosId = activePos?.id
 
-        // Fetch tables with error handling
-        const rawTables = await dataCacheService.getTables(activePosId, token, forceRefresh)
+        // Fetch tables with error handling. Adding point_of_sale_id as query param to satisfy TableController
+        // We'll update getTables in dataCacheService to support this if needed, 
+        // but for now let's try calling apiClient directly to pass the query param
+        const response = await apiClient.get('/tables', {
+            params: { point_of_sale_id: activePosId }
+        })
+        const rawTables = response.data?.data || response.data || []
 
         if (!rawTables || !Array.isArray(rawTables)) {
           throw new Error('Format de données invalide pour les tables')

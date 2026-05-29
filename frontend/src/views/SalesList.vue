@@ -140,7 +140,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faSearch, faPenToSquare, faTrash, faChevronUp, faChevronDown, faCheckCircle, faTimesCircle, faClock } from '@fortawesome/free-solid-svg-icons'
 import { API_BASE_URL } from '@/utils/api'
@@ -197,6 +197,9 @@ const filteredSales = computed(() => {
 
 const totalAmount = computed(() =>
   filteredSales.value.reduce((sum, sale) => {
+    // Exclure les ventes en attente du calcul
+    if (sale.status === 'pending') return sum;
+    
     const amount = Number(sale.final_amount ?? sale.total_amount ?? 0);
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0)
@@ -233,10 +236,7 @@ const loadSales = async () => {
   loading.value = true
   loadError.value = null
   try {
-    const auth = storage.getAuth()
-    const response = await axios.get(`${API_BASE_URL}/sales`, {
-      headers: { Authorization: `Bearer ${auth?.token}` }
-    })
+    const response = await apiClient.get('/sales')
     sales.value = response.data.data || response.data || []
   } catch (err) {
     console.error(err)
@@ -248,10 +248,7 @@ const loadSales = async () => {
 
 const loadPointOfSales = async () => {
   try {
-    const auth = storage.getAuth()
-    const response = await axios.get(`${API_BASE_URL}/point-of-sales`, {
-      headers: { Authorization: `Bearer ${auth?.token}` }
-    })
+    const response = await apiClient.get('/point-of-sales')
     pointOfSales.value = response.data.data || response.data || []
   } catch (err) {
     console.error(err)
