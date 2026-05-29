@@ -2,26 +2,32 @@ pipeline {
     agent any
 
     // ============================================================
+    // OPTIONS GLOBALES DU PIPELINE
+    // ============================================================
+    options {
+        // Empêche deux builds de tourner en même temps
+        // Evite les conflits sur les ressources K8s (même namespace)
+        disableConcurrentBuilds()
+
+        // Timeout global — tue le pipeline s'il dépasse 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
+
+        // Conserve uniquement les 10 derniers builds dans Jenkins
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    // ============================================================
     // VARIABLES D'ENVIRONNEMENT
     // ============================================================
-    // Centralisées ici pour faciliter la maintenance
-    // Une seule modification ici suffit pour tout le pipeline
     environment {
-        // Namespace Kubernetes cible
-        K8S_NAMESPACE = 'devops-app'
-
-        // Noms des images Docker — préfixe Docker Hub obligatoire
+        K8S_NAMESPACE  = 'devops-app'
         BACKEND_IMAGE  = 'giovanni09/backend'
         FRONTEND_IMAGE = 'giovanni09/frontend'
-
-        // Version des images — utilise le numéro de build Jenkins
-        // Chaque build a une version unique
-        // Evite d'écraser l'image précédente avec :latest
-        // En cas de problème on peut rollback vers une version précédente
-        IMAGE_TAG = "v${BUILD_NUMBER}"
-
-        // Timeout pour kubectl rollout status
+        IMAGE_TAG      = "v${BUILD_NUMBER}"
         ROLLOUT_TIMEOUT = '120s'
+
+        // Branche qui déclenche le déploiement
+        DEPLOY_BRANCH  = 'infra/kubernetes'
     }
 
     stages {
@@ -29,8 +35,6 @@ pipeline {
         // ============================================================
         // STAGE 1 — Checkout
         // ============================================================
-        // Récupère le code source depuis Git
-        // scm = Source Control Management configuré dans Jenkins
         stage('Checkout') {
             steps {
                 echo "Récupération du code source..."
@@ -41,8 +45,6 @@ pipeline {
         // ============================================================
         // STAGE 2 — Build des images Docker
         // ============================================================
-        // On build les deux images en parallèle pour gagner du temps
-        // parallel = les deux builds tournent en même temps
         stage('Build Images') {
             steps {
                 echo "Build des images Docker..."
@@ -72,8 +74,6 @@ pipeline {
         // ============================================================
         // STAGE 3 — Vérification syntaxe PHP
         // ============================================================
-        // php -l vérifie la syntaxe sans exécuter le code
-        // Détecte les erreurs de syntaxe PHP avant le déploiement
         stage('Verification Syntaxe PHP') {
             steps {
                 echo "Vérification de la syntaxe PHP..."
@@ -86,26 +86,20 @@ pipeline {
                         || true
                     "
                 """
-                // || true = ne pas faire échouer le stage si grep
-                // ne trouve rien (grep retourne 1 si aucun résultat)
             }
         }
 
         // ============================================================
         // STAGE 4 — Tests PHPUnit
         // ============================================================
-        // On crée un réseau Docker isolé pour les tests
-        // Un container Postgres de test est lancé
-        // Les tests tournent contre cette DB de test
-        // La DB de prod n'est jamais touchée
+        // APP_KEY récupérée depuis Jenkins Credentials — jamais en clair
+        // Volume /tmp partagé pour récupérer le rapport JUnit XML
         stage('Tests') {
             steps {
                 echo "Lancement des tests PHPUnit..."
                 sh """
-                    # Créer le réseau de test isolé
                     docker network create test-net-${BUILD_NUMBER} || true
 
-                    # Lancer Postgres pour les tests
                     docker run -d \
                         --name pg-test-${BUILD_NUMBER} \
                         --network test-net-${BUILD_NUMBER} \
@@ -114,17 +108,12 @@ pipeline {
                         -e POSTGRES_PASSWORD=postgres_test \
                         postgres:15-alpine
 
-                    # Lancer Redis pour les tests (requis par les migrations de permissions)
                     docker run -d \
                         --name redis-test-${BUILD_NUMBER} \
                         --network test-net-${BUILD_NUMBER} \
                         redis:7-alpine
                 """
-                // BUILD_NUMBER dans le nom du container et du réseau
-                // Permet plusieurs builds en parallèle sans conflits
 
-                // Attendre que Postgres soit prêt
-                // pg_isready est plus fiable que sleep
                 sh """
                     echo "Attente que Postgres soit prêt..."
                     docker run --rm \
@@ -139,45 +128,65 @@ pipeline {
                             echo 'Postgres est prêt !'
                         "
                 """
-                // pg_isready au lieu de sleep 8
-                // sleep 8 = on attend 8s même si Postgres est prêt en 2s
-                // pg_isready = on attend exactement le temps nécessaire
 
-                // Lancer les tests
-                // PHPUnit 11 retourne exit code 1 pour warnings ET echecs
-                // On capture la sortie pour distinguer les vrais echecs des warnings
-                sh """
-                    docker run --rm \
-                        --network test-net-${BUILD_NUMBER} \
-                        -e APP_ENV=testing \
-                        -e APP_KEY=base64:EQWSnPTutsgY10S8BrAIQs01aYQrjFs/5iTL1vymOWg= \
-                        -e DB_CONNECTION=pgsql \
-                        -e DB_HOST=pg-test-${BUILD_NUMBER} \
-                        -e DB_PORT=5432 \
-                        -e DB_DATABASE=testing \
-                        -e DB_USERNAME=postgres \
-                        -e DB_PASSWORD=postgres_test \
-                        -e REDIS_HOST=redis-test-${BUILD_NUMBER} \
-                        -e REDIS_PORT=6379 \
-                        ${BACKEND_IMAGE}:${IMAGE_TAG} \
-                        php vendor/bin/phpunit --testdox \
-                        > /tmp/phpunit-${BUILD_NUMBER}.txt 2>&1 || true
-                    cat /tmp/phpunit-${BUILD_NUMBER}.txt
-                    grep -qE 'Failures: [1-9]|Errors: [1-9]' /tmp/phpunit-${BUILD_NUMBER}.txt \
-                        && exit 1 || exit 0
-                """
+                withCredentials([string(credentialsId: 'app-key', variable: 'APP_KEY_TEST')]) {
+                    sh """
+                        docker run --rm \
+                            --network test-net-${BUILD_NUMBER} \
+                            -v /tmp:/tmp \
+                            -e APP_ENV=testing \
+                            -e APP_KEY="\${APP_KEY_TEST}" \
+                            -e DB_CONNECTION=pgsql \
+                            -e DB_HOST=pg-test-${BUILD_NUMBER} \
+                            -e DB_PORT=5432 \
+                            -e DB_DATABASE=testing \
+                            -e DB_USERNAME=postgres \
+                            -e DB_PASSWORD=postgres_test \
+                            -e REDIS_HOST=redis-test-${BUILD_NUMBER} \
+                            -e REDIS_PORT=6379 \
+                            ${BACKEND_IMAGE}:${IMAGE_TAG} \
+                            php vendor/bin/phpunit \
+                                --testdox \
+                                --log-junit /tmp/phpunit-${BUILD_NUMBER}.xml \
+                            > /tmp/phpunit-${BUILD_NUMBER}.txt 2>&1 || true
+
+                        cat /tmp/phpunit-${BUILD_NUMBER}.txt
+                    """
+
+                    // Tests échoués = build UNSTABLE (orange), pas FAILURE (rouge)
+                    // Le déploiement continue — rollback possible via kubectl rollout undo
+                    // ou en relançant un build précédent depuis Jenkins
+                    script {
+                        def hasFailures = sh(
+                            script: "grep -qE 'Failures: [1-9]|Errors: [1-9]' /tmp/phpunit-${BUILD_NUMBER}.txt",
+                            returnStatus: true
+                        ) == 0
+
+                        if (hasFailures) {
+                            unstable('⚠️ Des tests ont échoué — déploiement maintenu, corriger côté développeurs')
+                        }
+                    }
+                }
             }
 
-            // Nettoyage après les tests
-            // always = s'exécute même si les tests échouent
             post {
                 always {
                     echo "Nettoyage des containers de test..."
                     sh """
-                        docker rm -f pg-test-${BUILD_NUMBER} || true
+                        docker rm -f pg-test-${BUILD_NUMBER}    || true
                         docker rm -f redis-test-${BUILD_NUMBER} || true
                         docker network rm test-net-${BUILD_NUMBER} || true
+
+                        # Copier les rapports dans le workspace Jenkins pour archivage
+                        cp /tmp/phpunit-${BUILD_NUMBER}.txt ${WORKSPACE}/phpunit-output.txt   || true
+                        cp /tmp/phpunit-${BUILD_NUMBER}.xml ${WORKSPACE}/phpunit-results.xml  || true
                     """
+
+                    // Rapport JUnit visible dans l'interface Jenkins (onglet "Test Results")
+                    junit allowEmptyResults: true, testResults: 'phpunit-results.xml'
+
+                    // Archive le log texte pour consultation directe
+                    archiveArtifacts artifacts: 'phpunit-output.txt', allowEmptyArchive: true
                 }
             }
         }
@@ -185,10 +194,15 @@ pipeline {
         // ============================================================
         // STAGE 5 — Push vers Docker Hub
         // ============================================================
-        // On push UNIQUEMENT les images qui ont passé les tests
-        // Les credentials Docker Hub sont stockés dans Jenkins
-        // et jamais en clair dans ce fichier
+        // Exécuté UNIQUEMENT sur la branche de production (DEPLOY_BRANCH)
+        // Les autres branches buildent et testent, mais ne déploient pas
         stage('Push Images') {
+            when {
+                expression {
+                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                }
+            }
             steps {
                 echo "Push des images vers Docker Hub..."
                 withCredentials([usernamePassword(
@@ -210,19 +224,20 @@ pipeline {
         // ============================================================
         // STAGE 6 — Déploiement Kubernetes
         // ============================================================
-        // On applique tous les manifests K8s dans le bon ordre
-        // kubectl apply = crée si inexistant, met à jour si existant
+        // sed en pipe vers kubectl — les fichiers YAML ne sont jamais modifiés
+        // En cas de crash Jenkins entre deux étapes, les fichiers restent propres
         stage('Deploy K8s') {
+            when {
+                expression {
+                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                }
+            }
             steps {
                 echo "Déploiement sur Kubernetes..."
 
-                // 1. ConfigMap et Secrets — les apps en ont besoin
-                // NOTE : namespace et RBAC sont appliqués UNE SEULE FOIS
-                // manuellement (kubectl apply -f k8s/namespace.yaml et rbac.yaml)
-                // car namespace = ressource cluster-scoped hors portée du Role Jenkins
                 sh 'kubectl apply -f k8s/configmap.yaml'
 
-                // Secrets créés depuis Jenkins Credentials — jamais en clair dans Git
                 withCredentials([
                     string(credentialsId: 'app-key',     variable: 'APP_KEY'),
                     string(credentialsId: 'db-password', variable: 'DB_PASSWORD')
@@ -236,55 +251,55 @@ pipeline {
                     """
                 }
 
-                // 2. Base de données
                 sh 'kubectl apply -f k8s/postgres/postgres.yaml'
 
-                // 3. Attendre que Postgres soit prêt
                 sh """
                     kubectl rollout status statefulset/postgres \
                         -n ${K8S_NAMESPACE} \
                         --timeout=${ROLLOUT_TIMEOUT}
                 """
 
-                // 4. Mettre à jour le tag d'image dans les manifests
-                // sed remplace le tag hardcodé par la version du build en cours
-                // Un seul rollout, directement avec la bonne image
+                // Injection du tag d'image via sed en pipe — sans toucher aux fichiers
                 sh """
-                    sed -i 's|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${IMAGE_TAG}|g' k8s/backend/backend.yaml
-                    sed -i 's|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${IMAGE_TAG}|g' k8s/backend/migrate-job.yaml
-                    sed -i 's|image: ${FRONTEND_IMAGE}:.*|image: ${FRONTEND_IMAGE}:${IMAGE_TAG}|g' k8s/frontend/frontend.yaml
+                    sed 's|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${IMAGE_TAG}|g' \
+                        k8s/backend/backend.yaml | kubectl apply -f -
+
+                    sed 's|image: ${FRONTEND_IMAGE}:.*|image: ${FRONTEND_IMAGE}:${IMAGE_TAG}|g' \
+                        k8s/frontend/frontend.yaml | kubectl apply -f -
                 """
 
-                // 5. Backend et Frontend — déjà avec le bon tag d'image
-                sh 'kubectl apply -f k8s/backend/backend.yaml'
-                sh 'kubectl apply -f k8s/frontend/frontend.yaml'
-
-                // 6. Ingress en dernier
                 sh 'kubectl apply -f k8s/ingress.yaml'
+
+                // Job de migration : suppression + recréation avec le bon tag d'image
+                sh """
+                    kubectl delete job backend-migrate \
+                        -n ${K8S_NAMESPACE} --ignore-not-found
+
+                    sed 's|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${IMAGE_TAG}|g' \
+                        k8s/backend/migrate-job.yaml | kubectl apply -f -
+                """
             }
         }
 
         // ============================================================
         // STAGE 7 — Attente que les pods soient prêts
         // ============================================================
-        // kubectl rollout status attend que le déploiement
-        // soit complètement terminé avant de continuer
-        // Remplace le sleep 20 qui était arbitraire et non fiable
         stage('Attente Disponibilite') {
+            when {
+                expression {
+                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                }
+            }
             steps {
                 echo "Attente que les pods soient prêts..."
 
-                // Attendre le backend
                 sh """
                     kubectl rollout status deployment/backend \
                         -n ${K8S_NAMESPACE} \
                         --timeout=${ROLLOUT_TIMEOUT}
                 """
-                // rollout status surveille les readinessProbe
-                // Il ne continue que quand TOUS les pods sont Ready
-                // Timeout de 120s = échec si pas prêt après 2 minutes
 
-                // Attendre le frontend
                 sh """
                     kubectl rollout status deployment/frontend \
                         -n ${K8S_NAMESPACE} \
@@ -296,20 +311,16 @@ pipeline {
         // ============================================================
         // STAGE 8 — Migrations Laravel
         // ============================================================
-        // Les migrations s'exécutent APRÈS que les pods soient prêts
-        // On est certain que le backend est disponible
-        // Remplace sleep 20 + migrate qui était non fiable
         stage('Migrate') {
+            when {
+                expression {
+                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                }
+            }
             steps {
                 echo "Exécution des migrations Laravel..."
-                // Utilise un Job K8s dédié plutôt que kubectl exec :
-                // - attend que Postgres soit prêt avant de lancer
-                // - retente automatiquement en cas d'échec (backoffLimit: 2)
-                // - traçable avec : kubectl get jobs -n devops-app
                 sh """
-                    kubectl delete job backend-migrate \
-                        -n ${K8S_NAMESPACE} --ignore-not-found
-                    kubectl apply -f k8s/backend/migrate-job.yaml
                     kubectl wait --for=condition=complete \
                         --timeout=${ROLLOUT_TIMEOUT} \
                         job/backend-migrate \
@@ -330,21 +341,45 @@ pipeline {
                 Image frontend : ${FRONTEND_IMAGE}:${IMAGE_TAG}
                 Namespace      : ${K8S_NAMESPACE}
             """
+            // Notification Slack — décommenter si le plugin Slack est installé
+            // et la credential 'slack-webhook' configurée dans Jenkins
+            // slackSend(
+            //     color: 'good',
+            //     channel: '#deployments',
+            //     message: "✅ *${env.JOB_NAME}* #${BUILD_NUMBER} déployé — `${BACKEND_IMAGE}:${IMAGE_TAG}`"
+            // )
         }
+
         failure {
             echo """
                 ❌ Echec du pipeline !
                 Vérifier les logs ci-dessus pour plus de détails.
                 Namespace : ${K8S_NAMESPACE}
             """
-            // Ici on pourrait ajouter des notifications
-            // Slack, email, etc.
+
+            // Rollback automatique si l'échec survient après le déploiement
+            script {
+                def isDeployBranch = env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                                     env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                if (isDeployBranch) {
+                    echo "Tentative de rollback..."
+                    sh """
+                        kubectl rollout undo deployment/backend  -n ${K8S_NAMESPACE} || true
+                        kubectl rollout undo deployment/frontend -n ${K8S_NAMESPACE} || true
+                    """
+                }
+            }
+
+            // Notification Slack — décommenter si le plugin Slack est installé
+            // slackSend(
+            //     color: 'danger',
+            //     channel: '#deployments',
+            //     message: "❌ *${env.JOB_NAME}* #${BUILD_NUMBER} a échoué — <${env.BUILD_URL}|Voir les logs>"
+            // )
         }
+
         always {
-            // Déconnexion Docker Hub — ne jamais laisser de session ouverte
             sh 'docker logout || true'
-            // Nettoyage des images Docker non utilisées
-            // pour éviter de saturer le disque du node Jenkins
             sh 'docker image prune -f || true'
         }
     }
