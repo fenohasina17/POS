@@ -340,6 +340,7 @@
     <TableSelectorModal
       ref="tableSelectorModal"
       :is-open="showTableSelector"
+      :current-session-id="currentSessionId"
       @close="closeTableSelector"
       @table-selected="onTableSelected"
     />
@@ -394,6 +395,7 @@ const cart = ref([])
 const searchQuery = ref('')
 const selectedTable = ref(null)
 const showTableSelector = ref(false)
+const currentSessionId = ref(null)
 const isPaymentModalOpen = ref(false)
 const isInvoiceModalOpen = ref(false)
 const invoiceItems = ref([])
@@ -884,6 +886,17 @@ const paymentSaleData = computed(() => {
   }
 })
 
+// ========== HELPERS ==========
+const fetchCurrentSession = async () => {
+  try {
+    const { data } = await apiClient.get('/my-active-session')
+    return data?.data || data || null
+  } catch (error) {
+    console.error('Erreur session:', error)
+    return null
+  }
+}
+
 // ========== WATCHERS & LIFECYCLE ==========
 watch(
   () => props.tableId,
@@ -895,6 +908,13 @@ watch(
 
 onMounted(async () => {
   await loadCategories()
+  
+  // Récupérer la session active
+  const session = await fetchCurrentSession()
+  if (session?.id) {
+    currentSessionId.value = session.id
+  }
+
   if (!props.tableId) openTableSelector()
 })
 </script>

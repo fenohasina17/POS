@@ -267,7 +267,7 @@
 <script setup>
 import { ref, shallowRef, onMounted, computed, watch } from 'vue'
 import { useAuth } from '@/composables/useAuth'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import apiClient from '@/services/apiClient'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
@@ -277,6 +277,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faBoxes, faSearch, faShoppingCart, faTrash, faMinus, faPlus, faCheck, faXmark, faLock } from '@fortawesome/free-solid-svg-icons'
 const { activePos } = useAuth()
 const route = useRoute()
+const router = useRouter()
 
 import PaymentModal from './PaymentModal.vue'
 import InvoiceModal from './InvoiceModal.vue'

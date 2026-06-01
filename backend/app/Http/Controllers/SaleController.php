@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use App\Models\OrderLine;
+use App\Models\Table;
 use App\Models\CashRegisterSession;
 use App\Models\PointOfSale;
 use App\Models\User;
@@ -22,6 +23,7 @@ use App\Services\PrintGroupingService;
 use App\Services\CashTransactionService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+ use App\Events\TableLockUpdated;
 
 class SaleController extends Controller
 {
@@ -83,6 +85,13 @@ class SaleController extends Controller
 
             $sale = Sale::findOrFail($saleId);
             $validatedSale = $this->saleService->validatePendingOrder($sale, $validated);
+            
+            // --- Déverrouiller la table ---
+            $table = $sale->table;
+            if ($table) {
+                $table->update(['locked_by_session_id' => null, 'locked_at' => null]);
+                event(new TableLockUpdated($table->id, null));
+            }
 
             $formattedData = $this->saleService->getFormattedSaleData($validatedSale);
 
@@ -919,7 +928,28 @@ class SaleController extends Controller
                 return response()->json(['message' => 'La session de caisse n\'appartient pas au point de vente ciblé.'], 403);
             }
 
+            // ... (rest of the checks)
+            if ($session->cashRegister->point_of_sale_id !== $targetPointOfSaleId) {
+                return response()->json(['message' => 'La session de caisse n\'appartient pas au point de vente ciblé.'], 403);
+            }
+
+            // --- Logique de verrouillage ---
+            $table = Table::findOrFail($validated['table_id']);
+            if ($table->locked_by_session_id && $table->locked_by_session_id != $session->id) {
+                return response()->json(['message' => 'Cette table est déjà occupée par une autre session.'], 409);
+            }
+
             $sale = $this->saleService->createPendingOrder($validated, $user);
+            
+            // Poser verrou
+            $table->update([
+                'locked_by_session_id' => $session->id,
+                'locked_at' => now()
+            ]);
+            
+            \Log::info("🔔 Dispatching TableLockUpdated for Table: {$table->id} by Session: {$session->id}");
+            event(new TableLockUpdated($table->id, $session->id));
+
             return response()->json($sale, 201);
 
         } catch (ValidationException $e) {
@@ -1201,7 +1231,7 @@ class SaleController extends Controller
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
 
                         $query = \App\Models\Product::where('id', $value);
-                        
+
                         if ($targetPosId) {
                             $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $targetPosId));
                         }
@@ -1347,6 +1377,13 @@ class SaleController extends Controller
             }
 
             $cancelledSale = $this->saleService->cancelSale($sale, $validated['reason'] ?? null);
+            
+            // --- Déverrouiller la table ---
+            $table = $sale->table;
+            if ($table) {
+                $table->update(['locked_by_session_id' => null, 'locked_at' => null]);
+                event(new TableLockUpdated($table->id, null));
+            }
 
             return response()->json($cancelledSale, 200);
 

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Table;
+use App\Models\CashRegisterSession;
+use App\Events\TableLockUpdated;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
@@ -64,7 +66,32 @@ class TableController extends Controller
                 return $targetPosId;
             }
 
-            $query = Table::with(['pointOfSale']);
+            // --- LOGIQUE AUTO-UNLOCK (5 MINUTES) ---
+            $timeoutLimit = now()->subMinutes(5);
+            $staleTables = Table::where('point_of_sale_id', $targetPosId)
+                ->whereNotNull('locked_by_session_id')
+                ->where('locked_at', '<', $timeoutLimit)
+                ->get();
+
+            foreach ($staleTables as $staleTable) {
+                // On vérifie s'il y a une vente active liée (pending ou in_progress)
+                $hasActiveSale = \App\Models\Sale::where('table_id', $staleTable->id)
+                    ->whereIn('status', ['pending', 'in_progress'])
+                    ->exists();
+
+                if (!$hasActiveSale) {
+                    $staleTable->update([
+                        'locked_by_session_id' => null,
+                        'locked_at' => null,
+                        'status' => 'available'
+                    ]);
+                    event(new TableLockUpdated($staleTable->id, null));
+                    \Log::info("⏲️ Auto-Unlock: Table {$staleTable->table_number} libérée pour inactivité.");
+                }
+            }
+            // ----------------------------------------
+
+            $query = Table::with(['pointOfSale', 'lockedBySession.user']);
             if ($targetPosId) {
                 $query->where('point_of_sale_id', $targetPosId);
             } elseif (!$isAdmin) {
@@ -327,6 +354,63 @@ class TableController extends Controller
             return response()->json(['error' => 'Erreur de validation', 'details' => $e->errors()], 422);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Erreur lors de la mise à jour de la table.'], 500);
+        }
+    }
+
+    // 🔒 Verrouiller une table
+    public function lock(Request $request, $id)
+    {
+        try {
+            $user = Auth::user();
+            $targetPosId = $this->getAuthorizedPosId($request);
+
+            $table = Table::where('point_of_sale_id', $targetPosId)->findOrFail($id);
+
+            // Trouver la session active de l'utilisateur
+            $session = CashRegisterSession::where('user_id', $user->id)
+                ->where('is_closed', false)
+                ->first();
+
+            if (!$session) {
+                return response()->json(['message' => 'Aucune session de caisse active trouvée.'], 422);
+            }
+
+            if ($table->locked_by_session_id && $table->locked_by_session_id != $session->id) {
+                return response()->json(['message' => 'Table déjà occupée.'], 409);
+            }
+
+            $table->update([
+                'locked_by_session_id' => $session->id,
+                'locked_at' => now(),
+                'status' => 'occupied'
+            ]);
+
+            event(new TableLockUpdated($table->id, $session->id));
+
+            return response()->json(['message' => 'Table verrouillée', 'table' => $table]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // 🔓 Déverrouiller une table
+    public function unlock(Request $request, $id)
+    {
+        try {
+            $targetPosId = $this->getAuthorizedPosId($request);
+            $table = Table::where('point_of_sale_id', $targetPosId)->findOrFail($id);
+
+            $table->update([
+                'locked_by_session_id' => null,
+                'locked_at' => null,
+                'status' => 'available'
+            ]);
+
+            event(new TableLockUpdated($table->id, null));
+
+            return response()->json(['message' => 'Table déverrouillée', 'table' => $table]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 

@@ -31,6 +31,7 @@ export function useCategories() {
       }
 
       const rawCategories = await dataCacheService.getCategories(activePos.value.id, token, forceRefresh)
+      categories.value = rawCategories
       console.log('loadCategories : catégories reçues :', rawCategories.length, 'catégories')
       const categoryPrinterMap = { ...categoryPrinterTypes.value }
       const aggregatedProducts = []

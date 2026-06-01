@@ -35,12 +35,18 @@
               :class="[
                 'table-box', 
                 table.status,
-                { 'selected-table': selectedTableId === table.id }
+                { 'selected-table': selectedTableId === table.id },
+                { 'locked': isTableLockedByOther(table) }
               ]"
-              :disabled="table.status === 'out_of_order'"
+              :disabled="isTableLockedByOther(table) || table.status === 'out_of_order'"
               @click="selectTable(table)"
             >
-              <span class="table-number">{{ table.table_number }}</span>
+              <div class="flex flex-col items-center">
+                  <span class="table-number">{{ table.table_number }}</span>
+                  <span v-if="isTableLockedByOther(table)" class="text-[8px] truncate max-w-full">
+                    {{ table.locked_by_session?.user?.name || 'Occupé' }}
+                  </span>
+              </div>
             </button>
           </div>
         </div>
@@ -70,6 +76,10 @@ export default {
     isOpen: {
       type: Boolean,
       default: false
+    },
+    currentSessionId: {
+      type: [Number, String],
+      default: null
     }
   },
   data() {
@@ -95,14 +105,29 @@ export default {
   },
   mounted() {
     this.setupEventListeners()
+    this.initEcho()
   },
   beforeUnmount() {
     if (this.unsubscribeEvents) {
       this.unsubscribeEvents()
     }
+    if (window.Echo) {
+      window.Echo.leave('tables')
+    }
   },
   methods: {
+    initEcho() {
+        if(window.Echo) {
+            window.Echo.channel('tables')
+            .listen('TableLockUpdated', () => {
+                console.log('📡 Événement de verrouillage reçu, rafraîchissement...')
+                this.refresh()
+            })
+        }
+    },
     setupEventListeners() {
+  // ...
+
       this.unsubscribeEvents = EventBus.on('table:status-changed', () => {
         this.refresh()
       })
@@ -122,6 +147,8 @@ export default {
         const activePos = activePosStr ? JSON.parse(activePosStr) : null
         
         const rawTables = await dataCacheService.getTables(activePos?.id, token, true)
+        
+        console.log('DEBUG: Received raw tables:', rawTables);
         
         this.tables = (Array.isArray(rawTables) ? rawTables : [])
           .filter(table => !activePos?.id || table.point_of_sale_id == activePos.id)
@@ -146,6 +173,20 @@ export default {
     selectTable(table) {
       this.selectedTableId = table.id
       this.$emit('table-selected', table)
+    },
+
+    isTableLockedByOther(table) {
+        // Log pour comprendre la comparaison
+        if (!this._alerted) {
+            alert(`DEBUG Table ${table.table_number}: Status=${table.status}, TableLockedByID=${table.locked_by_session_id}, MySessionID=${this.currentSessionId}`);
+            this._alerted = true;
+        }
+        
+        const isLocked = table.status === 'occupied' && 
+               table.locked_by_session_id && 
+               String(table.locked_by_session_id) !== String(this.currentSessionId);
+               
+        return isLocked;
     },
 
     close() {
@@ -246,10 +287,16 @@ export default {
 .table-box.out_of_order { background-color: #64748b; }
 
 .table-box.selected-table {
-  outline: 4px solid #4f46e5;
+  outline: 4px solid #4f46e5; /* Bleu Indigo */
   outline-offset: 2px;
   transform: scale(1.1);
   box-shadow: 0 0 20px rgba(79, 70, 229, 0.5);
+}
+
+.table-box.locked {
+    background-color: #94a3b8 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .table-number {

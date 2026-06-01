@@ -196,6 +196,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tables/available', [TableController::class, 'getAvailableTables'])->name('tables.available');
     Route::get('/tables/occupied', [TableController::class, 'getOccupiedTables'])->name('tables.occupied');
     Route::patch('/tables/{id}/status', [TableController::class, 'updateStatus'])->name('tables.status.update');
+    Route::post('/tables/{id}/lock', [TableController::class, 'lock'])->name('tables.lock');
+    Route::post('/tables/{id}/unlock', [TableController::class, 'unlock'])->name('tables.unlock');
     Route::get('/tables/statistics', [TableController::class, 'getStatistics'])->name('tables.statistics');
 
     // ========== GESTION DES RÔLES ET PERMISSIONS ==========

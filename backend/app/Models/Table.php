@@ -28,15 +28,17 @@ class Table extends Model
         'status',
         'description',
         'point_of_sale_id',
-        'location' // Contient le JSON {zone: 'rdc', x: 0, y: 0}
-    ];
-
-    protected $casts = [
-        'location' => 'array',
-        'capacity' => 'integer'
+        'location',
+        'locked_by_session_id',
+        'locked_at'
     ];
 
     // --- RELATIONS ---
+
+    public function lockedBySession()
+    {
+        return $this->belongsTo(CashRegisterSession::class, 'locked_by_session_id');
+    }
 
     public function pointOfSale()
     {
@@ -46,6 +48,16 @@ class Table extends Model
     public function sales()
     {
         return $this->hasMany(Sale::class);
+    }
+
+    // --- ACCESSORS & MUTATORS ---
+
+    public function getStatusAttribute()
+    {
+        if ($this->locked_by_session_id) {
+            return 'occupied';
+        }
+        return $this->attributes['status'] ?? 'available';
     }
 
     // --- SCOPES ---

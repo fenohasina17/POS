@@ -25,9 +25,11 @@
     "electron-pos-printer": "^1.4.0",
     "flowbite": "^3.1.2",
     "idb": "^8.0.3",
+    "laravel-echo": "^2.3.4",
     "lodash": "^4.17.21",
     "lucide-vue-next": "^0.510.0",
     "pinia": "^3.0.1",
+    "pusher-js": "^8.5.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
   },
