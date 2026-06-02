@@ -91,7 +91,10 @@ spec:
               echo "==> php artisan migrate --force"
               php artisan migrate --force
               echo ""
-              echo "==> Migrations terminées avec succès"
+              echo "==> php artisan db:seed --force"
+              php artisan db:seed --force
+              echo ""
+              echo "==> Migrations et seeds terminés avec succès"
           envFrom:
             - configMapRef:
                 name: app-config

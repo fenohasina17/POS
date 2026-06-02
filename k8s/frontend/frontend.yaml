@@ -10,6 +10,10 @@ spec:
   ports:
     - port: 80
       targetPort: 80
+      name: http
+    - port: 443
+      targetPort: 443
+      name: https
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -28,10 +32,11 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: giovanni09/frontend:latest
+          image: giovanni09/frontend:v24
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
+            - containerPort: 443
           resources:
             requests:
               memory: "64Mi"
@@ -40,15 +45,13 @@ spec:
               memory: "128Mi"
               cpu: "200m"
           livenessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 80
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
-            httpGet:
-              path: /
+            tcpSocket:
               port: 80
             initialDelaySeconds: 5
             periodSeconds: 5
