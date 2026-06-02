@@ -342,7 +342,7 @@ pipeline {
                 echo "Exécution des migrations Laravel..."
                 sh """
                     kubectl wait --for=condition=complete \
-                        --timeout=${ROLLOUT_TIMEOUT} \
+                        --timeout=600s \
                         job/backend-migrate \
                         -n ${K8S_NAMESPACE}
                 """
