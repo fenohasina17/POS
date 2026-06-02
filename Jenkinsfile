@@ -32,6 +32,7 @@ pipeline {
     // ============================================================
     environment {
         K8S_NAMESPACE  = 'devops-app'
+        STAGING_NAMESPACE = 'devops-app-staging'
         BACKEND_IMAGE  = 'giovanni09/backend'
         FRONTEND_IMAGE = 'giovanni09/frontend'
         IMAGE_TAG      = "v${BUILD_NUMBER}"
@@ -245,8 +246,10 @@ pipeline {
         // STAGE 6 — Déploiement Kubernetes
         // ============================================================
         // sed en pipe vers kubectl — les fichiers YAML ne sont jamais modifiés
-        // En cas de crash Jenkins entre deux étapes, les fichiers restent propres
-        stage('Deploy K8s') {
+        // ============================================================
+        // STAGE 6 — Déploiement STAGING (toujours, même si tests UNSTABLE)
+        // ============================================================
+        stage('Deploy Staging') {
             when {
                 expression {
                     return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
@@ -254,7 +257,116 @@ pipeline {
                 }
             }
             steps {
-                echo "Déploiement sur Kubernetes..."
+                echo "Déploiement sur STAGING..."
+
+                sh 'kubectl apply -f k8s/staging/configmap.yaml'
+
+                withCredentials([
+                    string(credentialsId: 'app-key',     variable: 'APP_KEY'),
+                    string(credentialsId: 'db-password', variable: 'DB_PASSWORD')
+                ]) {
+                    sh """
+                        kubectl create secret generic app-secrets \
+                            --from-literal=APP_KEY="\${APP_KEY}" \
+                            --from-literal=DB_PASSWORD="\${DB_PASSWORD}" \
+                            -n ${STAGING_NAMESPACE} \
+                            --dry-run=client -o yaml | kubectl apply -f -
+                    """
+                }
+
+                sh 'kubectl apply -f k8s/staging/postgres/postgres.yaml'
+
+                sh """
+                    kubectl rollout status statefulset/postgres \
+                        -n ${STAGING_NAMESPACE} \
+                        --timeout=${ROLLOUT_TIMEOUT}
+                """
+
+                sh """
+                    sed 's|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${IMAGE_TAG}|g' \
+                        k8s/staging/backend/backend.yaml | kubectl apply -f -
+
+                    sed 's|image: ${FRONTEND_IMAGE}:.*|image: ${FRONTEND_IMAGE}:${IMAGE_TAG}|g' \
+                        k8s/staging/frontend/frontend.yaml | kubectl apply -f -
+                """
+
+                sh 'kubectl apply -f k8s/staging/ingress.yaml'
+
+                sh """
+                    kubectl delete job backend-migrate \
+                        -n ${STAGING_NAMESPACE} --ignore-not-found
+
+                    sed 's|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${IMAGE_TAG}|g' \
+                        k8s/staging/backend/migrate-job.yaml | kubectl apply -f -
+                """
+            }
+        }
+
+        // ============================================================
+        // STAGE 7 — Attente STAGING
+        // ============================================================
+        stage('Attente Staging') {
+            when {
+                expression {
+                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                }
+            }
+            steps {
+                echo "Attente que les pods staging soient prêts..."
+
+                sh """
+                    kubectl rollout status deployment/backend \
+                        -n ${STAGING_NAMESPACE} \
+                        --timeout=${ROLLOUT_TIMEOUT}
+                """
+
+                sh """
+                    kubectl rollout status deployment/frontend \
+                        -n ${STAGING_NAMESPACE} \
+                        --timeout=${ROLLOUT_TIMEOUT}
+                """
+            }
+        }
+
+        // ============================================================
+        // STAGE 8 — Migration STAGING
+        // ============================================================
+        stage('Migrate Staging') {
+            when {
+                expression {
+                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                }
+            }
+            steps {
+                echo "Migrations Laravel staging..."
+                sh """
+                    kubectl wait --for=condition=complete \
+                        --timeout=600s \
+                        job/backend-migrate \
+                        -n ${STAGING_NAMESPACE}
+                """
+            }
+        }
+
+        // ============================================================
+        // STAGE 9 — Déploiement PROD (seulement si tests OK)
+        // ============================================================
+        stage('Deploy Prod') {
+            when {
+                allOf {
+                    expression {
+                        return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                               env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                    }
+                    expression {
+                        return currentBuild.result == null || currentBuild.result == 'SUCCESS'
+                    }
+                }
+            }
+            steps {
+                echo "Déploiement sur PROD..."
 
                 sh 'kubectl apply -f k8s/configmap.yaml'
 
@@ -279,7 +391,6 @@ pipeline {
                         --timeout=${ROLLOUT_TIMEOUT}
                 """
 
-                // Injection du tag d'image via sed en pipe — sans toucher aux fichiers
                 sh """
                     sed 's|image: ${BACKEND_IMAGE}:.*|image: ${BACKEND_IMAGE}:${IMAGE_TAG}|g' \
                         k8s/backend/backend.yaml | kubectl apply -f -
@@ -290,7 +401,6 @@ pipeline {
 
                 sh 'kubectl apply -f k8s/ingress.yaml'
 
-                // Job de migration : suppression + recréation avec le bon tag d'image
                 sh """
                     kubectl delete job backend-migrate \
                         -n ${K8S_NAMESPACE} --ignore-not-found
@@ -302,17 +412,22 @@ pipeline {
         }
 
         // ============================================================
-        // STAGE 7 — Attente que les pods soient prêts
+        // STAGE 10 — Attente PROD
         // ============================================================
-        stage('Attente Disponibilite') {
+        stage('Attente Prod') {
             when {
-                expression {
-                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
-                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                allOf {
+                    expression {
+                        return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                               env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                    }
+                    expression {
+                        return currentBuild.result == null || currentBuild.result == 'SUCCESS'
+                    }
                 }
             }
             steps {
-                echo "Attente que les pods soient prêts..."
+                echo "Attente que les pods prod soient prêts..."
 
                 sh """
                     kubectl rollout status deployment/backend \
@@ -329,17 +444,22 @@ pipeline {
         }
 
         // ============================================================
-        // STAGE 8 — Migrations Laravel
+        // STAGE 11 — Migration PROD
         // ============================================================
-        stage('Migrate') {
+        stage('Migrate Prod') {
             when {
-                expression {
-                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
-                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                allOf {
+                    expression {
+                        return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                               env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                    }
+                    expression {
+                        return currentBuild.result == null || currentBuild.result == 'SUCCESS'
+                    }
                 }
             }
             steps {
-                echo "Exécution des migrations Laravel..."
+                echo "Migrations Laravel prod..."
                 sh """
                     kubectl wait --for=condition=complete \
                         --timeout=600s \
