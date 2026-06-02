@@ -66,8 +66,8 @@ class TableController extends Controller
                 return $targetPosId;
             }
 
-            // --- LOGIQUE AUTO-UNLOCK (5 MINUTES) ---
-            $timeoutLimit = now()->subMinutes(5);
+            // --- LOGIQUE AUTO-UNLOCK (1 MINUTE) ---
+            $timeoutLimit = now()->subMinutes(1);
             $staleTables = Table::where('point_of_sale_id', $targetPosId)
                 ->whereNotNull('locked_by_session_id')
                 ->where('locked_at', '<', $timeoutLimit)
@@ -99,6 +99,11 @@ class TableController extends Controller
             }
 
             $tables = $query->orderBy('table_number')->get();
+
+            // Debug: Log the first table's attributes
+            if ($tables->isNotEmpty()) {
+                \Log::info("DEBUG: Table 1 attributes: " . json_encode($tables->first()->toArray()));
+            }
 
             return response()->json($tables);
         } catch (\Exception $e) {

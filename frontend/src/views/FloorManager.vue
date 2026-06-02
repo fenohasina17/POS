@@ -37,7 +37,7 @@
               ]"
             >
               <span v-if="status !== 'all'" class="h-4 w-4 rounded-full shadow-sm" :class="getStatusBgClass(status)"></span>
-              {{ status === 'all' ? 'TOUTES' : getStatusText(status).toUpperCase() }}
+              {{ status === 'all' ? 'TOUTES' : getStatusText(status).toUpperCase() }} ({{ getTableCount(status) }})
             </button>
           </div>
         </div>
@@ -72,19 +72,19 @@
           ></div>
 
           <div class="flex h-full flex-col justify-between">
-            <!-- Overlay Gros Cadenas (si occupé par autre) -->
-            <div 
-              v-if="isTableLockedByOther(table)" 
+            <!-- Overlay Verrouillage simple (si occupé par autre) -->
+            <div
+              v-if="isTableLockedByOther(table)"
               class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-[1px] transition-all"
             >
-                <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-rose-500 shadow-xl border border-rose-100 animate-in zoom-in duration-300">
+                <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white text-rose-500 shadow-xl border border-rose-100">
                     <font-awesome-icon icon="fa-solid fa-lock" class="text-3xl" />
                 </div>
             </div>
 
             <!-- Header: Status Icon & Badge -->
             <div class="flex items-center justify-between">
-                <div 
+                <div
                     class="flex h-7 w-7 items-center justify-center rounded-lg shadow-sm"
                     :class="isTableLockedByOther(table) ? 'bg-slate-200 text-slate-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white'"
                 >
@@ -102,7 +102,7 @@
 
             <!-- Footer: Actions ou Verrouillage -->
             <div class="relative z-30">
-                <!-- Overlay Verrouillage (si occupé par autre) -->
+                <!-- Nom caissier si verrouillage -->
                 <div v-if="isTableLockedByOther(table)" class="flex items-center justify-center gap-1 rounded-xl bg-white/90 py-1.5 border border-slate-200 shadow-sm">
                     <span class="truncate text-[9px] font-black text-rose-600 uppercase tracking-tighter">Par {{ table.locked_by_session?.user?.name || 'Occupé' }}</span>
                 </div>
@@ -111,10 +111,15 @@
                 <div v-else class="flex items-center gap-1">
                     <button
                         @click="startTableService(table)"
-                        :disabled="table.status === 'out_of_order'"
-                        class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-slate-900 h-8 text-[9px] font-black text-white transition-all hover:bg-indigo-600 active:scale-95 disabled:opacity-30"
+                        :disabled="table.status === 'out_of_order' || isTableLockedByOther(table)"
+                        class="flex flex-1 items-center justify-center gap-1 rounded-lg h-8 text-[9px] font-black text-white transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :class="[
+                            (table.status === 'out_of_order' || isTableLockedByOther(table))
+                                ? 'bg-slate-400'
+                                : 'bg-slate-900 hover:bg-indigo-600'
+                        ]"
                     >
-                        CMD
+                        {{ isTableLockedByOther(table) ? 'OCCUPÉ' : 'CMD' }}
                     </button>
                     <button
                         @click="viewTableDetails(table)"
@@ -213,6 +218,12 @@ const selectedTable = ref(null)
 const currentSessionId = ref(null)
 
 // ========== LOGIQUE ==========
+
+const getTableCount = (status) => {
+  if (status === 'all') return tables.value.length
+  return tables.value.filter(t => t.status === status).length
+}
+
 // Récupération de la session active
 const loadCurrentSession = async () => {
   try {
@@ -220,7 +231,6 @@ const loadCurrentSession = async () => {
     const session = response.data?.current_session || response.data?.data || response.data
     if (session?.id) {
       currentSessionId.value = session.id
-      console.log('🆔 Session actuelle ID:', currentSessionId.value);
     }
   } catch (e) {
     console.warn('Erreur lors de la récupération de la session:', e.message)
@@ -233,8 +243,8 @@ const loadCurrentSession = async () => {
 }
 
 const isTableLockedByOther = (table) => {
-  return table.status === 'occupied' && 
-         table.locked_by_session_id && 
+  return table.status === 'occupied' &&
+         table.locked_by_session_id &&
          String(table.locked_by_session_id) !== String(currentSessionId.value)
 }
 
@@ -332,7 +342,6 @@ const loadTables = async () => {
     })
 
     const rawTables = Array.isArray(response.data) ? response.data : response.data.data || []
-    console.log('📊 Tables chargées du serveur:', rawTables);
     tables.value = rawTables.map(t => ({
       ...t,
       status: normalizeStatus(t.status)
@@ -350,24 +359,20 @@ const refreshData = () => loadTables()
 // Real-time updates
 const initEcho = () => {
   if (EchoInstance) {
-    console.log('📡 Écoute du canal "tables"...');
     EchoInstance.channel('tables')
       .listen('.table.updated', (e) => {
-        console.log('📢 Événement table.updated reçu !', e);
         loadTables();
       });
-  } else {
-    console.warn('⚠️ EchoInstance n\'est pas défini');
   }
 }
 
 const startTableService = async (table) => {
   if (table.status === 'out_of_order') return
-  
+
   try {
     // Verrouiller la table immédiatement via API
     await apiClient.post(`/tables/${table.id}/lock`)
-    
+
     // Rediriger vers la page de commande
     router.push({
       name: 'dashboard-table-order',
