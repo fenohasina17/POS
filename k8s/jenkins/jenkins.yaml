@@ -68,16 +68,16 @@ spec:
             httpGet:
               path: /login
               port: 8080
-            initialDelaySeconds: 120
-            periodSeconds: 20
-            failureThreshold: 10
+            initialDelaySeconds: 180
+            periodSeconds: 30
+            failureThreshold: 15
           readinessProbe:
             httpGet:
               path: /login
               port: 8080
-            initialDelaySeconds: 90
-            periodSeconds: 15
-            failureThreshold: 5
+            initialDelaySeconds: 150
+            periodSeconds: 20
+            failureThreshold: 10
           volumeMounts:
             - name: jenkins-data
               mountPath: /var/jenkins_home

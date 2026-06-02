@@ -17,6 +17,17 @@ pipeline {
     }
 
     // ============================================================
+    // PARAMÈTRES DU PIPELINE
+    // ============================================================
+    parameters {
+        booleanParam(
+            name: 'FORCE_DEPLOY',
+            defaultValue: false,
+            description: '⚡ Forcer le déploiement même si build ou tests échouent — utilise la dernière image :latest réussie pour les services non buildés (review/staging uniquement)'
+        )
+    }
+
+    // ============================================================
     // VARIABLES D'ENVIRONNEMENT
     // ============================================================
     environment {
@@ -24,10 +35,14 @@ pipeline {
         BACKEND_IMAGE  = 'giovanni09/backend'
         FRONTEND_IMAGE = 'giovanni09/frontend'
         IMAGE_TAG      = "v${BUILD_NUMBER}"
-        ROLLOUT_TIMEOUT = '120s'
+        ROLLOUT_TIMEOUT = '300s'
 
         // Branche qui déclenche le déploiement
         DEPLOY_BRANCH  = 'infra/kubernetes'
+
+        // Indicateurs de succès de build — mis à 'true' dans Build Images
+        BACKEND_BUILT  = 'false'
+        FRONTEND_BUILT = 'false'
     }
 
     stages {
