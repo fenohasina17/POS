@@ -91,10 +91,18 @@ spec:
               echo "==> php artisan migrate --force"
               php artisan migrate --force
               echo ""
-              echo "==> php artisan db:seed --force"
-              php artisan db:seed --force
+              echo "==> Verification si seed necessaire..."
+              USER_COUNT=$(php artisan tinker --execute="echo App\\Models\\User::count();" 2>/dev/null | grep -E '^[0-9]+$' | tail -1)
+              echo "Users en base: ${USER_COUNT:-inconnu}"
+              if [ -z "$USER_COUNT" ] || [ "$USER_COUNT" = "0" ]; then
+                echo "==> DB vide, lancement du seed..."
+                php artisan db:seed --force
+                echo "==> Seed termine"
+              else
+                echo "==> DB deja peuplee ($USER_COUNT users), seed ignore"
+              fi
               echo ""
-              echo "==> Migrations et seeds terminés avec succès"
+              echo "==> Migrations terminees avec succes"
           envFrom:
             - configMapRef:
                 name: app-config
