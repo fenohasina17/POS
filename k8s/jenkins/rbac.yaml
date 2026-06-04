@@ -201,3 +201,51 @@ roleRef:
   kind: Role                      # Role et non ClusterRole
   apiGroup: rbac.authorization.k8s.io
   name: jenkins-role              # Le Role créé plus haut
+---
+# ============================================================
+# ROLE STAGING — Mêmes droits dans devops-app-staging
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-role
+  namespace: devops-app-staging
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "replicasets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["services", "configmaps", "secrets", "persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+---
+# ============================================================
+# ROLEBINDING STAGING — Lier le Role staging au SA jenkins
+# ============================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-rolebinding
+  namespace: devops-app-staging
+subjects:
+  - kind: ServiceAccount
+    name: jenkins-sa
+    namespace: devops-app
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: jenkins-role
