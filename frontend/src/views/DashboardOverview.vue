@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <section v-if="isAdmin" class="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+    <section v-if="canViewStats" class="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
       <article
         v-for="card in statCards"
         :key="card.id"
@@ -58,7 +58,7 @@
       </article>
     </section>
 
-    <section v-if="isAdmin" class="flex flex-col gap-6 lg:flex-row">
+    <section v-if="canViewStats" class="flex flex-col gap-6 lg:flex-row">
       <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:w-96 lg:flex-none">
         <div class="flex items-start justify-between">
           <div>
@@ -182,7 +182,7 @@
       </article>
     </section>
 
-    <section v-if="isAdmin" class="grid gap-6 grid-cols-1">
+    <section v-if="canViewStats" class="grid gap-6 grid-cols-1">
       <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <header class="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -253,7 +253,7 @@
       </article>
     </section>
 
-    <section v-if="isAdmin" class="grid gap-6 xl:grid-cols-3">
+    <section v-if="canViewStats" class="grid gap-6 xl:grid-cols-3">
       <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
         <header class="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -342,7 +342,7 @@
       </article>
     </section>
 
-    <section v-if="isAdmin" class="grid gap-6 xl:grid-cols-3">
+    <section v-if="canViewStats" class="grid gap-6 xl:grid-cols-3">
       <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-3">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -426,7 +426,8 @@ const productViewOptions = ['quantité', 'montant']
 const activeProductView = ref('quantité')
 const pointOfSales = ref([])
 const selectedPointOfSale = ref('')
-const { isAdmin, user: currentUser, loadUserData } = useAuth()
+const { isAdmin, hasRole, user: currentUser, loadUserData } = useAuth()
+const canViewStats = computed(() => isAdmin.value || hasRole('gérant'))
 
 const authHeaders = () => {
   const auth = storage.getAuth()

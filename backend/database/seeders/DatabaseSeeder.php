@@ -9,13 +9,14 @@ use Database\Seeders\{
     RolePermissionRelationSeeder,
     CashRegisterSeeder,
     CashierSeeder,
+    ManagerSeeder,
     PosTablesSeeder,
     PaymentSeeder,
     PointOfSaleSeeder
-    };
+};
 
-    class DatabaseSeeder extends Seeder
-    {
+class DatabaseSeeder extends Seeder
+{
     public function run(): void
     {
         // 1. Création de base : Rôles et Permissions
@@ -40,10 +41,10 @@ use Database\Seeders\{
             PointOfSaleSeeder::class,
             CashRegisterSeeder::class,
             CashierSeeder::class,
+            ManagerSeeder::class,
             PosTablesSeeder::class,
             PaymentSeeder::class,
         ]);
     }
-    }
-
+}
 

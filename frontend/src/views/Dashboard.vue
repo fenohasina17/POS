@@ -13,7 +13,7 @@
         'fixed inset-y-0 left-0 z-40 border-r border-slate-200 bg-white shadow-sm transition-all duration-200 ease-in-out',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full',
         'lg:translate-x-0',
-        sidebarCollapsed ? 'lg:w-16' : 'lg:w-56'
+        sidebarCollapsed ? 'lg:w-16' : 'lg:w-56',
       ]"
     >
       <div class="flex h-full flex-col">
@@ -65,24 +65,33 @@
                   type="button"
                   :class="[
                     'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition',
-                    isActive(item) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100',
-                    isSidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2' : ''
+                    isActive(item)
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'text-slate-600 hover:bg-slate-100',
+                    isSidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2' : '',
                   ]"
                   @click="handleNavigation(item)"
                 >
                   <span
                     class="flex h-8 w-8 items-center justify-center rounded-lg"
-                    :class="isActive(item) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
+                    :class="
+                      isActive(item)
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'bg-slate-100 text-slate-500'
+                    "
                   >
                     <FontAwesomeIcon :icon="item.icon" class="text-sm" />
                   </span>
-                  <span :class="['flex-1 text-left text-xs', isSidebarCollapsed ? 'lg:hidden' : '']">{{ item.label }}</span>
+                  <span
+                    :class="['flex-1 text-left text-xs', isSidebarCollapsed ? 'lg:hidden' : '']"
+                    >{{ item.label }}</span
+                  >
                   <FontAwesomeIcon
                     v-if="item.children && !isSidebarCollapsed"
                     :icon="faChevronDown"
                     :class="[
                       'text-[10px] text-slate-400 transition-transform',
-                      isMenuExpanded(item) ? 'rotate-180 text-indigo-500' : ''
+                      isMenuExpanded(item) ? 'rotate-180 text-indigo-500' : '',
                     ]"
                   />
                 </button>
@@ -97,13 +106,19 @@
                         type="button"
                         :class="[
                           'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition',
-                          isActive(child) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100'
+                          isActive(child)
+                            ? 'bg-indigo-50 text-indigo-600'
+                            : 'text-slate-600 hover:bg-slate-100',
                         ]"
                         @click="handleNavigation(child)"
                       >
                         <span
                           class="flex h-7 w-7 items-center justify-center rounded-md"
-                          :class="isActive(child) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
+                          :class="
+                            isActive(child)
+                              ? 'bg-white text-indigo-600 shadow-sm'
+                              : 'bg-slate-100 text-slate-500'
+                          "
                         >
                           <FontAwesomeIcon :icon="child.icon" class="text-xs" />
                         </span>
@@ -121,7 +136,12 @@
 
     <!-- Main content area -->
     <div :class="['flex min-h-screen flex-1 flex-col', contentPaddingClass]">
-      <header :class="['fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur', headerOffsetClass]">
+      <header
+        :class="[
+          'fixed top-0 right-0 left-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur',
+          headerOffsetClass,
+        ]"
+      >
         <div class="flex w-full flex-wrap items-center gap-3 px-3 py-1 sm:px-4 lg:px-6">
           <!-- LEFT: Bouton toggle + loading indicator -->
           <div class="flex items-center gap-2">
@@ -134,10 +154,17 @@
             </button>
 
             <transition name="fade">
-              <div v-if="globalLoading" class="flex items-center gap-1.5 rounded-full bg-indigo-50/50 px-2 py-1">
+              <div
+                v-if="globalLoading"
+                class="flex items-center gap-1.5 rounded-full bg-indigo-50/50 px-2 py-1"
+              >
                 <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500"></div>
-                <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.15s]"></div>
-                <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.3s]"></div>
+                <div
+                  class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.15s]"
+                ></div>
+                <div
+                  class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.3s]"
+                ></div>
               </div>
             </transition>
           </div>
@@ -150,7 +177,9 @@
               aria-label="Notifications"
             >
               <FontAwesomeIcon :icon="faBell" class="text-sm" />
-              <span class="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-orange-400"></span>
+              <span
+                class="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-orange-400"
+              ></span>
             </button>
             <div ref="userMenuRef" class="relative flex items-center">
               <button
@@ -160,9 +189,18 @@
                 aria-haspopup="true"
                 :aria-expanded="userMenuOpen"
               >
-                <img src="../assets/avatar.png" alt="User avatar" class="h-7 w-7 rounded-full object-cover" />
-                <span class="hidden text-xs font-semibold text-slate-700 sm:inline">{{ userDisplayName }}</span>
-                <FontAwesomeIcon :icon="faChevronDown" class="hidden text-[10px] text-slate-400 sm:inline" />
+                <img
+                  src="../assets/avatar.png"
+                  alt="User avatar"
+                  class="h-7 w-7 rounded-full object-cover"
+                />
+                <span class="hidden text-xs font-semibold text-slate-700 sm:inline">{{
+                  userDisplayName
+                }}</span>
+                <FontAwesomeIcon
+                  :icon="faChevronDown"
+                  class="hidden text-[10px] text-slate-400 sm:inline"
+                />
               </button>
 
               <div
@@ -185,16 +223,27 @@
         </div>
       </header>
 
-      <main class="flex-1  pb-6 pt-[3.5rem] sm:px-4 lg:px-5 lg:pt-[4rem]">
+      <main class="flex-1 pb-6 pt-[3.5rem] sm:px-4 lg:px-5 lg:pt-[4rem]">
         <router-view v-slot="{ Component }">
           <transition name="page-fade" mode="out-in">
-            <div v-if="globalLoading" class="flex h-[60vh] flex-col items-center justify-center space-y-6">
+            <div
+              v-if="globalLoading"
+              class="flex h-[60vh] flex-col items-center justify-center space-y-6"
+            >
               <div class="relative flex h-20 w-20 items-center justify-center">
-                <div class="absolute inset-0 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
-                <img src="../assets/logoigp.jpg" alt="Loading" class="h-10 w-10 rounded-full shadow-sm" />
+                <div
+                  class="absolute inset-0 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"
+                ></div>
+                <img
+                  src="../assets/logoigp.jpg"
+                  alt="Loading"
+                  class="h-10 w-10 rounded-full shadow-sm"
+                />
               </div>
               <div class="flex flex-col items-center gap-2">
-                <p class="animate-pulse text-base font-semibold text-slate-700">Préparation de votre session...</p>
+                <p class="animate-pulse text-base font-semibold text-slate-700">
+                  Préparation de votre session...
+                </p>
                 <p class="text-xs text-slate-400">Chargement des données en cours</p>
               </div>
             </div>
@@ -229,7 +278,7 @@ import {
   faUserGroup,
   faChartLine,
   faLayerGroup,
-  faListCheck
+  faListCheck,
 } from '@fortawesome/free-solid-svg-icons'
 import { useAuth } from '@/composables/useAuth'
 import { useCategories } from '@/composables/useCategories'
@@ -254,7 +303,7 @@ library.add(
   faUserGroup,
   faChartLine,
   faLayerGroup,
-  faListCheck
+  faListCheck,
 )
 
 defineOptions({ name: 'DashboardLayout' })
@@ -280,6 +329,7 @@ const { user, isAdmin, hasRole, loadUserData } = useAuth()
 const { loadCategories } = useCategories()
 
 // Computed
+const canViewStats = computed(() => isAdmin.value || hasRole('gérant'))
 const isSidebarCollapsed = computed(() => sidebarCollapsed.value && isDesktop.value)
 
 const headerOffsetClass = computed(() => {
@@ -407,52 +457,93 @@ const expandMenuForRoute = () => {
   expandedMenus.value = updated
 }
 
-// Filtrage des éléments de menu selon les droits (admin, caissier)
+// Filtrage des éléments de menu selon les droits
 const filterAdminItems = (items) => {
   return items
     .filter((item) => {
       if (item.adminOnly && !isAdmin.value) return false
-      if (item.caissierOnly && !hasRole('caissier') && !isAdmin.value) return false
+
+      const isCaissier = hasRole('caissier')
+      const isGerant = hasRole('gérant')
+      const isAdminUser = isAdmin.value
+
+      // Item réservé uniquement aux caissiers
+      if (item.caissierOnly) {
+        return isCaissier || isAdminUser
+      }
+
+      // Item accessible par Gérant + Caissier
+      if (item.gerantOrCaissier) {
+        return isGerant || isCaissier || isAdminUser
+      }
+
+      // Par défaut : tout le monde peut voir
       return true
     })
-    .map((item) =>
-      item.children
-        ? {
-            ...item,
-            children: item.children.filter((child) => {
-              if (child.adminOnly && !isAdmin.value) return false
-              if (child.caissierOnly && !hasRole('caissier') && !isAdmin.value) return false
-              return true
-            }),
-          }
-        : item,
-    )
+    .map((item) => {
+      if (item.children) {
+        return {
+          ...item,
+          children: item.children.filter((child) => {
+            if (child.adminOnly && !isAdmin.value) return false
+
+            const isCaissier = hasRole('caissier')
+            const isGerant = hasRole('gérant')
+
+            if (child.caissierOnly) {
+              return isCaissier || isAdmin.value
+            }
+
+            if (child.gerantOrCaissier) {
+              return isGerant || isCaissier || isAdmin.value
+            }
+
+            return true
+          })
+        }
+      }
+      return item
+    })
 }
 
 // Définition des sections de navigation
 const navigationSections = computed(() => {
-  const menuItems = filterAdminItems([
-    { label: 'Dashboard', name: 'dashboard-overview', icon: faGaugeHigh },
-    { label: 'Vente directe', name: 'dashboard-direct', icon: faCashRegister },
-    {
-      label: 'Service Salle',
-      name: 'service-salle',
-      icon: faTableCellsLarge,
-      children: [
-        { label: 'Salle', name: 'dashboard-table', icon: faTableCellsLarge },
-        { label: 'Gestion des tables', name: 'dashboard-table-manage', icon: faListCheck },
-      ],
-    },
-    { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked, adminOnly: true },
-    { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup, adminOnly: true },
-    { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, adminOnly: true },
-    { label: 'Mes ventes', name: 'dashboard-user-sales', icon: faReceipt },
-    { label: 'Remise à zéro', name: 'dashboard-retour', icon: faArrowRotateLeft, caissierOnly: true },
-  ])
+const menuItems = filterAdminItems([
+  { label: 'Dashboard', name: 'dashboard-overview', icon: faGaugeHigh },
+
+  { label: 'Vente directe', name: 'dashboard-direct', icon: faCashRegister, caissierOnly: true },
+
+  {
+    label: 'Service Salle',
+    name: 'service-salle',
+    icon: faTableCellsLarge,
+    caissierOnly: true,
+    children: [
+      { label: 'Salle', name: 'dashboard-table', icon: faTableCellsLarge, caissierOnly: true },
+      { label: 'Gestion des tables', name: 'dashboard-table-manage', icon: faListCheck, caissierOnly: true },
+    ],
+  },
+
+  { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked, adminOnly: true },
+  { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup, adminOnly: true },
+  { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, adminOnly: true },
+  { label: 'Mes ventes', name: 'dashboard-user-sales', icon: faReceipt },
+  {
+    label: 'Remise à zéro',
+    name: 'dashboard-retour',
+    icon: faArrowRotateLeft,
+    gerantOrCaissier: true
+  },
+])
 
   const toolItems = filterAdminItems([
     { label: 'Point de vente', name: 'dashboard-point-of-sale', icon: faStore, adminOnly: true },
-    { label: 'Caisse', name: 'dashboard-cash-register-sessions', icon: faClipboardList, adminOnly: true },
+    {
+      label: 'Caisse',
+      name: 'dashboard-cash-register-sessions',
+      icon: faClipboardList,
+      adminOnly: true,
+    },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
     ...(isAdmin.value
       ? [
@@ -545,7 +636,7 @@ watch(
   () => {
     expandMenuForRoute()
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // Sauvegarde automatique de l'état des sections pliées dans localStorage
@@ -554,7 +645,7 @@ watch(
   (newVal) => {
     localStorage.setItem('sidebar_sections', JSON.stringify(newVal))
   },
-  { deep: true }
+  { deep: true },
 )
 </script>
 
@@ -568,7 +659,9 @@ aside::-webkit-scrollbar-thumb {
 }
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 .fade-enter-from,
 .fade-leave-to {

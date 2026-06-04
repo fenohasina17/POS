@@ -20,7 +20,7 @@ import RoleCreate from '@/views/roles/RoleCreate.vue'
 import RoleEdit from '@/views/roles/RoleEdit.vue'
 import PermissionList from '@/views/permissions/PermissionList.vue'
 // Import PermissionCreate view
-import PermissionCreate from '@/views/permissions/PermissionCreate.vue' 
+import PermissionCreate from '@/views/permissions/PermissionCreate.vue'
 
 import UserList from '@/views/users/UserList.vue'
 import UserCreate from '@/views/users/UserCreate.vue' // Assuming UserCreate exists
@@ -216,7 +216,7 @@ const router = createRouter({
 
     // Redirections
     { path: '/user-sales', redirect: { name: 'dashboard-user-sales' } },
-    { path: '/retour', redirect: { name: 'dashboard-retour' } },
+   { path: '/retour', redirect: { name: 'dashboard-retour' } },
     { path: '/point-of-sale', redirect: { name: 'dashboard-point-of-sale' } },
     { path: '/cash-register-sessions', redirect: { name: 'dashboard-cash-register-sessions' } },
   ],

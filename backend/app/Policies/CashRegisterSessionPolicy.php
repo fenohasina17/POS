@@ -24,8 +24,8 @@ class CashRegisterSessionPolicy
      */
     public function view(User $user, CashRegisterSession $session)
     {
-        // Example: allow if user is owner or has admin role
-        return $user->id === $session->user_id || $user->hasRole('admin');
+        // Example: allow if user is owner, has admin role or gérant role
+        return $user->id === $session->user_id || $user->hasRole('admin') || $user->hasRole('gérant');
     }
 
     /**
@@ -42,8 +42,8 @@ class CashRegisterSessionPolicy
      */
     public function update(User $user, CashRegisterSession $session)
     {
-        // Example: allow if user is owner or has admin role
-        return $user->id === $session->user_id || $user->hasRole('admin');
+        // Example: allow if user is owner or has admin role or gérant role
+        return $user->id === $session->user_id || $user->hasRole('admin') || $user->hasRole('gérant');
     }
 
     /**

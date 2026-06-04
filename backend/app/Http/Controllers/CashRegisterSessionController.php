@@ -200,27 +200,28 @@ class CashRegisterSessionController extends Controller
      */
 public function show($id, Request $request)
 {
-   
-    try {
-        $query = CashRegisterSession::with(['cashRegister', 'user', 'transactions', 'discrepancies']);
-        if ($request->boolean('with_trashed')) {
-            $query->withTrashed();
-        }
-        $session = $query->find($id);
-        if (!$session) {
-            return response()->json(['message' => 'Cash register session not found.'], Response::HTTP_NOT_FOUND);
-        }
-        $user = auth()->user();
-        if (!$user || !$user->hasPermissionTo('view.cash_register_sessions', 'api')) {
-            abort(403, 'This action is unauthorized.');
-        }
 
-        $isManager = $this->userIsManager($user);
-        $isAdmin = $user->hasRole('admin', 'api');
-        $activePosId = $request->attributes->get('activePosId');
+try {
+    $query = CashRegisterSession::with(['cashRegister', 'user', 'transactions', 'discrepancies']);
+    if ($request->boolean('with_trashed')) {
+        $query->withTrashed();
+    }
+    $session = $query->find($id);
+    if (!$session) {
+        return response()->json(['message' => 'Cash register session not found.'], Response::HTTP_NOT_FOUND);
+    }
+    $user = auth()->user();
+    if (!$user || !$user->hasPermissionTo('view.cash_register_sessions', 'api')) {
+        abort(403, 'This action is unauthorized.');
+    }
 
-        if (!$isAdmin) {
-            if (!$activePosId) {
+    $isManager = $this->userIsManager($user);
+    $isAdmin = $user->hasRole('admin', 'api');
+    $activePosId = $request->attributes->get('activePosId');
+
+    \Log::info("DEBUG SHOW: SessionID: $id, ActivePosID: $activePosId, SessionPosID: " . optional($session->cashRegister)->point_of_sale_id);
+
+    if (!$isAdmin) {            if (!$activePosId) {
                 return response()->json([
                     'message' => 'Point de vente actif non défini pour l\'utilisateur.'
                 ], 403);
