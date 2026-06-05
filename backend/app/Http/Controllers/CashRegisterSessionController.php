@@ -233,19 +233,20 @@ try {
                     'message' => 'Accès refusé pour ce point de vente.'
                 ], 403);
             }
-            // Ensure session belongs to the active POS
+            // Check if session belongs to the active POS
             if (optional($session->cashRegister)->point_of_sale_id !== $activePosId) {
-                 return response()->json([
+                return response()->json([
                     'success' => false,
                     'message' => 'Accès refusé : la session n\'appartient pas à votre point de vente actif.'
                 ], 403);
             }
-            // Further restrict non-managers to their own sessions
-            if (!$isManager && $session->user_id !== $user->id) {
-                abort(403, 'This action is unauthorized.');
+            // Restriction retirée : permet aux autorisés de voir toutes les sessions du POS actif
             }
-        }
-        return response()->json($session);
+
+            // Calcul dynamique du montant théorique attendu
+            $session->expected_cash_amount = $session->starting_amount + $session->total_sales - $session->total_refunds;
+
+            return response()->json($session);
     } catch (\Exception $e) {
         \Log::error('Exception: ' . $e->getMessage());
         return response()->json(['error' => $e->getMessage()], 500);

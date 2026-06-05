@@ -100,11 +100,6 @@
               <!-- Résultat -->
               <div v-if="validationAttempted || hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm"
                    :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
-                <!-- DEBUG INFO -->
-                <div class="text-[8px] text-slate-400 mb-2">
-                  DEBUG: Counted={{ totalCounted }} | Starting={{ sessionData?.starting_amount }} | Sales={{ sessionData?.total_sales }}
-                </div>
-                <!-- FIN DEBUG -->
                 <div class="flex items-start justify-between">
                   <div>
                     <h3 class="text-lg font-bold" :class="varianceStatus === 'conforme' ? 'text-emerald-800' : 'text-rose-800'">
@@ -208,7 +203,17 @@ const selectedSessionId = ref(null)
 const hasAnySale = computed(() => sessionSales.value.length > 0)
 const ticketCount = computed(() => sessionSales.value.length)
 
-const sessionProductsCount = ref(0)
+const sessionProductsCount = computed(() => {
+  console.log('🔍 DEBUG: Computing sessionProductsCount, sales length:', sessionSales.value.length);
+  const total = sessionSales.value.reduce((total, sale) => {
+    const lines = sale.orderlines || [];
+    const sum = lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
+    return total + sum;
+  }, 0);
+  console.log('🔍 DEBUG: Calculated total products:', total);
+  return total;
+})
+
 const totalProductTypes = computed(() => {
   const productIds = new Set()
   sessionSales.value.forEach(sale => {
@@ -225,9 +230,20 @@ const totalCounted = computed(() => {
 
 const varianceAmount = computed(() => {
   const starting = parseFloat(sessionData.value?.starting_amount) || 0
-  const sales = parseFloat(sessionData.value?.total_sales) || 0
-  const expected = starting + sales
-  const counted = totalCounted.value
+  
+  // Sommer uniquement les montants des paiements en 'Espèce' pour chaque vente
+  const totalCashSales = sessionSales.value.reduce((sum, sale) => {
+    const cashPayments = sale.payments?.filter(p => p.payment?.name === 'Espèce') || []
+    const saleCash = cashPayments.reduce((pSum, p) => pSum + parseFloat(p.amount || 0), 0)
+    return sum + saleCash
+  }, 0)
+  
+  const expected = starting + totalCashSales
+  
+  // Si déjà validé, on utilise le montant réel stocké en base
+  const counted = hasRecordedBilletage.value 
+    ? parseFloat(sessionData.value?.actual_cash_amount || 0) 
+    : totalCounted.value
   
   return counted - expected
 })
@@ -288,14 +304,9 @@ const fetchSessionData = async (id) => {
     hasRecordedBilletage.value = Boolean(session.is_bill_checked)
 
     const salesResponse = await apiClient.get('/sales', { params: { cash_register_session_id: id } })
-    sessionSales.value = Array.isArray(salesResponse.data) ? salesResponse.data : (salesResponse.data.data || [])
+    sessionSales.value = Array.isArray(salesResponse.data) ? salesResponse.data : salesResponse.data?.data || []
     
-    // Calcul manuel
-    sessionProductsCount.value = sessionSales.value.reduce((total, sale) => {
-      const lines = sale.orderlines || [];
-      return total + (lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0) || 0)
-    }, 0)
-
+    // sessionProductsCount sera mis à jour automatiquement via la computed property
   } catch (err) {
     errorMessage.value = 'Erreur lors du chargement de la session.'
   } finally {
