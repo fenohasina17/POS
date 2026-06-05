@@ -25,7 +25,7 @@ class SaleService
     {
         return Cache::remember("payment.{$paymentId}.is_cash", 86400, function() use ($paymentId) {
             $payment = Payment::find($paymentId);
-            return $payment && $payment->name === 'Espèces';
+            return $payment && $payment->name === 'Espèce';
         });
     }
 
@@ -47,7 +47,7 @@ class SaleService
      *
      * @param CashRegisterSession $session Session de caisse active
      * @return int Numéro de ticket unique pour la session
-     * 
+     *
      * @throws \Illuminate\Database\QueryException En cas d'erreur de verrouillage BD
      */
     protected function generateTicketNumber(CashRegisterSession $session): int
@@ -55,7 +55,7 @@ class SaleService
         return DB::transaction(function () use ($session) {
             // Verrouiller la session pour éviter les doublons de numéros en cas d'appels simultanés
             $lockedSession = CashRegisterSession::where('id', $session->id)->lockForUpdate()->first();
-            
+
             // On cherche le numéro le plus élevé déjà utilisé dans cette session (incluant les ventes supprimées)
             $maxUsed = Sale::withTrashed()
                 ->where('cash_register_session_id', $session->id)
@@ -75,7 +75,7 @@ class SaleService
      * @param array|null $payments Tableau des paiements [['payment_id' => int, 'amount' => float], ...]
      * @param float $finalAmount Montant total à payer (après remise)
      * @return void
-     * 
+     *
      * @throws SaleServiceException Si total payé < montant final (tolérance 0.01)
      */
     protected function validatePayments(?array $payments, float $finalAmount): void
@@ -171,7 +171,7 @@ class SaleService
      * @param Sale $sale Vente concernée
      * @param float $finalAmount Montant final à payer
      * @return array ['amount_received' => float, 'change_amount' => float]
-     * 
+     *
      * @throws SaleServiceException Si paiement insuffisant
      */
     protected function processPayments(array $data, Sale $sale, float $finalAmount): array
@@ -227,7 +227,7 @@ class SaleService
      *                    - amount_received (float) : Montant reçu
      * @param mixed $user Utilisateur connecté (pour audit)
      * @return Sale Vente créée avec relations chargées (orderlines.product, payments.payment, table, user, cashTransaction)
-     * 
+     *
      * @throws SaleServiceException Si session fermée, paiement insuffisant, ou erreur générique
      */
     public function createSale(array $data, $user): Sale
@@ -297,7 +297,7 @@ class SaleService
      *                    - discount_percentage (float) : Remise en % (défaut: 0)
      * @param mixed $user Utilisateur connecté
      * @return Sale Commande en attente avec relations chargées (orderLines.product, table)
-     * 
+     *
      * @throws SaleServiceException Si session fermée ou erreur création
      */
     public function createPendingOrder(array $data, $user): Sale
@@ -356,7 +356,7 @@ class SaleService
      * @param array $orderLines Nouveaux articles à ajouter
      *                          [['product_id' => int, 'quantity' => int, 'price' => float], ...]
      * @return Sale Commande mise à jour avec relations (orderLines.product, table)
-     * 
+     *
      * @throws SaleServiceException Si la commande n'est pas en statut 'pending'
      */
     public function addToPendingOrder(Sale $sale, array $orderLines): Sale
@@ -412,7 +412,7 @@ class SaleService
      * @param Sale $sale Commande existante (status MUST BE 'pending')
      * @param array $orderLineIds IDs des lignes de commande à supprimer
      * @return Sale Commande mise à jour avec relations (orderLines.product, table)
-     * 
+     *
      * @throws SaleServiceException Si la commande n'est pas en statut 'pending'
      */
     public function removeFromPendingOrder(Sale $sale, array $orderLineIds): Sale
@@ -453,7 +453,7 @@ class SaleService
      *                    - change_amount (float) : Monnaie rendue (calculé auto si absent)
      *                    - discount_percentage (float) : Remise finale (écrase celle existante)
      * @return Sale Vente complétée avec relations (orderLines.product, table, payments.payment)
-     * 
+     *
      * @throws SaleServiceException Si commande vide ou pas en statut 'pending'
      */
     public function validatePendingOrder(Sale $sale, array $data): Sale
@@ -528,7 +528,7 @@ class SaleService
      * @param Sale $sale Vente à annuler
      * @param string|null $reason Motif de l'annulation (optionnel)
      * @return Sale Vente annulée avec status='cancelled', cancelled_at, cancellation_reason
-     * 
+     *
      * @throws SaleServiceException::alreadyCancelled Si la vente est déjà annulée
      */
     public function cancelSale(Sale $sale, ?string $reason = null): Sale

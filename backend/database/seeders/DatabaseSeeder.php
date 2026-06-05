@@ -1,5 +1,7 @@
 <?php
 
+namespace Database\Seeders;
+
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\PointOfSale;
@@ -12,7 +14,8 @@ use Database\Seeders\{
     ManagerSeeder,
     PosTablesSeeder,
     PaymentSeeder,
-    PointOfSaleSeeder
+    PointOfSaleSeeder,
+    CategoryProductSeeder,
 };
 
 class DatabaseSeeder extends Seeder
@@ -42,6 +45,7 @@ class DatabaseSeeder extends Seeder
             CashRegisterSeeder::class,
             CashierSeeder::class,
             ManagerSeeder::class,
+            CategoryProductSeeder::class,
             PosTablesSeeder::class,
             PaymentSeeder::class,
         ]);

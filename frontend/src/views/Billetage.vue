@@ -34,7 +34,7 @@
           </div>
         </header>
 
-        <!-- Sélecteur de session (Admin + Gérant) -->
+        <!-- Sélecteur de session -->
         <div v-if="canSelectSession" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <label class="block text-sm font-semibold text-slate-700">Session à traiter</label>
           <select v-model="selectedSessionId" @change="onSessionChange" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
@@ -55,7 +55,7 @@
             <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <p class="text-xs font-semibold uppercase text-slate-400">Total tickets</p>
-                <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionSales.length }}</p>
+                <p class="mt-2 text-2xl font-bold text-slate-800">{{ ticketCount }}</p>
               </div>
               <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <p class="text-xs font-semibold uppercase text-slate-400">Articles vendus</p>
@@ -69,7 +69,7 @@
           </section>
 
           <!-- Formulaire Billetage -->
-          <form ref="formRef" class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
+          <form class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
             <div class="space-y-4">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -90,16 +90,21 @@
                     min="0"
                     step="1"
                     :disabled="isSubmitting || isLoading || sessionClosed || hasRecordedBilletage || !canEditBilletage"
-                    @focus="showKeyboard({ type: 'denomination', value: denomination.value }, $event)"
+                    @focus="activeField = { type: 'denomination', value: denomination.value }"
                     class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 disabled:opacity-60"
                   />
                   <span class="text-right text-sm font-semibold text-slate-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</span>
                 </div>
               </div>
-
+              
               <!-- Résultat -->
               <div v-if="validationAttempted || hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm"
                    :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
+                <!-- DEBUG INFO -->
+                <div class="text-[8px] text-slate-400 mb-2">
+                  DEBUG: Counted={{ totalCounted }} | Starting={{ sessionData?.starting_amount }} | Sales={{ sessionData?.total_sales }}
+                </div>
+                <!-- FIN DEBUG -->
                 <div class="flex items-start justify-between">
                   <div>
                     <h3 class="text-lg font-bold" :class="varianceStatus === 'conforme' ? 'text-emerald-800' : 'text-rose-800'">
@@ -160,14 +165,11 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { reactive, ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import apiClient from '@/services/apiClient'
-import EchoInstance from '@/services/echo'
-import { API_BASE_URL } from '@/utils/api'
-import Profile from './Profile.vue'
-import { useAuth } from '@/composables/useAuth'
 import NumericKeypad from '@/components/NumericKeypad.vue'
+import { useAuth } from '@/composables/useAuth'
 
 // Données
 const denominations = [
@@ -186,8 +188,6 @@ const { isAdmin, hasRole, loadUserData } = useAuth()
 
 // États
 const counts = reactive(Object.fromEntries(denominations.map(d => [d.value, 0])))
-const keyboardVisible = ref(false)
-const keyboardPosition = ref({ top: 0, left: 0 })
 const activeField = ref(null)
 
 const sessionId = ref(null)
@@ -198,24 +198,17 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const showCashCount = ref(false)
-const discrepancyExplanation = ref('')
 const validationAttempted = ref(false)
 const sessionSales = ref([])
 const sessionData = ref(null)
-const cashTransactions = ref([])
 const openSessions = ref([])
 const selectedSessionId = ref(null)
 
 // Computed
 const hasAnySale = computed(() => sessionSales.value.length > 0)
+const ticketCount = computed(() => sessionSales.value.length)
 
-const sessionProductsCount = computed(() => {
-  return sessionSales.value.reduce((total, sale) => {
-    const lines = sale.orderlines || [];
-    return total + (lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0) || 0)
-  }, 0)
-})
-
+const sessionProductsCount = ref(0)
 const totalProductTypes = computed(() => {
   const productIds = new Set()
   sessionSales.value.forEach(sale => {
@@ -231,20 +224,18 @@ const totalCounted = computed(() => {
 })
 
 const varianceAmount = computed(() => {
-  const expected = parseFloat(sessionData.value?.expected_cash_amount) || 0
+  const starting = parseFloat(sessionData.value?.starting_amount) || 0
+  const sales = parseFloat(sessionData.value?.total_sales) || 0
+  const expected = starting + sales
   const counted = totalCounted.value
+  
   return counted - expected
 })
 
-const varianceStatus = computed(() => {
-  return varianceAmount.value === 0 ? 'conforme' : 'ecart'
-})
+const varianceStatus = computed(() => (varianceAmount.value === 0 ? 'conforme' : 'ecart'))
+const varianceStatusLabel = computed(() => (varianceAmount.value === 0 ? 'Caisse conforme' : 'Écart détecté'))
 
-const varianceStatusLabel = computed(() => {
-  return varianceAmount.value === 0 ? 'Caisse conforme' : 'Écart détecté'
-})
-
-// Permissions corrigées
+// Permissions
 const canSelectSession = computed(() => isAdmin.value || hasRole('gérant'))
 const canEditBilletage = computed(() => isAdmin.value || hasRole('caissier'))
 const canShowBilletageButton = computed(() => isAdmin.value || hasRole('caissier'))
@@ -267,10 +258,9 @@ const resetForm = () => {
   errorMessage.value = ''
   successMessage.value = ''
   validationAttempted.value = false
-  discrepancyExplanation.value = ''
 }
 
-// Chargement des données
+// Chargement
 const fetchOpenSessions = async () => {
   try {
     const { data } = await apiClient.get('/cash-register-sessions/open')
@@ -278,6 +268,8 @@ const fetchOpenSessions = async () => {
     if (openSessions.value.length) {
       selectedSessionId.value = openSessions.value[0].id
       await fetchSessionData(selectedSessionId.value)
+    } else {
+      errorMessage.value = 'Aucune session ouverte.'
     }
   } catch (err) {
     errorMessage.value = 'Impossible de charger les sessions.'
@@ -286,6 +278,7 @@ const fetchOpenSessions = async () => {
 
 const fetchSessionData = async (id) => {
   isLoading.value = true
+  errorMessage.value = ''
   try {
     const { data } = await apiClient.get(`/cash-register-sessions/${id}`)
     const session = data?.data || data
@@ -294,10 +287,15 @@ const fetchSessionData = async (id) => {
     sessionClosed.value = Boolean(session.is_closed)
     hasRecordedBilletage.value = Boolean(session.is_bill_checked)
 
-    const salesResponse = await apiClient.get('/sales', {
-      params: { cash_register_session_id: id }
-    })
+    const salesResponse = await apiClient.get('/sales', { params: { cash_register_session_id: id } })
     sessionSales.value = Array.isArray(salesResponse.data) ? salesResponse.data : (salesResponse.data.data || [])
+    
+    // Calcul manuel
+    sessionProductsCount.value = sessionSales.value.reduce((total, sale) => {
+      const lines = sale.orderlines || [];
+      return total + (lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0) || 0)
+    }, 0)
+
   } catch (err) {
     errorMessage.value = 'Erreur lors du chargement de la session.'
   } finally {
@@ -305,98 +303,51 @@ const fetchSessionData = async (id) => {
   }
 }
 
-// Actions
-const onSessionChange = async () => {
-  if (selectedSessionId.value) {
-    await fetchSessionData(selectedSessionId.value)
-  }
-}
+const onSessionChange = () => { if (selectedSessionId.value) fetchSessionData(selectedSessionId.value) }
 
 const submit = async () => {
-  if (!canEditBilletage.value) {
-    errorMessage.value = "Vous n'avez pas les droits pour valider le billetage."
-    return
-  }
-
+  if (!canEditBilletage.value) return
   isSubmitting.value = true
-  errorMessage.value = ''
-
   try {
     await apiClient.put(`/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: totalCounted.value,
       is_bill_checked: true
     })
-
-    successMessage.value = 'Billetage validé avec succès !'
+    successMessage.value = 'Billetage validé !'
     hasRecordedBilletage.value = true
     validationAttempted.value = true
   } catch (err) {
-    errorMessage.value = err.response?.data?.message || 'Erreur lors de la validation du billetage.'
-  } finally {
-    isSubmitting.value = false
-  }
+    errorMessage.value = 'Erreur lors de la validation.'
+  } finally { isSubmitting.value = false }
 }
 
 const closeSession = async () => {
-  if (!canCloseSession.value) {
-    errorMessage.value = "Vous n'avez pas les droits pour clôturer cette session."
-    return
-  }
-
-  if (!hasRecordedBilletage.value) {
-    errorMessage.value = "Veuillez valider le billetage avant de clôturer la session."
-    return
-  }
-
+  if (!canCloseSession.value || !hasRecordedBilletage.value) return
   isSubmitting.value = true
-  errorMessage.value = ''
-  
   try {
     await apiClient.put(`/cash-register-sessions/${sessionId.value}`, {
       is_closed: true,
       actual_cash_amount: totalCounted.value,
       closed_at: new Date().toISOString()
     })
-    
-    successMessage.value = 'Session clôturée avec succès !'
-    sessionClosed.value = true
     router.push({ name: 'dashboard-overview' })
   } catch (err) {
-    errorMessage.value = err.response?.data?.message || 'Erreur lors de la clôture de la session.'
-  } finally {
-    isSubmitting.value = false
-  }
-}
-
-// Clavier
-const showKeyboard = (field, event) => {
-    activeField.value = field
-    // Logic for showing numeric keyboard if needed
+    errorMessage.value = 'Erreur lors de la clôture.'
+  } finally { isSubmitting.value = false }
 }
 
 const handleKeyPress = (key) => {
   if (!activeField.value) return
-
-  const denomValue = activeField.value.value
-  let currentVal = String(counts[denomValue] || '0')
-
-  if (key === 'DEL') {
-    counts[denomValue] = currentVal.length > 1 ? parseInt(currentVal.slice(0, -1)) : 0
-  } else if (key === 'C') {
-    counts[denomValue] = 0
-  } else {
-    const newVal = currentVal === '0' ? String(key) : currentVal + key
-    counts[denomValue] = parseInt(newVal)
-  }
+  const denom = activeField.value.value
+  let val = String(counts[denom] || '0')
+  if (key === 'DEL') counts[denom] = val.length > 1 ? parseInt(val.slice(0, -1)) : 0
+  else if (key === 'C') counts[denom] = 0
+  else counts[denom] = parseInt(val === '0' ? String(key) : val + key)
 }
 
-// Cycle de vie
 onMounted(async () => {
   await loadUserData()
-  if (!canAccessBilletage.value) {
-    router.push({ name: 'dashboard-overview' })
-    return
-  }
-  await fetchOpenSessions()
+  if (!canAccessBilletage.value) router.push({ name: 'dashboard-overview' })
+  else await fetchOpenSessions()
 })
 </script>

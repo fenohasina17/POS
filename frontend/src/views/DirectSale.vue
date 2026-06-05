@@ -95,6 +95,7 @@
             >
               {{ category.name }}
             </button>
+
           </div>
         </div>
 

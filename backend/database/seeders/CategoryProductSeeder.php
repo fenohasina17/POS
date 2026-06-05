@@ -17,7 +17,7 @@ class CategoryProductSeeder extends Seeder
     public function run(): void
     {
         $pointsOfSale = PointOfSale::all();
-        
+
         if ($pointsOfSale->isEmpty()) {
             $this->command->error('No Points of Sale found. Run PointOfSaleSeeder first.');
             return;

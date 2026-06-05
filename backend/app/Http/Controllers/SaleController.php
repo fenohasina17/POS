@@ -182,8 +182,11 @@ class SaleController extends Controller
                 $sales->where('point_of_sale_id', $activePosId);
 
                 if (!$isManager) {
-                    // Caissier : voit uniquement ses propres ventes
-                    $sales->where('user_id', $user->id);
+                    // Caissier : si pas de session spécifique, voit uniquement ses propres ventes
+                    // Si une session est spécifiée, il voit toutes les ventes de cette session
+                    if (!$sessionId) {
+                        $sales->where('user_id', $user->id);
+                    }
                 }
 
                 if ($sessionId) {
@@ -231,7 +234,15 @@ class SaleController extends Controller
                 }
             }
 
+            // ========== RESTRICTIONS ==========
+            // ... (rest of filtering logic) ...
+            
+            \Log::info("DEBUG SalesQuery: " . $sales->toSql());
+            \Log::info("DEBUG Bindings: " . json_encode($sales->getBindings()));
+
             $sales = $sales->orderByDesc('created_at')->get();
+            
+            \Log::info("DEBUG Final Sales Count: " . $sales->count());
 
             return response()->json($sales);
 
