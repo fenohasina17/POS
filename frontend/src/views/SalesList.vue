@@ -34,10 +34,13 @@
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1.5">Point de vente</label>
-          <select v-model="pointOfSaleFilter" class="w-full py-3.5 px-4 bg-slate-50 border border-slate-300 rounded-2xl">
+          <select v-if="isAdmin" v-model="pointOfSaleFilter" class="w-full py-3.5 px-4 bg-slate-50 border border-slate-300 rounded-2xl">
             <option value="">Tous les points de vente</option>
             <option v-for="pos in pointOfSales" :key="pos.id" :value="pos.id">{{ pos.name }}</option>
           </select>
+          <div v-else class="w-full py-3.5 px-4 bg-slate-100 border border-slate-300 rounded-2xl text-slate-700">
+            {{ activePos?.name || 'Aucun point de vente' }}
+          </div>
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1.5">Période</label>
@@ -140,12 +143,15 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { storage } from '@/utils/storage'
+import { useAuth } from '@/composables/useAuth'
 import apiClient from '@/services/apiClient'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faSearch, faPenToSquare, faTrash, faChevronUp, faChevronDown, faCheckCircle, faTimesCircle, faClock } from '@fortawesome/free-solid-svg-icons'
 import { API_BASE_URL } from '@/utils/api'
-import { storage } from '@/utils/storage'
 import EditSaleModal from './EditSaleModal.vue'
+
+const { isAdmin, activePos } = useAuth()
 
 // États
 const sales = ref([])
@@ -172,7 +178,10 @@ const filteredSales = computed(() => {
       getOrderLines(sale).some(line => (line.product?.name || line.name || '').toLowerCase().includes(q))
     )
   }
-  if (pointOfSaleFilter.value) {
+  // Pour les non-admin, filtrer uniquement par le POS actif
+  if (!isAdmin.value && activePos.value?.id) {
+    result = result.filter(sale => sale.point_of_sale_id === activePos.value.id)
+  } else if (pointOfSaleFilter.value) {
     result = result.filter(sale => sale.point_of_sale_id === parseInt(pointOfSaleFilter.value))
   }
   if (startDate.value) {
@@ -288,7 +297,9 @@ const deleteSale = async (saleId) => {
 
 onMounted(() => {
   loadSales()
-  loadPointOfSales()
+  if (isAdmin.value) {
+    loadPointOfSales()
+  }
 })
 </script>
 

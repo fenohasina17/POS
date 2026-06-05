@@ -22,7 +22,7 @@ class RolePermissionRelationSeeder extends Seeder
 
         // Fetch roles and permissions
         $adminRole = Role::where('name', 'admin')->first();
-        $gerantRole = Role::where('name', 'gerant')->first();
+        $gerantRole = Role::where('name', 'gérant')->first();
         $caissierRole = Role::where('name', 'caissier')->first();
 
         $allPermissions = Permission::all();

@@ -472,6 +472,11 @@ const filterAdminItems = (items) => {
         return isCaissier || isAdminUser
       }
 
+      // Item accessible par Gérant + Admin
+      if (item.gerantOrAdmin) {
+        return isGerant || isAdminUser
+      }
+
       // Item accessible par Gérant + Caissier
       if (item.gerantOrCaissier) {
         return isGerant || isCaissier || isAdminUser
@@ -492,6 +497,10 @@ const filterAdminItems = (items) => {
 
             if (child.caissierOnly) {
               return isCaissier || isAdmin.value
+            }
+
+            if (child.gerantOrAdmin) {
+              return isGerant || isAdmin.value
             }
 
             if (child.gerantOrCaissier) {
@@ -526,8 +535,7 @@ const menuItems = filterAdminItems([
 
   { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked, adminOnly: true },
   { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup, adminOnly: true },
-  { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, adminOnly: true },
-  { label: 'Mes ventes', name: 'dashboard-user-sales', icon: faReceipt },
+  { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, gerantOrAdmin: true },
   {
     label: 'Remise à zéro',
     name: 'dashboard-retour',

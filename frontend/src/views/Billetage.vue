@@ -136,7 +136,7 @@
                 type="button"
                 @click="closeSession"
                 class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-200 disabled:opacity-60"
-                :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !canCloseSession"
+                :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !canCloseSession || !hasRecordedBilletage"
               >
                 Clôturer la session
               </button>
