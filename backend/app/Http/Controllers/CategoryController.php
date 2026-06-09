@@ -100,11 +100,7 @@ class CategoryController extends Controller
             //     $query->where('point_of_sale_id', $targetPosId);
             // }
 
-            $cacheKey = "categories_pos_{$targetPosId}_products_{$withProducts}_pricing_{$withPricing}";
-            
-            $categories = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($query) {
-                return $query->orderBy('name')->get();
-            });
+            $categories = $query->orderBy('name')->get();
 
             return response()->json([
                 'success' => true,

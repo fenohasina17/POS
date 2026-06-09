@@ -8,7 +8,6 @@ use App\Models\SalePayment;
 use App\Models\CashRegisterSession;
 use App\Models\CashTransaction;
 use App\Models\Payment;
-use Illuminate\Support\Facades\Cache;
 use App\Exceptions\SaleServiceException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -23,10 +22,8 @@ class SaleService
      */
     protected function isCashPayment(int $paymentId): bool
     {
-        return Cache::remember("payment.{$paymentId}.is_cash", 86400, function() use ($paymentId) {
-            $payment = Payment::find($paymentId);
-            return $payment && $payment->name === 'Espèce';
-        });
+        $payment = Payment::find($paymentId);
+        return $payment && $payment->name === 'Espèce';
     }
 
     /**

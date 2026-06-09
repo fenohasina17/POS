@@ -33,3 +33,12 @@ npm run build
 ```sh
 npm run lint
 ```
+
+## Troubleshooting
+
+### 'concurrently' not recognized
+If you encounter an error stating that `concurrently` is not recognized, run the following command to explicitly install the development dependency:
+
+```sh
+npm install --save-dev concurrently
+```

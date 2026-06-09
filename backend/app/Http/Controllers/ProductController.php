@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Pricing;
-use App\Models\PointOfSale; // Added to retrieve POS for filtering
+use App\Models\PointOfSale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Response; // Added for HTTP status constants
+use Illuminate\Http\Response;
 
 class ProductController extends Controller
 {
@@ -70,20 +71,17 @@ class ProductController extends Controller
                 $query->whereHas('pointsOfSale', fn($q) => $q->where('point_of_sales.id', $activePosId));
             }
 
-            $cacheKey = "products_pos_{$activePosId}_admin_{$isAdmin}_req_{$requestedPosId}";
-            $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($query, $activePosId, $requestedPosId, $isAdmin) {
-                return $query->with([
-                    'pricings' => function ($q) use ($activePosId, $requestedPosId, $isAdmin) {
-                        // Filter pricing by active POS or requested POS if admin
-                        if ($isAdmin && $requestedPosId) {
-                             $q->where('point_of_sale_id', $requestedPosId);
-                        } elseif ($activePosId) {
-                            $q->where('point_of_sale_id', $activePosId);
-                        }
+            $products = $query->with([
+                'pricings' => function ($q) use ($activePosId, $request, $isAdmin) {
+                    $requestedPosId = $request->query('point_of_sale_id');
+                    // Filter pricing by active POS or requested POS if admin
+                    if ($isAdmin && $requestedPosId) {
+                            $q->where('point_of_sale_id', $requestedPosId);
+                    } elseif ($activePosId) {
+                        $q->where('point_of_sale_id', $activePosId);
                     }
-                ])->get();
-            });
-
+                }
+            ])->get();
 
             return response()->json($products, 200);
         } catch (\Exception $e) {
@@ -222,32 +220,35 @@ class ProductController extends Controller
             }
 
             // Mise à jour du produit
-            $product->update($validated);
+            return DB::transaction(function () use ($request, $product, $validated, $targetPosId) {
+                $product->update($validated);
 
-            // Attach product to the target point of sale pivot table (ensuring it's still attached)
-            $pos = PointOfSale::find($targetPosId);
-            $pos->products()->syncWithoutDetaching([$product->id]); // Ensure product is associated with this POS
+                // Attach product to the target point of sale pivot table (ensuring it's still attached)
+                $pos = PointOfSale::find($targetPosId);
+                $pos->products()->syncWithoutDetaching([$product->id]); // Ensure product is associated with this POS
 
-            // Mise à jour ou création du tarif associé
-            if (isset($validated['price'])) {
-                $pricing = Pricing::where('product_id', $product->id)
-                    ->where('point_of_sale_id', $targetPosId)
-                    ->first();
+                // Mise à jour ou création du tarif associé
+                if (isset($validated['price'])) {
+                    $pricing = Pricing::where('product_id', $product->id)
+                        ->where('point_of_sale_id', $targetPosId)
+                        ->first();
 
-                if ($pricing) {
-                    $pricing->update(['price' => $validated['price']]);
-                } else {
-                    Pricing::create([
-                        'product_id'       => $product->id,
-                        'point_of_sale_id' => $targetPosId,
-                        'price'            => $validated['price'],
-                    ]);
+                    if ($pricing) {
+                        $pricing->update(['price' => $validated['price']]);
+                    } else {
+                        Pricing::create([
+                            'product_id'       => $product->id,
+                            'point_of_sale_id' => $targetPosId,
+                            'price'            => $validated['price'],
+                        ]);
+                    }
                 }
-            }
-            return response()->json([
-                'product' => $product->fresh(['pricings' => fn($q) => $q->where('point_of_sale_id', $targetPosId)]),
-                'message' => 'Produit mis à jour avec succès'
-            ], 200);
+                
+                return response()->json([
+                    'product' => $product->fresh(['pricings' => fn($q) => $q->where('point_of_sale_id', $targetPosId)]),
+                    'message' => 'Produit et tarif mis à jour avec succès'
+                ], 200);
+            });
         } catch (ValidationException $e) {
             return response()->json(['errors' => $e->validator->errors()], 422);
         } catch (\Exception $e) {

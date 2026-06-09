@@ -138,6 +138,7 @@ const localProduct = reactive({
   name: '',
   ref: '',
   price: 0,
+  pricing_id: null,
   status: false,
   category_id: null,
   image: null,
@@ -147,10 +148,12 @@ const localProduct = reactive({
 const categories = ref([])
 const imageError = ref('')
 
+const auth = useAuth()
+const { activePos } = auth
+
 const fetchCategories = async () => {
   try {
     const token = localStorage.getItem('token')
-    const { activePos } = useAuth()
     const pointOfSaleId = activePos.value?.id
 
     console.log('🔍 pointOfSaleId utilisé:', pointOfSaleId)
@@ -190,6 +193,7 @@ watch(
         name: newProduct.name,
         ref: newProduct.ref,
         price: newProduct.price,
+        pricing_id: newProduct.pricing_id,
         status: newProduct.status,
         category_id: newProduct.category_id,
         image: null,
@@ -239,20 +243,24 @@ const saveError = ref('')
 
 const saveProduct = async () => {
   try {
+    isSaving.value = true
+    saveError.value = ''
     const token = localStorage.getItem('token')
-    const payload_1 = {
+    
+    // Payload unique pour la mise à jour atomique
+    const payload = {
       id: localProduct.id,
       name: localProduct.name,
       ref: localProduct.ref,
-      price: localProduct.price,
+      price: localProduct.price, // Désormais envoyé dans la même requête
       status: localProduct.status,
       category_id: localProduct.category_id,
       image: localProduct.image ? await convertFileToBase64(localProduct.image) : null
     }
 
-    const response_1 = await axios.put(
+    const response = await axios.put(
       `${API_BASE_URL}/products/${localProduct.id}`,
-      payload_1,
+      payload,
       { 
         headers: { 
           Authorization: `Bearer ${token}`, 
@@ -261,34 +269,15 @@ const saveProduct = async () => {
         } 
       }
     )
-    const payload_2 = {
 
-      price: localProduct.price
-    }
-    try {
-      const response_2 = await axios.put(
-        `${API_BASE_URL}/pricings/${localProduct.id}`,
-        payload_2,
-        { 
-          headers: { 
-            Authorization: `Bearer ${token}`, 
-            'Content-Type': 'application/json',
-            'X-Active-POS-ID': activePos.value?.id || ''
-          } 
-        }
-      );
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du prix:', error.response?.data || error);
-    }
-    const updatedProductData = {
-      ...response_1.data.product,
-      price: localProduct.price // Ajoutez le prix depuis le state local
-    };
-    emits('save', updatedProductData)
+    // La réponse contient le produit avec les pricings mis à jour
+    emits('save', response.data.product)
     emits('close')
   } catch (error) {
     console.error('Erreur:', error.response?.data || error)
-    alert(error.response?.data?.message || 'Erreur de mise à jour')
+    saveError.value = error.response?.data?.message || 'Erreur de mise à jour'
+  } finally {
+    isSaving.value = false
   }
 }
 

@@ -82,55 +82,99 @@
           </div>
 
           <div v-if="loadingRegisters" class="py-8 text-center text-slate-500">
-            Chargement des caisses...
+            <div class="flex flex-col items-center gap-3">
+              <i class="fas fa-circle-notch animate-spin text-2xl text-indigo-500"></i>
+              <p class="text-sm font-medium">Chargement des caisses...</p>
+            </div>
           </div>
 
-          <div v-else>
-            <div class="mb-4">
+          <div v-else class="space-y-6">
+            <!-- Barre de recherche moderne -->
+            <div class="relative group">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <i class="fas fa-search text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+              </div>
               <input
                 v-model="searchRegister"
                 type="text"
                 placeholder="Rechercher une caisse..."
-                class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none"
+                class="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 py-3.5 text-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none shadow-sm"
               />
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto rounded-xl border border-slate-200 bg-white p-4">
-              <div v-if="filteredRegisters.length === 0" class="col-span-full py-4 text-center text-sm text-slate-500">
-                Aucune caisse trouvée.
+
+            <!-- Conteneur Flex en 2 colonnes -->
+            <div class="flex flex-wrap gap-5 max-h-[600px] overflow-y-auto p-1 custom-scrollbar">
+              <!-- État vide -->
+              <div v-if="filteredRegisters.length === 0" class="w-full py-12 flex flex-col items-center justify-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                <i class="fas fa-desktop text-3xl text-slate-200 mb-3"></i>
+                <p class="text-slate-500 font-medium text-sm">Aucune caisse trouvée.</p>
               </div>
+
+              <!-- Carte de Caisse (Largeur 50% moins le gap) -->
               <button
                 v-for="register in filteredRegisters"
                 :key="register.id"
                 type="button"
-                class="cash-register-card flex flex-col items-start p-4 bg-white rounded-xl border border-slate-200 hover:bg-indigo-50 transition-all disabled:cursor-not-allowed text-left"
-                :class="{
-                  'selected': selectedCashRegister === register.id,
-                  'opacity-60 pointer-events-none bg-slate-100': isRegisterLocked(register.id) && !isAdmin
-                }"
+                class="group relative flex flex-col p-5 bg-white rounded-[24px] border transition-all duration-300 shadow-sm hover:shadow-md active:scale-[0.98] w-[calc(50%-10px)]"
+                :class="[
+                  selectedCashRegister === register.id 
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/15 bg-indigo-50/30' 
+                    : 'border-slate-200 hover:border-indigo-200',
+                  (isRegisterLocked(register.id) && !isAdmin)
+                    ? 'grayscale opacity-60 cursor-not-allowed bg-slate-50'
+                    : 'cursor-pointer'
+                ]"
                 :disabled="isRegisterLocked(register.id) && !isAdmin"
                 @click="selectCashRegister(register.id)"
               >
-                <div class="flex items-center gap-3 w-full">
-                  <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                    <i class="fas fa-desktop text-xl"></i>
-                  </span>
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-slate-900 truncate">{{ register.name }}</p>
-                    <p class="text-xs text-slate-400 mt-0.5 truncate">{{ register.point_of_sale?.name || 'Sans point de vente' }}</p>
-                    <p v-if="register.current_session?.user?.name" class="text-xs text-indigo-600 mt-1">👤{{ register.current_session.user.name }}</p>
+                <!-- Statut & Icône -->
+                <div class="flex items-center justify-between w-full mb-3">
+                  <div 
+                    class="size-10 flex items-center justify-center rounded-xl transition-colors"
+                    :class="selectedCashRegister === register.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'"
+                  >
+                    <i class="fas fa-desktop text-base"></i>
                   </div>
+                  
                   <span
                     v-if="statusBadgeText(register.id)"
-                    :class="['inline-block px-2 py-1 rounded-lg text-xs font-semibold', statusBadgeClass(register.id)]"
+                    :class="['px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider', statusBadgeClass(register.id)]"
                   >
                     {{ statusBadgeText(register.id) }}
                   </span>
                 </div>
 
-                <!-- Panneau de debug -->
-                <div v-if="debugMode" class="mt-3 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-400 w-full">
-                  <div>👤 Owner: {{ registerOwners[register.id] || '-' }}</div>
-                  <div>🔒 Locked: {{ isRegisterLocked(register.id) }}</div>
+                <!-- Textes -->
+                <div class="space-y-0.5 mb-3">
+                  <h3 class="font-bold text-slate-900 text-sm truncate">
+                    {{ register.name }}
+                  </h3>
+                  <p class="text-[11px] text-slate-400 truncate flex items-center">
+                    <i class="fas fa-store mr-1 text-[10px]"></i>
+                    {{ register.point_of_sale?.name || 'Standard' }}
+                  </p>
+                </div>
+
+                <!-- Badge Utilisateur (Style Compact Figma) -->
+                <div v-if="register.current_session?.user?.name" class="mt-auto pt-3 border-t border-slate-100 w-full">
+                  <div class="flex items-center gap-2">
+                    <div class="size-5 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] text-indigo-600 font-bold border border-indigo-200">
+                      {{ register.current_session.user.name.charAt(0) }}
+                    </div>
+                    <p class="text-[10px] font-medium text-slate-600 truncate">
+                      {{ register.current_session.user.name }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Lock Icon -->
+                <div v-if="isRegisterLocked(register.id) && !isAdmin" class="absolute top-2 right-2 text-slate-300">
+                  <i class="fas fa-lock text-[10px]"></i>
+                </div>
+
+                <!-- Debug -->
+                <div v-if="debugMode" class="mt-2 text-[8px] font-mono text-slate-300 uppercase tracking-tighter">
+                  ID: {{ register.id }} | L: {{ isRegisterLocked(register.id) }} | Owner: {{ registerOwners[register.id] || '-' }}
                 </div>
               </button>
             </div>
@@ -385,15 +429,8 @@ const statusBadgeText = (registerId) => {
   }
 
   const status = registerStatuses.value[registerId]
-  const owner = registerOwners.value[registerId]
-
-  if (status === 'connected') {
-    const userId = currentUserId.value
-    const userName = currentUserName.value
-
-    const isOwn = (typeof owner === 'string' && owner === userName)
-
-
+  if (status === 'connected' || (isRegisterLocked(registerId) && !isAdmin.value)) {
+    return 'Occupée'
   }
 
   if (status === 'error') return 'Erreur'
@@ -865,22 +902,22 @@ onMounted(async () => {
 }
 
 /* Scrollbar pour la liste des caisses */
-.grid::-webkit-scrollbar {
-  width: 8px;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
 }
 
-.grid::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
 }
 
-.grid::-webkit-scrollbar-thumb {
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #cbd5e1;
-  border-radius: 4px;
-}
-
-.grid::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
 }
 
 /* Style de focus pour la recherche */

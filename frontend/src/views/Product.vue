@@ -253,15 +253,20 @@ const fetchData = async () => {
       if (!Array.isArray(category.products)) continue
       for (const product of category.products) {
         let price = 0
-        if (Array.isArray(product.pricing)) {
-          const pricing = product.pricing.find(p => p.point_of_sale_id === posId)
-          if (pricing) price = parseFloat(pricing.price)
+        let pricing_id = null
+        if (Array.isArray(product.pricings)) {
+          const pricing = product.pricings.find(p => p.point_of_sale_id === posId)
+          if (pricing) {
+            price = parseFloat(pricing.price)
+            pricing_id = pricing.id
+          }
         }
         allProducts.push({
           ...product,
           category_id: category.id,
           category_name: category.name,
           price,
+          pricing_id,
         })
       }
     }
@@ -332,7 +337,25 @@ const closeEditModal = () => {
 const handleSave = (updatedProduct) => {
   const index = products.value.findIndex(p => p.id === updatedProduct.id)
   if (index !== -1) {
-    products.value[index] = { ...products.value[index], ...updatedProduct }
+    const posId = activePos.value?.id
+    let price = 0
+    let pricing_id = null
+    
+    // Extraction du prix depuis la relation pricings mise à jour
+    if (Array.isArray(updatedProduct.pricings)) {
+      const pricing = updatedProduct.pricings.find(p => p.point_of_sale_id === posId)
+      if (pricing) {
+        price = parseFloat(pricing.price)
+        pricing_id = pricing.id
+      }
+    }
+    
+    products.value[index] = { 
+      ...products.value[index], 
+      ...updatedProduct,
+      price,
+      pricing_id
+    }
   }
   closeEditModal()
 }
