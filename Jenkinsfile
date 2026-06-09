@@ -107,38 +107,6 @@ pipeline {
             }
         }
         // ============================================================
-        // STAGE 3 — Scan Trivy (vulnérabilités images Docker)
-        // ============================================================
-        // Trivy scanne les images Docker buildées pour détecter
-        // les vulnérabilités CVE connues dans :
-        // - Les packages système (debian, alpine...)
-        // - Les dépendances PHP/Node (composer, npm...)
-        //
-        // --severity HIGH,CRITICAL : ne signale que les graves
-        // --exit-code 0            : non bloquant (ne casse pas le pipeline)
-        // --format table           : sortie lisible dans les logs
-        // ============================================================
-        stage('Scan Trivy') {
-            steps {
-                echo "Scan des images Docker avec Trivy..."
-                sh """
-                    docker run --rm \
-                        -v /var/run/docker.sock:/var/run/docker.sock \
-                        -v /tmp/trivy-cache:/root/.cache/trivy \
-                        aquasec/trivy:latest image \
-                        --severity HIGH,CRITICAL \
-                        --exit-code 0 \
-                        --format table \
-                        giovanni09/backend:${BUILD_NUMBER} || true
-                """
-                echo "Scan Trivy termine"
-            }
-        }
-
-
-        // ============================================================
-        // STAGE 3 — Vérification syntaxe PHP
-        // ============================================================
         stage('Verification Syntaxe PHP') {
             steps {
                 echo "Vérification de la syntaxe PHP..."
@@ -288,6 +256,25 @@ pipeline {
                         docker push ${FRONTEND_IMAGE}:latest
                     """
                 }
+            }
+        }
+
+        // ============================================================
+        // STAGE 5b — Scan Trivy (après push, image disponible sur Docker Hub)
+        // ============================================================
+        stage('Scan Trivy') {
+            steps {
+                echo "Scan des vulnerabilites avec Trivy..."
+                sh """
+                    docker run --rm \
+                        -v /tmp/trivy-cache:/root/.cache/trivy \
+                        aquasec/trivy:latest image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        --format table \
+                        giovanni09/backend:${BUILD_NUMBER} || true
+                """
+                echo "Scan Trivy termine"
             }
         }
 
