@@ -267,12 +267,13 @@ pipeline {
                 echo "Scan des vulnerabilites avec Trivy..."
                 sh """
                     docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
                         -v /tmp/trivy-cache:/root/.cache/trivy \
                         aquasec/trivy:latest image \
                         --severity HIGH,CRITICAL \
                         --exit-code 0 \
                         --format table \
-                        giovanni09/backend:${BUILD_NUMBER} || true
+                        giovanni09/backend:latest || true
                 """
                 echo "Scan Trivy termine"
             }
