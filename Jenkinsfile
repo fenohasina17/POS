@@ -59,6 +59,26 @@ pipeline {
         }
 
         // ============================================================
+        // ============================================================
+        // STAGE 2 — Scan Secrets (truffleHog)
+        // ============================================================
+        stage('Scan Secrets') {
+            steps {
+                echo "Scan des secrets avec truffleHog..."
+                sh '''
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        -v $(pwd):/workdir \
+                        -w /workdir \
+                        trufflesecurity/trufflehog:latest \
+                        git file:///workdir \
+                        --only-verified \
+                        --fail || true
+                '''
+                echo "Scan secrets termine"
+            }
+        }
+
         // STAGE 2 — Build des images Docker
         // ============================================================
         stage('Build Images') {
