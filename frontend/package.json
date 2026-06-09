@@ -40,6 +40,7 @@
     "@vue/devtools-kit": "^8.0.5",
     "@vue/eslint-config-prettier": "^10.2.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^10.0.3",
     "cypress": "^15.1.0",
     "electron": "^42.0.1",
     "eslint": "^9.22.0",

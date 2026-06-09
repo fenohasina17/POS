@@ -516,18 +516,19 @@ const getSaleAmount = (sale) => {
 }
 
 const filteredSalesData = computed(() => {
-  if (!isAdmin.value) {
-    const userId = currentUser.value?.id
-    if (!userId) return []
-    return salesData.value.filter((sale) => String(getSaleUserId(sale) ?? '') === String(userId))
+  // Admins or Managers can view all sales for their POS/Organization
+  if (isAdmin.value || hasRole('gérant')) {
+    if (selectedPointOfSale.value) {
+      const target = selectedPointOfSale.value
+      return salesData.value.filter((sale) => String(getSalePointOfSaleId(sale) ?? '') === target)
+    }
+    return salesData.value
   }
 
-  if (selectedPointOfSale.value) {
-    const target = selectedPointOfSale.value
-    return salesData.value.filter((sale) => String(getSalePointOfSaleId(sale) ?? '') === target)
-  }
-
-  return salesData.value
+  // Regular cashiers are restricted to their own sales
+  const userId = currentUser.value?.id
+  if (!userId) return []
+  return salesData.value.filter((sale) => String(getSaleUserId(sale) ?? '') === String(userId))
 })
 
 const availablePointOfSales = computed(() =>
@@ -989,7 +990,7 @@ const topProducts = computed(() => {
   const map = new Map()
 
   filteredSalesData.value.forEach((sale) => {
-    const lines = Array.isArray(sale?.order_lines) ? sale.order_lines : []
+    const lines = Array.isArray(sale?.orderlines) ? sale.orderlines : []
     lines.forEach((line) => {
       const name = line?.product?.name ?? line?.product_name ?? 'Produit inconnu'
       if (!map.has(name)) {
@@ -1050,6 +1051,11 @@ const loadSalesData = async () => {
       params,
     })
     salesData.value = extractArray(data?.data ?? data)
+    console.log('🔍 DEBUG: Dashboard sales loaded, total count:', salesData.value.length);
+    if (salesData.value.length > 0) {
+      console.log('🔍 DEBUG: Première vente récupérée:', salesData.value[0]);
+    }
+    console.log('🔍 DEBUG: isAdmin:', isAdmin.value, 'currentUser:', currentUser.value?.id);
   } catch (error) {
     console.error('Erreur chargement statistiques ventes:', error.response?.data || error.message)
     salesData.value = []
