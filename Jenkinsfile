@@ -71,7 +71,7 @@ pipeline {
                         -v $(pwd):/workdir \
                         -w /workdir \
                         trufflesecurity/trufflehog:latest \
-                        git file:///workdir \
+                        filesystem /workdir \
                         --only-verified \
                         --fail || true
                 '''
