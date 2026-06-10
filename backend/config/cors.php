@@ -6,8 +6,11 @@ return [
 
     'allowed_methods' => ['*'],
 
-    // Autoriser toutes les origines
-    'allowed_origins' => ['*'],
+    // Restreint au(x) frontend(s) connu(s) - liste séparée par des virgules
+    'allowed_origins' => array_filter(array_map('trim', explode(
+        ',',
+        env('CORS_ALLOWED_ORIGINS', env('FRONTEND_URL', 'http://localhost:5173'))
+    ))),
 
     'allowed_headers' => ['*'],
 
