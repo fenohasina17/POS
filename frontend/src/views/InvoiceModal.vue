@@ -48,7 +48,7 @@
                 <div class="flex items-center gap-2">
                   <FontAwesomeIcon :icon="getPaymentIcon(payment.payment_name)" class="text-slate-400" />
                   <div>
-                    <p class="font-bold text-slate-700">{{ payment.method }}</p>
+                    <p class="font-bold text-slate-700">{{ payment.payment_method_name }}</p>
                     <p v-if="payment.reference" class="text-[9px] text-slate-400">Réf: {{ payment.reference }}</p>
                   </div>
                 </div>
@@ -96,11 +96,11 @@
             <div v-for="(item, index) in groupedItems" :key="index" class="flex items-center justify-between rounded-xl bg-white p-3 border border-slate-100 shadow-sm transition-all hover:border-indigo-100">
               <div class="flex-1 min-w-0 pr-2">
                 <p class="text-xs font-black text-slate-950 truncate leading-tight">{{ item.name }}</p>
-                <p class="text-[9px] font-medium text-slate-400 mt-0.5">
+                <p class="text-sm font-medium text-slate-400 mt-0.5">
                   {{ item.quantity }} x {{ formatPrice(item.price) }}
                 </p>
               </div>
-              <p class="text-xs font-black text-indigo-600">
+              <p class="text-sm font-black text-indigo-600">
                 {{ formatPrice(item.price * item.quantity) }}
               </p>
             </div>
