@@ -245,17 +245,19 @@ pipeline {
                     sh '''
                         echo "=== COMPOSER AUDIT (PHP) ==="
                         docker run --rm \
+                            --entrypoint composer \
                             -v $(pwd)/backend:/app \
                             -w /app \
-                            giovanni09/backend:latest \
-                            composer audit --format=table || true
+                            composer:2 \
+                            audit --format=table || true
 
                         echo "=== NPM AUDIT (Node) ==="
                         docker run --rm \
+                            --entrypoint npm \
                             -v $(pwd)/frontend:/app \
                             -w /app \
                             node:20-alpine \
-                            npm audit --production 2>/dev/null || true
+                            audit 2>/dev/null || true
                     '''
                     echo "Audit dependances termine"
                 }
