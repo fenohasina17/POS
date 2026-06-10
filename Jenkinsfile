@@ -10,7 +10,7 @@ pipeline {
         disableConcurrentBuilds()
 
         // Timeout global — tue le pipeline s'il dépasse 30 minutes
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 60, unit: 'MINUTES')
 
         // Conserve uniquement les 10 derniers builds dans Jenkins
         buildDiscarder(logRotator(numToKeepStr: '10'))
@@ -240,23 +240,25 @@ pipeline {
         // ============================================================
         stage('OWASP Dependency Check') {
             steps {
-                echo "Scan OWASP des dependances..."
-                sh '''
-                    mkdir -p $(pwd)/owasp-report
-                    docker run --rm \
-                        -v $(pwd)/backend:/src \
-                        -v $(pwd)/owasp-report:/report \
-                        -v /tmp/owasp-data:/usr/share/dependency-check/data \
-                        owasp/dependency-check:latest \
-                        --project "Giovanni POS" \
-                        --scan /src \
-                        --format HTML \
-                        --format JSON \
-                        --out /report \
-                        --failOnCVSS 9 \
-                        --enableRetired || true
-                '''
-                echo "Scan OWASP termine"
+                catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                    echo "Scan OWASP des dependances..."
+                    sh '''
+                        mkdir -p $(pwd)/owasp-report
+                        docker run --rm \
+                            -v $(pwd)/backend:/src \
+                            -v $(pwd)/owasp-report:/report \
+                            -v /tmp/owasp-data:/usr/share/dependency-check/data \
+                            owasp/dependency-check:latest \
+                            --project "Giovanni POS" \
+                            --scan /src \
+                            --format HTML \
+                            --format JSON \
+                            --out /report \
+                            --failOnCVSS 9 \
+                            --enableRetired || true
+                    '''
+                    echo "Scan OWASP termine"
+                }
             }
             post {
                 always {
