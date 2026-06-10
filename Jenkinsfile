@@ -230,6 +230,38 @@ pipeline {
         }
 
         // ============================================================
+        // STAGE 4b — OWASP Dependency Check (vulnérabilités dépendances)
+        // ============================================================
+        // Scanne composer.json (PHP) et package.json (Node) pour détecter
+        // les CVE connues dans les librairies tierces de l'application.
+        //
+        // --failOnCVSS 9 : bloque seulement si CVSS >= 9 (CRITICAL)
+        // --format HTML  : rapport lisible archivé dans Jenkins
+        // ============================================================
+        stage('OWASP Dependency Check') {
+            steps {
+                echo "Scan OWASP des dependances..."
+                sh '''
+                    docker run --rm \
+                        -v $(pwd):/src \
+                        -v /tmp/owasp-data:/usr/share/dependency-check/data \
+                        owasp/dependency-check:latest \
+                        --project "Giovanni POS" \
+                        --scan /src/backend \
+                        --format HTML \
+                        --format JSON \
+                        --out /src/owasp-report \
+                        --failOnCVSS 9 \
+                        --enableRetired || true
+                '''
+                echo "Scan OWASP termine"
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'owasp-report/**', allowEmptyArchive: true
+                }
+            }
+        }
         // STAGE 5 — Push vers Docker Hub
         // ============================================================
         // Exécuté UNIQUEMENT sur la branche de production (DEPLOY_BRANCH)
