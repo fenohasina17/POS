@@ -231,9 +231,15 @@ const totalCounted = computed(() => {
 const varianceAmount = computed(() => {
   const starting = parseFloat(sessionData.value?.starting_amount) || 0
   
-  // Sommer uniquement les montants des paiements en 'Espèce' pour chaque vente
+  const isCashPayment = (name) => {
+    if (!name) return false;
+    const normalized = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return ['esp', 'cash', 'liq'].some(keyword => normalized.includes(keyword));
+  };
+
+  // Sommer uniquement les montants des paiements en espèces pour chaque vente
   const totalCashSales = sessionSales.value.reduce((sum, sale) => {
-    const cashPayments = sale.payments?.filter(p => p.payment?.name === 'Espèce') || []
+    const cashPayments = sale.payments?.filter(p => isCashPayment(p.payment?.name)) || []
     const saleCash = cashPayments.reduce((pSum, p) => pSum + parseFloat(p.amount || 0), 0)
     return sum + saleCash
   }, 0)
