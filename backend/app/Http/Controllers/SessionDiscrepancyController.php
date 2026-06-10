@@ -27,7 +27,7 @@ class SessionDiscrepancyController extends Controller
             return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
         }
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
         
         // Admins can see all discrepancies or filter by query param
@@ -73,7 +73,7 @@ class SessionDiscrepancyController extends Controller
 
         $discrepancy = SessionDiscrepancy::with('cashRegisterSession.cashRegister')->findOrFail($id);
         
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admin (managers) specific checks

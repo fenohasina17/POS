@@ -24,7 +24,7 @@ class TableController extends Controller
             return response()->json(['message' => 'Utilisateur non authentifié'], 401);
         }
 
-        $isAdmin = $user->hasRole('admin');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         if (!$isAdmin) {
@@ -59,7 +59,7 @@ class TableController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $targetPosId = $this->getAuthorizedPosId($request);
 
             if ($targetPosId instanceof \Illuminate\Http\JsonResponse) {
@@ -120,7 +120,7 @@ class TableController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $targetPosId = $this->getAuthorizedPosId($request);
 
             if ($targetPosId instanceof \Illuminate\Http\JsonResponse) {

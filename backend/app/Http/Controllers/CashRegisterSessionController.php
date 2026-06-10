@@ -54,7 +54,7 @@ class CashRegisterSessionController extends Controller
         $query = CashRegisterSession::query();
 
         $isManager = $this->userIsManager($user);
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Admin can see all or filter by query param
@@ -216,7 +216,7 @@ try {
     }
 
     $isManager = $this->userIsManager($user);
-    $isAdmin = $user->hasRole('admin', 'api');
+    $isAdmin = $user->isAdmin();
     $activePosId = $request->attributes->get('activePosId');
 
     \Log::info("DEBUG SHOW: SessionID: $id, ActivePosID: $activePosId, SessionPosID: " . optional($session->cashRegister)->point_of_sale_id);
@@ -276,7 +276,7 @@ try {
         // le gérant est bloqué par la restriction métier plus bas.
         $isOwner = $session->user_id === $user->id;
         $hasUpdatePerm = $user->hasPermissionTo('update.cash_register_sessions', 'api');
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
 
@@ -397,11 +397,11 @@ try {
         if (!auth()->guard('api')->check() || !$user->hasPermissionTo('delete.cash_register_sessions', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
-        if (!$user->hasRole('admin', 'api') && $this->userIsManager($user)) {
+        if (!$user->isAdmin() && $this->userIsManager($user)) {
             abort(403, 'Les gérants ne peuvent pas supprimer une session de caisse.');
         }
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         if (!$isAdmin) {
@@ -447,11 +447,11 @@ try {
         if (!auth()->guard('api')->check() || !$user->hasPermissionTo('update.cash_register_sessions', 'api')) {
             abort(403, 'This action is unauthorized.');
         }
-        if (!$user->hasRole('admin', 'api') && $this->userIsManager($user)) {
+        if (!$user->isAdmin() && $this->userIsManager($user)) {
             abort(403, 'Les gérants ne peuvent pas rouvrir une session de caisse.');
         }
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         if (!$isAdmin) {
@@ -506,7 +506,7 @@ try {
         }
 
         // Apply active POS filtering for non-admins
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         if (!$isAdmin) {
@@ -549,7 +549,7 @@ try {
         }
         
         // Apply active POS filtering for non-admins
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         if (!$isAdmin) {
@@ -608,7 +608,7 @@ try {
         }
 
         // 3. LOGIQUE DE FILTRAGE PAR POINT DE VENTE (POS)
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         if (!$isAdmin) {
@@ -665,7 +665,7 @@ try {
             }
 
             // Apply active POS filtering for non-admins
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {

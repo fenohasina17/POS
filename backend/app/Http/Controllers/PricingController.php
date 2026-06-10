@@ -28,7 +28,7 @@ class PricingController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {
@@ -80,7 +80,7 @@ class PricingController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $query = Pricing::with('product')->where('product_id', $id);
@@ -132,7 +132,7 @@ class PricingController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $validated = $request->validate([
@@ -196,7 +196,7 @@ class PricingController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             \Log::info("DEBUG - isAdmin: " . ($isAdmin ? 'yes' : 'no') . ", activePosId: " . ($activePosId ?? 'NULL'));
@@ -276,7 +276,7 @@ class PricingController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $pricing = Pricing::query();

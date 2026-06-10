@@ -65,4 +65,19 @@ class User extends Authenticatable
         return $this->hasMany(CashRegister::class);
     }
 
+    // Role Helpers
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(\App\Enums\RoleEnum::ADMIN->value, 'api');
+    }
+
+    public function isManager(): bool
+    {
+        return $this->hasRole(\App\Enums\RoleEnum::MANAGER->value, 'api');
+    }
+
+    public function isCashier(): bool
+    {
+        return $this->hasRole(\App\Enums\RoleEnum::CASHIER->value, 'api');
+    }
 }

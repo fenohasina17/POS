@@ -160,7 +160,7 @@ class SaleController extends Controller
                 'payments.payment'  // ← relation payments.payment (SalePayment -> Payment)
             ]);
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $isManager = $user->hasAnyRole(['gerant', 'gérant'], 'api');
             $activePosId = $request->attributes->get('activePosId');
 
@@ -274,7 +274,7 @@ class SaleController extends Controller
             return response()->json(['message' => 'Vous n\'avez pas la permission de voir les KPIs.'], 403);
         }
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admin users (including managers) must be associated with the requested pointOfSale, or it must be their active POS
@@ -373,7 +373,7 @@ class SaleController extends Controller
             return response()->json(['message' => 'Vous n\'avez pas la permission de voir les statistiques.'], 403);
         }
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admin users (including managers) must be associated with the requested pointOfSale, or it must be their active POS
@@ -651,14 +651,14 @@ class SaleController extends Controller
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admins must have an active POS set by middleware
-        if (!$user->hasRole('admin', 'api') && !$activePosId) {
+        if (!$user->isAdmin() && !$activePosId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Point de vente actif non défini pour l\'utilisateur.'
             ], 403);
         }
         // Non-admins must be assigned to their active POS
-        if (!$user->hasRole('admin', 'api') && !$user->pointsOfSale->contains($activePosId)) {
+        if (!$user->isAdmin() && !$user->pointsOfSale->contains($activePosId)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Accès refusé pour ce point de vente.'
@@ -672,7 +672,7 @@ class SaleController extends Controller
                 'table_id' => [
                     'nullable',
                     Rule::exists('tables', 'id')->where(function ($query) use ($activePosId, $request) {
-                        $isAdmin = Auth::user()->hasRole('admin', 'api');
+                        $isAdmin = Auth::user()->isAdmin();
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
                             $query->where('point_of_sale_id', $targetPosId);
@@ -683,7 +683,7 @@ class SaleController extends Controller
                 'point_of_sale_id' => [
                     'required',
                     Rule::exists('point_of_sales', 'id')->where(function ($query) use ($user, $activePosId) {
-                        $isAdmin = $user->hasRole('admin', 'api');
+                        $isAdmin = $user->isAdmin();
                         if (!$isAdmin) {
                             $query->where('id', $activePosId); // Non-admin must target their active POS
                         }
@@ -693,7 +693,7 @@ class SaleController extends Controller
                 'cash_register_session_id' => [
                     'required',
                     Rule::exists('cash_register_sessions', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                        $isAdmin = $user->hasRole('admin', 'api');
+                        $isAdmin = $user->isAdmin();
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
                             $query->whereIn('cash_register_id', function ($sub) use ($targetPosId) {
@@ -712,7 +712,7 @@ class SaleController extends Controller
                 'items.*.product_id' => [
                     'required',
                     Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                        $isAdmin = $user->hasRole('admin', 'api');
+                        $isAdmin = $user->isAdmin();
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
                             $query->whereIn('id', function ($sub) use ($targetPosId) {
@@ -750,7 +750,7 @@ class SaleController extends Controller
 
             $validated = $request->validate($rules);
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $targetPointOfSaleId = $validated['point_of_sale_id'];
 
             // For non-admin, ensure the validated point_of_sale_id matches the active POS ID
@@ -844,14 +844,14 @@ class SaleController extends Controller
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admins must have an active POS set by middleware
-        if (!$user->hasRole('admin', 'api') && !$activePosId) {
+        if (!$user->isAdmin() && !$activePosId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Point de vente actif non défini pour l\'utilisateur.'
             ], 403);
         }
         // Non-admins must be assigned to their active POS
-        if (!$user->hasRole('admin', 'api') && !$user->pointsOfSale->contains($activePosId)) {
+        if (!$user->isAdmin() && !$user->pointsOfSale->contains($activePosId)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Accès refusé pour ce point de vente.'
@@ -863,7 +863,7 @@ class SaleController extends Controller
                 'table_id' => [
                     'required',
                     Rule::exists('tables', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                        $isAdmin = Auth::user()->hasRole('admin', 'api');
+                        $isAdmin = Auth::user()->isAdmin();
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
                             $query->where('point_of_sale_id', $targetPosId);
@@ -874,7 +874,7 @@ class SaleController extends Controller
                 'point_of_sale_id' => [
                     'required',
                     Rule::exists('point_of_sales', 'id')->where(function ($query) use ($user, $activePosId) {
-                        $isAdmin = $user->hasRole('admin', 'api');
+                        $isAdmin = $user->isAdmin();
                         if (!$isAdmin) {
                             $query->where('id', $activePosId); // Non-admin must target their active POS
                         }
@@ -883,7 +883,7 @@ class SaleController extends Controller
                 'cash_register_session_id' => [
                     'required',
                     Rule::exists('cash_register_sessions', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                        $isAdmin = $user->hasRole('admin', 'api');
+                        $isAdmin = $user->isAdmin();
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
                             $query->whereIn('cash_register_id', function ($sub) use ($targetPosId) {
@@ -899,7 +899,7 @@ class SaleController extends Controller
                 'order_lines.*.product_id' => [
                     'required',
                     Rule::exists('products', 'id')->where(function ($query) use ($activePosId, $user, $request) {
-                        $isAdmin = $user->hasRole('admin', 'api');
+                        $isAdmin = $user->isAdmin();
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
                         if ($targetPosId) {
                             $query->whereIn('id', function ($sub) use ($targetPosId) {
@@ -919,7 +919,7 @@ class SaleController extends Controller
         }
 
         $targetPointOfSaleId = $validated['point_of_sale_id'];
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
 
         try {
             if ($isAdmin && $targetPointOfSaleId && !$user->pointsOfSale->contains($targetPointOfSaleId)) {
@@ -1001,7 +1001,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Vous n\'avez pas la permission de voir cette vente.'], 403);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             // Non-admin users are restricted by their active POS or user_id
@@ -1065,7 +1065,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Vous n\'avez pas la permission de supprimer une vente.'], 403);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             // Non-admin users are restricted by their active POS
@@ -1132,7 +1132,7 @@ class SaleController extends Controller
                 ], 401);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {
@@ -1218,7 +1218,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {
@@ -1230,7 +1230,7 @@ class SaleController extends Controller
                 }
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $validated = $request->validate([
@@ -1238,7 +1238,7 @@ class SaleController extends Controller
                 'order_lines.*.product_id' => [
                     'required',
                     function ($attribute, $value, $fail) use ($activePosId, $user, $request) {
-                        $isAdmin = Auth::user()->hasRole('admin', 'api');
+                        $isAdmin = Auth::user()->isAdmin();
                         $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
 
                         $query = \App\Models\Product::where('id', $value);
@@ -1302,7 +1302,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {
@@ -1364,7 +1364,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {
@@ -1445,7 +1445,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Vous n\'avez pas la permission de voir cette vente.'], 403);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             // Non-admin users are restricted by their active POS
@@ -1524,7 +1524,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Accès non autorisé.'], 403);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             // Non-admin users are restricted by their active POS
@@ -1634,7 +1634,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {
@@ -1725,7 +1725,7 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin) {

@@ -46,7 +46,7 @@ class ProductController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $query = Product::query();
@@ -102,7 +102,7 @@ class ProductController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $validated = $request->validate([
@@ -173,7 +173,7 @@ class ProductController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $validated = $request->validate([
@@ -267,7 +267,7 @@ class ProductController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $targetPosId = null;
@@ -330,7 +330,7 @@ class ProductController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $targetPosId = null;

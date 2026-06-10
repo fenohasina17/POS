@@ -4,76 +4,50 @@ namespace App\Policies;
 
 use App\Models\Sale;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
 class SalePolicy
 {
-    /**
-     * Determine whether the user can view any models.
-     */
+    use HandlesAuthorization;
+
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+        return null;
+    }
+
     public function viewAny(User $user): bool
     {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can view the model.
-     */
-    public function view(User $user, Sale $sale): bool
-    {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can create models.
-     */
-    public function create(User $user, array $data): bool
-    {
-        $isAdmin = $user->hasRole('admin', 'api');
-
-        // SÉCURITÉ 1 : POS assigné
-        if (!$isAdmin && (int) $user->point_of_sale_id !== (int) $data['point_of_sale_id']) {
-            return false;
-        }
-
-        // SÉCURITÉ 2 : Ne peut créer que pour soi-même
-        if (!$isAdmin && (int) $data['user_id'] !== (int) $user->id) {
-            return false;
-        }
-
         return true;
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
+    public function view(User $user, Sale $sale): bool
+    {
+        return $user->pointsOfSale->contains($sale->point_of_sale_id);
+    }
+
+    public function create(User $user): bool
+    {
+        // Caissiers and managers can create sales
+        return true; 
+    }
+
     public function update(User $user, Sale $sale): bool
     {
-        return false;
+        // Manager can update their POS sales, cashier only their own sales
+        if ($user->isManager()) {
+            return $user->pointsOfSale->contains($sale->point_of_sale_id);
+        }
+        return $user->id === $sale->user_id;
     }
 
-    /**
-     * Determine whether the user can delete the model.
-     */
     public function delete(User $user, Sale $sale): bool
     {
+        if ($user->isManager()) {
+            return $user->pointsOfSale->contains($sale->point_of_sale_id);
+        }
         return false;
     }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Sale $sale): bool
-    {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Sale $sale): bool
-    {
-        return false;
-    }
-    
 }

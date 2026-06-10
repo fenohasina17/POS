@@ -40,7 +40,7 @@ class SalePaymentController extends Controller
 
             $sale = Sale::findOrFail($saleId);
 
-            $isAdmin = $user->hasRole('admin', 'api');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             // Non-admin specific checks
@@ -159,7 +159,7 @@ class SalePaymentController extends Controller
 
         $sale = Sale::with('payments.payment')->findOrFail($saleId);
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admin specific checks
@@ -217,7 +217,7 @@ class SalePaymentController extends Controller
 
         $sale = $salePayment->sale;
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admin specific checks
@@ -266,7 +266,7 @@ class SalePaymentController extends Controller
 
         $sale = $salePayment->sale; // Access sale through salePayment
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admin specific checks
@@ -336,7 +336,7 @@ class SalePaymentController extends Controller
 
         $sale = $salePayment->sale; // Access sale through salePayment
 
-        $isAdmin = $user->hasRole('admin', 'api');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         // Non-admin specific checks

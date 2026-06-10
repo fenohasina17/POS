@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 
 class CashRegisterSession extends Model
 {
-    use SoftDeletes, HasFactory;
+    use HasFactory, SoftDeletes, \App\Models\Traits\ScopeByPos;
 
     protected $fillable = [
         // Identifiants

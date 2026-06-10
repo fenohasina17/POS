@@ -10,48 +10,43 @@ class CashRegisterSessionPolicy
 {
     use HandlesAuthorization;
 
-    /**
-     * Determine whether the user can view any cash register sessions.
-     */
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+        return null;
+    }
+
     public function viewAny(User $user)
     {
-        // Example: allow all authenticated users to view sessions
-        return $user !== null;
+        return true;
     }
 
-    /**
-     * Determine whether the user can view the cash register session.
-     */
     public function view(User $user, CashRegisterSession $session)
     {
-        // Example: allow if user is owner, has admin role or gérant role
-        return $user->id === $session->user_id || $user->hasRole('admin') || $user->hasRole('gérant');
+        // Un caissier voit sa session, un gérant voit les sessions de son POS
+        if ($user->isManager()) {
+            return $user->pointsOfSale->contains($session->cashRegister->point_of_sale_id);
+        }
+        return $user->id === $session->user_id;
     }
 
-    /**
-     * Determine whether the user can create cash register sessions.
-     */
-    // public function create(User $user)
-    // {
-    //     // Example: allow if user has role caissier or admin
-    //     return $user->hasAnyRole(['caissier', 'admin','gerant']);
-    // }
+    public function create(User $user)
+    {
+        return true;
+    }
 
-    /**
-     * Determine whether the user can update the cash register session.
-     */
     public function update(User $user, CashRegisterSession $session)
     {
-        // Example: allow if user is owner or has admin role or gérant role
-        return $user->id === $session->user_id || $user->hasRole('admin') || $user->hasRole('gérant');
+        if ($user->isManager()) {
+            return $user->pointsOfSale->contains($session->cashRegister->point_of_sale_id);
+        }
+        return $user->id === $session->user_id;
     }
 
-    /**
-     * Determine whether the user can delete the cash register session.
-     */
     public function delete(User $user, CashRegisterSession $session)
     {
-        // Example: allow only admin to delete
-        return $user->hasRole('admin');
+        return false; // Only admin
     }
 }

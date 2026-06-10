@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Table extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Models\Traits\ScopeByPos;
 
     // Définition des zones pour la liste déroulante
     public static $availableZones = [

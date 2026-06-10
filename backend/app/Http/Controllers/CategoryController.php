@@ -32,7 +32,7 @@ class CategoryController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $request->validate([
@@ -122,7 +122,7 @@ class CategoryController extends Controller
     protected function resolveRelations(Request $request): array
     {
         $user = Auth::user();
-        $isAdmin = $user->hasRole('admin');
+        $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
 
         $targetPosId = null;
@@ -174,7 +174,7 @@ class CategoryController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $category = Category::find($id);
@@ -236,7 +236,7 @@ class CategoryController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $targetPosId = null;

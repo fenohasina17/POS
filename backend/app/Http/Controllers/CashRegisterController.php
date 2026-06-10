@@ -24,7 +24,7 @@ class CashRegisterController extends Controller
                 return response()->json(['message' => 'Utilisateur non authentifié'], 401);
             }
             
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId'); // From middleware
 
             $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
@@ -86,7 +86,7 @@ class CashRegisterController extends Controller
             $user = Auth::user();
             if (!$user) return response()->json(['error' => 'Non authentifié'], 401);
             
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId'); // From middleware
 
             $query = CashRegister::query();
@@ -121,7 +121,7 @@ class CashRegisterController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             $rules = [
@@ -178,7 +178,7 @@ class CashRegisterController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin && !$activePosId) {
@@ -245,7 +245,7 @@ class CashRegisterController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
             if (!$isAdmin && !$activePosId) {
@@ -300,7 +300,7 @@ class CashRegisterController extends Controller
 
         $activePosId = $request->attributes->get('activePosId');
 
-        if (!$user->hasRole('admin')) {
+        if (!$user->isAdmin()) {
             if (!$activePosId) {
                 return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur'], Response::HTTP_FORBIDDEN);
             }
