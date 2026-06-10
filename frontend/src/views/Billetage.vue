@@ -330,6 +330,10 @@ const submit = async () => {
       actual_cash_amount: totalCounted.value,
       is_bill_checked: true
     })
+    // Mettre à jour l'état local pour que varianceAmount utilise la bonne valeur
+    if (sessionData.value) {
+      sessionData.value.actual_cash_amount = totalCounted.value;
+    }
     successMessage.value = 'Billetage validé !'
     hasRecordedBilletage.value = true
     validationAttempted.value = true
