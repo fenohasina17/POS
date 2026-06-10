@@ -238,31 +238,26 @@ pipeline {
         // --failOnCVSS 9 : bloque seulement si CVSS >= 9 (CRITICAL)
         // --format HTML  : rapport lisible archivé dans Jenkins
         // ============================================================
-        stage('OWASP Dependency Check') {
+        stage('Audit Dependances') {
             steps {
                 catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                    echo "Scan OWASP des dependances..."
+                    echo "Audit des dependances PHP et Node..."
                     sh '''
-                        mkdir -p $(pwd)/owasp-report
+                        echo "=== COMPOSER AUDIT (PHP) ==="
                         docker run --rm \
-                            -v $(pwd)/backend:/src \
-                            -v $(pwd)/owasp-report:/report \
-                            -v /tmp/owasp-data:/usr/share/dependency-check/data \
-                            owasp/dependency-check:latest \
-                            --project "Giovanni POS" \
-                            --scan /src \
-                            --format HTML \
-                            --format JSON \
-                            --out /report \
-                            --failOnCVSS 9 \
-                            --enableRetired || true
+                            -v $(pwd)/backend:/app \
+                            -w /app \
+                            giovanni09/backend:latest \
+                            composer audit --format=table || true
+
+                        echo "=== NPM AUDIT (Node) ==="
+                        docker run --rm \
+                            -v $(pwd)/frontend:/app \
+                            -w /app \
+                            node:20-alpine \
+                            npm audit --production 2>/dev/null || true
                     '''
-                    echo "Scan OWASP termine"
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'owasp-report/**', allowEmptyArchive: true
+                    echo "Audit dependances termine"
                 }
             }
         }
