@@ -1,0 +1,17 @@
+# Secrets et clés privées
+app/qz/private-key.pem
+app/qz/digital-certificate.txt
+
+# Fichiers de développement
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+docker-compose.yml
+docker/
+node_modules/
+*.md
+!README.md
+.phpunit.cache
+tests/
