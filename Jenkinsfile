@@ -243,11 +243,11 @@ pipeline {
                 echo "Scan OWASP des dependances..."
                 sh '''
                     docker run --rm \
-                        -v $(pwd):/src \
+                        -v $(pwd)/backend:/src \
                         -v /tmp/owasp-data:/usr/share/dependency-check/data \
                         owasp/dependency-check:latest \
                         --project "Giovanni POS" \
-                        --scan /src/backend \
+                        --scan /src \
                         --format HTML \
                         --format JSON \
                         --out /src/owasp-report \
