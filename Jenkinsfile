@@ -242,15 +242,17 @@ pipeline {
             steps {
                 echo "Scan OWASP des dependances..."
                 sh '''
+                    mkdir -p $(pwd)/owasp-report
                     docker run --rm \
                         -v $(pwd)/backend:/src \
+                        -v $(pwd)/owasp-report:/report \
                         -v /tmp/owasp-data:/usr/share/dependency-check/data \
                         owasp/dependency-check:latest \
                         --project "Giovanni POS" \
                         --scan /src \
                         --format HTML \
                         --format JSON \
-                        --out /src/owasp-report \
+                        --out /report \
                         --failOnCVSS 9 \
                         --enableRetired || true
                 '''
