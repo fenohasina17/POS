@@ -208,7 +208,7 @@ const totalAmount = computed(() =>
   filteredSales.value.reduce((sum, sale) => {
     // Exclure les ventes en attente du calcul
     if (sale.status === 'pending') return sum;
-    
+
     const amount = Number(sale.final_amount ?? sale.total_amount ?? 0);
     return sum + (isNaN(amount) ? 0 : amount);
   }, 0)
