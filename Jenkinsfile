@@ -244,20 +244,14 @@ pipeline {
                     echo "Audit des dependances PHP et Node..."
                     sh '''
                         echo "=== COMPOSER AUDIT (PHP) ==="
-                        docker run --rm \
-                            --entrypoint composer \
-                            -v /var/jenkins_home/workspace/devops-app/backend:/app \
-                            -w /app \
-                            composer:2 \
+                        docker run --rm --entrypoint composer \
+                            -w /var/www \
+                            giovanni09/backend:latest \
                             audit --format=table || true
-
                         echo "=== NPM AUDIT (Node) ==="
-                        docker run --rm \
-                            --entrypoint npm \
-                            -v /var/jenkins_home/workspace/devops-app/frontend:/app \
-                            -w /app \
-                            node:20-alpine \
-                            audit 2>/dev/null || true
+                        tar -C frontend --exclude=node_modules --exclude=dist -czf - package.json package-lock.json 2>/dev/null | \
+                        docker run --rm -i --entrypoint sh node:20-alpine -c \
+                            "cd /tmp && tar -xzf - && npm audit || true" || true
                     '''
                     echo "Audit dependances termine"
                 }
