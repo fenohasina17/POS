@@ -246,7 +246,7 @@ pipeline {
                         echo "=== COMPOSER AUDIT (PHP) ==="
                         docker run --rm \
                             --entrypoint composer \
-                            -v $(pwd)/backend:/app \
+                            -v /var/jenkins_home/workspace/devops-app/backend:/app \
                             -w /app \
                             composer:2 \
                             audit --format=table || true
@@ -254,7 +254,7 @@ pipeline {
                         echo "=== NPM AUDIT (Node) ==="
                         docker run --rm \
                             --entrypoint npm \
-                            -v $(pwd)/frontend:/app \
+                            -v /var/jenkins_home/workspace/devops-app/frontend:/app \
                             -w /app \
                             node:20-alpine \
                             audit 2>/dev/null || true
