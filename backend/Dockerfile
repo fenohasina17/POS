@@ -51,6 +51,7 @@ RUN curl -sSfL https://github.com/mlocati/docker-php-extension-installer/release
     && install-php-extensions pdo_pgsql zip intl redis
 
 COPY --from=builder /var/www /var/www
+COPY --from=builder /usr/bin/composer /usr/bin/composer
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache || true
 
