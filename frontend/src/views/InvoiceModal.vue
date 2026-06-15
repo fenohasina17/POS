@@ -114,20 +114,13 @@
       </div>
 
       <!-- Actions Footer -->
-      <div class="p-6 grid grid-cols-2 gap-3 border-t border-slate-50 bg-white rounded-b-[2rem]">
+      <div class="p-6 flex justify-center border-t border-slate-50 bg-white rounded-b-[2rem]">
         <button
-          @click="printInvoicePDF"
-          class="flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 py-3 text-[10px] font-black text-slate-600 transition-all hover:bg-slate-50 active:scale-95"
+          @click="printAndClose"
+          class="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-12 py-3 text-[10px] font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-indigo-700 active:scale-95"
         >
           <FontAwesomeIcon icon="fa-solid fa-print" class="text-xs" />
-          IMPRIMER
-        </button>
-        <button
-          @click="closeModal"
-          class="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-[10px] font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-indigo-700 active:scale-95"
-        >
-          <FontAwesomeIcon icon="fa-solid fa-check-circle" class="text-xs" />
-          TERMINER
+          IMPRIMER LE REÇU
         </button>
       </div>
 
@@ -274,6 +267,11 @@ const printInvoiceDirect = async () => {
     showNotification('Erreur impression directe: ' + error.message, 'error')
   }
 }
+const printAndClose = async () => {
+  await printInvoicePDF()
+  closeModal()
+}
+
 const printInvoicePDF = async () => {
   try {
     console.log('[DEBUG_PRINT] --- DÉBUT DU TRAITEMENT DE LA COMMANDE ---');

@@ -77,32 +77,32 @@
     <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
       <!-- SECTION PRODUITS -->
       <section
-        class="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white bg-white/80 backdrop-blur-md p-6 shadow-xl shadow-slate-200/50"
+        class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-white bg-white/80 backdrop-blur-md p-4 shadow-xl shadow-slate-200/50"
       >
-        <div class="flex flex-col gap-5 border-b border-slate-100 pb-6">
-          <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-col gap-3 border-b border-slate-100 pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
 
-            <div class="relative w-full sm:max-w-xs group">
+            <div class="relative w-full sm:max-w-[200px] group">
               <FontAwesomeIcon
                 icon="fa-solid fa-search"
-                class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500 text-xs"
               />
               <input
                 type="text"
-                placeholder="Rechercher un produit..."
+                placeholder="Rechercher..."
                 v-model="searchQuery"
-                class="w-full rounded-2xl border-none bg-slate-100/80 py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                class="w-full rounded-xl border-none bg-slate-100/80 py-2 pl-9 pr-3 text-xs text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
           </div>
 
           <!-- Catégories Style Grid -->
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
             <button
-              class="rounded-xl px-2 py-3 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm"
+              class="rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm"
               :class="
                 activeCategoryId === null
-                  ? 'bg-slate-900 text-white border-slate-900'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-slate-200'
                   : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'
               "
               @click="activeCategoryId = null"
@@ -112,10 +112,10 @@
             <button
               v-for="category in categories"
               :key="category.id"
-              class="rounded-xl px-2 py-3 text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm"
+              class="rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm truncate"
               :class="
                 activeCategoryId === category.id
-                  ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-500 ring-offset-2'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100 ring-1 ring-indigo-500 ring-offset-1'
                   : 'bg-white text-slate-600 border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30'
               "
               @click="activeCategoryId = category.id"
@@ -126,44 +126,48 @@
         </div>
 
         <!-- Grid Produits -->
-        <div class="mt-6 flex-1 overflow-y-auto pr-2 scrollbar-thin">
+        <div class="mt-4 flex-1 overflow-y-auto pr-2 scrollbar-thin">
           <div v-if="loadingProducts" class="flex h-64 items-center justify-center">
             <div
               class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"
             ></div>
           </div>
 
-          <div
+          <TransitionGroup
             v-else-if="filteredProducts.length"
-            class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+            name="bounce"
+            tag="div"
+            class="grid grid-cols-3 gap-3 sm:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
           >
             <button
               v-for="product in filteredProducts"
               :key="product.id"
-              class="group relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-3 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-2xl hover:shadow-indigo-100/50 active:scale-95 disabled:opacity-30 disabled:grayscale"
+              class="group relative flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-2 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/30 active:scale-95 disabled:opacity-30 disabled:grayscale"
               :disabled="isInteractionLocked"
               @click="addToCart(product)"
             >
-              <div class="aspect-square w-full overflow-hidden rounded-2xl bg-slate-50">
+              <div class="aspect-square w-full overflow-hidden rounded-xl bg-slate-50">
                 <img
                   :src="getProductImageUrl(product)"
                   class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   @error="handleImageError"
                 />
               </div>
-              <div class="mt-3 space-y-1">
-                <p class="truncate text-sm font-bold text-slate-800">{{ product.name }}</p>
-                <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <div class="mt-2 w-full space-y-0.5">
+                <p class="truncate text-xs font-bold text-slate-800">{{ product.name }}</p>
+                <p class="text-[9px] font-black uppercase tracking-widest text-slate-400">
                   {{ getCategoryName(product) }}
                 </p>
-                <span
-                  class="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-[11px] font-black text-indigo-600"
-                >
-                  {{ formatPrice(getProductPrice(product)) }}
-                </span>
+                <div class="pt-0.5">
+                  <span
+                    class="inline-block rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-black text-indigo-600"
+                  >
+                    {{ formatPrice(getProductPrice(product)) }}
+                  </span>
+                </div>
               </div>
             </button>
-          </div>
+          </TransitionGroup>
         </div>
       </section>
 
