@@ -26,9 +26,11 @@
                 type="button"
                 class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
                 @click="showCashCount = true"
-                :disabled="!sessionId || sessionClosed || hasRecordedBilletage"
+                :disabled="!sessionId || sessionClosed || hasRecordedBilletage || pendingSalesCount > 0"
               >
-                <i class="fas fa-coins text-xs"></i> Billetage
+                <i class="fas fa-coins text-xs"></i>
+                Billetage
+                <span v-if="pendingSalesCount" class="ml-2 text-sm">({{ pendingSalesCount }} vente{{ pendingSalesCount > 1 ? 's' : '' }} en attente)</span>
               </button>
             </div>
           </div>
@@ -222,6 +224,13 @@ const totalProductTypes = computed(() => {
     })
   })
   return productIds.size
+})
+
+const pendingSalesCount = computed(() => {
+  return sessionSales.value.filter(s => {
+    const st = (s.status || '').toString().toLowerCase()
+    return st === 'pending' || st === 'waiting' || st === ''
+  }).length
 })
 
 const totalCounted = computed(() => {

@@ -43,35 +43,35 @@
       </div>
 
       <!-- Section Produits -->
-      <section class="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white bg-white/80 backdrop-blur-md p-5 shadow-xl shadow-slate-200/50">
-        <div class="flex flex-col gap-5 border-b border-slate-100 pb-5">
-          <div class="flex flex-wrap items-center justify-between gap-4">
+      <section class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-white bg-white/80 backdrop-blur-md p-4 shadow-xl shadow-slate-200/50">
+        <div class="flex flex-col gap-3 border-b border-slate-100 pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 class="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+              <h2 class="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
                 Menu Digital
               </h2>
-              <p class="text-xs text-slate-400 font-medium">Sélectionnez les articles pour la vente</p>
+              <p class="text-[10px] text-slate-400 font-medium">Sélectionnez les articles</p>
             </div>
 
-            <div class="relative w-full sm:max-w-xs group">
+            <div class="relative w-full sm:max-w-[200px] group">
               <FontAwesomeIcon
                 icon="fa-solid fa-search"
-                class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500 text-xs"
               />
               <input
                 type="text"
-                placeholder="Rechercher un délice..."
+                placeholder="Rechercher..."
                 v-model="searchQuery"
-                class="w-full rounded-2xl border-none bg-slate-100/80 py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                class="w-full rounded-xl border-none bg-slate-100/80 py-2 pl-9 pr-3 text-xs text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
           </div>
 
           <!-- Catégories Style "Grid" -->
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
             <button
               type="button"
-              class="rounded-xl px-2 py-3 text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border"
+              class="rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border"
               :class="[
                 activeCategoryId === null
                   ? 'bg-slate-900 text-white border-slate-900 shadow-slate-200'
@@ -85,10 +85,10 @@
               v-for="category in categories"
               :key="category.id"
               type="button"
-              class="rounded-xl px-2 py-3 text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border"
+              class="rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border truncate"
               :class="[
                 activeCategoryId === category.id
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100 ring-2 ring-indigo-500 ring-offset-2'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100 ring-1 ring-indigo-500 ring-offset-1'
                   : 'bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/30 border-slate-100'
               ]"
               @click="setActiveCategory(category.id)"
@@ -100,60 +100,62 @@
         </div>
 
         <!-- Grid Produits -->
-        <div class="mt-5 flex-1 overflow-hidden">
-          <div
+        <div class="mt-4 flex-1 overflow-hidden">
+          <TransitionGroup
             v-if="filteredProducts.length"
-            class="grid h-full grid-cols-2 gap-4 overflow-y-auto pr-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+            name="bounce"
+            tag="div"
+            class="grid h-full grid-cols-3 gap-3 overflow-y-auto pr-2 sm:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
           >
             <button
               v-for="product in filteredProducts"
               :key="product.id"
               type="button"
-              class="group relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-3 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-2xl hover:shadow-indigo-100/50 active:scale-95"
+              class="group relative flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-2 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/30 active:scale-95"
               @click="addToCart(product)"
             >
-              <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-50">
+              <div class="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50">
                 <img
                   :src="getProductImageUrl(product)"
                   class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   @error="handleImageError"
                   loading="lazy"
                 />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
               </div>
 
-              <div class="mt-3 w-full space-y-1">
-                <p class="truncate text-sm font-bold text-slate-800">{{ product.name }}</p>
-                <div class="flex items-center justify-center gap-1.5">
-                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                  <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <div class="mt-2 w-full space-y-0.5">
+                <p class="truncate text-xs font-bold text-slate-800">{{ product.name }}</p>
+                <div class="flex items-center justify-center gap-1">
+                  <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
+                  <p class="text-[9px] font-semibold uppercase tracking-wider text-slate-400 truncate">
                     {{ product.category_name || 'Divers' }}
                   </p>
                 </div>
-                <div class="pt-1">
-                  <span class="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-black text-indigo-600">
+                <div class="pt-0.5">
+                  <span class="inline-block rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-black text-indigo-600">
                     {{ formatPrice(product.price) }}
                   </span>
                 </div>
               </div>
 
               <!-- Badge flottant "Plus" -->
-              <div class="absolute right-2 top-2 scale-0 rounded-full bg-indigo-600 p-1.5 text-white shadow-lg transition-transform group-hover:scale-100">
-                <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[10px]" />
+              <div class="absolute right-1.5 top-1.5 scale-0 rounded-full bg-indigo-600 p-1 text-white shadow-lg transition-transform duration-300 group-hover:scale-100">
+                <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[8px]" />
               </div>
             </button>
-          </div>
+          </TransitionGroup>
 
           <!-- Empty State -->
           <div
             v-else
-            class="flex h-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/30 py-20"
+            class="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 bg-slate-50/30 py-12"
           >
-            <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm">
-              <FontAwesomeIcon icon="fa-solid fa-boxes" class="text-3xl text-slate-200" />
+            <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
+              <FontAwesomeIcon icon="fa-solid fa-boxes" class="text-xl text-slate-200" />
             </div>
-            <p class="text-base font-bold text-slate-400">Aucun produit trouvé</p>
-            <p class="text-sm text-slate-300">Essayez une autre catégorie ou recherche</p>
+            <p class="text-sm font-bold text-slate-400">Aucun produit trouvé</p>
+            <p class="text-[11px] text-slate-300">Essayez une autre recherche</p>
           </div>
         </div>
       </section>
@@ -649,4 +651,27 @@ const openPaymentModal = () => {
 
 <style>
 @import '@/assets/styles/DirectSale.css';
+
+/* Transition Bounce ludique pour les produits */
+.bounce-enter-active {
+  animation: bounce-in 0.45s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+.bounce-leave-active {
+  animation: bounce-in 0.3s reverse ease-in;
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.bounce-move {
+  transition: transform 0.4s ease;
+}
 </style>

@@ -128,7 +128,7 @@ const router = createRouter({
           path: 'ventes',
           name: 'dashboard-ventes',
           component: () => import('../views/SalesList.vue'),
-          meta: { requiresManagerOrAdmin: true, bypassSessionForAdmin: true },
+          meta: { requiresManagerOrAdminOrCaissier: true, bypassSessionForAdmin: true },
         },
         {
           path: 'user-sales',

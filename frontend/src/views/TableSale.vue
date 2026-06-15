@@ -81,7 +81,6 @@
       >
         <div class="flex flex-col gap-5 border-b border-slate-100 pb-6">
           <div class="flex flex-wrap items-center justify-between gap-4">
-            <h2 class="text-xl font-black text-slate-800">Menu Digital</h2>
 
             <div class="relative w-full sm:max-w-xs group">
               <FontAwesomeIcon
@@ -698,7 +697,7 @@ const holdOrder = async () => {
     const { data } = await apiClient.post('/sales/pending-order', orderData)
 
     currentPendingOrder.value = data.data || data
-    
+
     // Explicitly reload to get updated status from server
     await loadTableAndData(selectedTable.value.id)
 
@@ -908,7 +907,7 @@ watch(
 
 onMounted(async () => {
   await loadCategories()
-  
+
   // Récupérer la session active
   const session = await fetchCurrentSession()
   if (session?.id) {
