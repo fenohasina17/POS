@@ -34,10 +34,11 @@
 
     <div v-if="loading" class="text-center py-20 text-slate-400">Chargement...</div>
 
-    <!-- Grille adaptative : affiche plusieurs POS par ligne -->
+    <!-- Grille adaptative -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       <div v-for="section in monitoringData" :key="section.pos_name || section.label" 
-           class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-3">
+           @click="openDetails(section)"
+           class="cursor-pointer bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-3 hover:border-indigo-200 transition">
         
         <h2 class="text-xs font-black text-slate-800 border-b border-slate-50 pb-2 truncate">{{ section.pos_name || section.label }}</h2>
         
@@ -56,25 +57,26 @@
             <p class="text-xs font-black text-emerald-600 truncate">{{ formatPrice(section.data.kpis.average_ticket) }}</p>
           </div>
         </div>
-
-        <!-- Paiements -->
-        <div class="space-y-1">
-          <p class="text-[8px] font-black uppercase text-slate-400">Paiements</p>
-          <div class="grid grid-cols-2 gap-1">
-            <div v-for="pay in section.data.payment_summary" :key="pay.method" class="flex justify-between bg-slate-50 px-2 py-1 rounded-lg">
-                <span class="font-bold text-slate-500 text-[9px]">{{ pay.method }}</span>
-                <span class="font-black text-indigo-600 text-[9px]">{{ formatPrice(pay.total) }}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
+    
+    <MonitoringDetailModal 
+        v-if="selectedSection"
+        :is-open="showModal"
+        :pos-name="selectedSection.pos_name || selectedSection.label"
+        :top-products="selectedSection.data.top_products"
+        :payment-summary="selectedSection.data.payment_summary"
+        :evolution-data="selectedSection.data.sales_evolution"
+        @close="showModal = false"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, reactive } from 'vue'
 import apiClient from '@/services/apiClient'
+import echo from '@/services/echo'
+import MonitoringDetailModal from '@/components/MonitoringDetailModal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faRotate, faChartPie } from '@fortawesome/free-solid-svg-icons'
@@ -84,6 +86,9 @@ library.add(faRotate, faChartPie)
 const loading = ref(false)
 const monitoringData = ref([])
 const pointsOfSale = ref([])
+const showModal = ref(false)
+const selectedSection = ref(null)
+
 const filters = reactive({
   pos_id: null,
   status: '',
@@ -111,6 +116,11 @@ const fetchData = async () => {
         monitoringData.value = [{ label: data.label, data: data }]
     }
   } catch (err) { console.error(err) } finally { loading.value = false }
+}
+
+const openDetails = (section) => {
+    selectedSection.value = section
+    showModal.value = true
 }
 
 onMounted(() => {
