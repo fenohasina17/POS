@@ -53,40 +53,30 @@ class CashRegisterSessionController extends Controller
 
         $query = CashRegisterSession::query();
 
-        $isManager = $this->userIsManager($user);
         $isAdmin = $user->isAdmin();
-        $activePosId = $request->attributes->get('activePosId');
+        $isManager = $user->isManager();
+        
+        $requestedPosId = $request->query('point_of_sale_id');
 
-        // Admin can see all or filter by query param
-        if ($isAdmin) {
-            $requestedPosId = $request->query('point_of_sale_id');
+        // Admin and Managers can see all or filter by query param
+        if ($isAdmin || $isManager) {
             if ($requestedPosId) {
+                // If a POS is requested, filter by it
                 $query->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $requestedPosId));
+            } elseif (!$isAdmin) {
+                // If Manager and no POS requested, restrict to POS they are assigned to
+                $query->whereHas('cashRegister', fn($q) => $q->whereIn('point_of_sale_id', $user->pointsOfSale->pluck('id')));
             }
+            // If Admin and no requestedPosId, NO filter (sees everything)
         }
-        // Managers (gerant) and regular users are restricted by their active POS or user_id
+        // Regular users are strictly restricted to the active POS header or their own sessions
         else {
+            $activePosId = $request->attributes->get('activePosId');
             if (!$activePosId) {
-                // For non-admins, an active POS is mandatory
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
-                ], 403);
+                return response()->json(['message' => 'Point de vente actif non défini.'], 403);
             }
-            // Check if user is assigned to the active POS
-            if (!$user->pointsOfSale->contains($activePosId)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Accès refusé pour ce point de vente.'
-                ], 403);
-            }
-            // Filter by active POS
             $query->whereHas('cashRegister', fn($q) => $q->where('point_of_sale_id', $activePosId));
-
-            // Further restrict non-managers to their own sessions if they are not admin
-            if (!$isAdmin && !$isManager) {
-                $query->where('user_id', $user->id);
-            }
+            $query->where('user_id', $user->id);
         }
 
         if ($request->boolean('with_trashed')) {

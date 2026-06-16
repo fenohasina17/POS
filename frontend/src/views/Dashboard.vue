@@ -171,6 +171,12 @@
 
           <!-- RIGHT: Notifications + User menu -->
           <div class="flex flex-1 items-center justify-end gap-2">
+            <!-- Badge Site Actif -->
+            <div v-if="activePos" class="hidden sm:flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full mr-2">
+              <span class="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
+              <span class="text-[10px] font-black text-indigo-700 uppercase tracking-tight">{{ activePos.name }}</span>
+            </div>
+
             <button
               type="button"
               class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
@@ -327,7 +333,7 @@ const isDesktop = ref(false)
 const expandedSections = ref({})
 
 // Auth et données
-const { user, isAdmin, hasRole, loadUserData } = useAuth()
+const { user, isAdmin, hasRole, loadUserData, activePos } = useAuth()
 const { loadCategories } = useCategories()
 
 // Computed
