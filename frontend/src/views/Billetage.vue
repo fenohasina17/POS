@@ -97,6 +97,12 @@
                   />
                   <span class="text-right text-sm font-semibold text-slate-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</span>
                 </div>
+
+                <!-- Total Récapitulatif -->
+                <div class="mt-4 flex items-center justify-between border-t border-slate-200 pt-4 px-2">
+                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">Total Espèces Comptées</p>
+                  <p class="text-xl font-black text-indigo-600">{{ formatCurrency(totalCounted) }}</p>
+                </div>
               </div>
               
               <!-- Résultat -->
@@ -207,7 +213,9 @@ const ticketCount = computed(() => sessionSales.value.length)
 
 const sessionProductsCount = computed(() => {
   console.log('🔍 DEBUG: Computing sessionProductsCount, sales length:', sessionSales.value.length);
-  const total = sessionSales.value.reduce((total, sale) => {
+  const total = sessionSales.value
+    .filter(sale => sale.status !== 'cancelled') // Ignorer les ventes annulées
+    .reduce((total, sale) => {
     const lines = sale.orderlines || [];
     const sum = lines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
     return total + sum;
@@ -218,7 +226,9 @@ const sessionProductsCount = computed(() => {
 
 const totalProductTypes = computed(() => {
   const productIds = new Set()
-  sessionSales.value.forEach(sale => {
+  sessionSales.value
+    .filter(sale => sale.status !== 'cancelled') // Ignorer les ventes annulées
+    .forEach(sale => {
     sale.orderlines?.forEach(line => {
       if (line.product_id) productIds.add(line.product_id)
     })
@@ -333,16 +343,25 @@ const onSessionChange = () => { if (selectedSessionId.value) fetchSessionData(se
 
 const submit = async () => {
   if (!canEditBilletage.value) return
+  
+  // Sécurité : Demander confirmation si le montant est à 0
+  if (totalCounted.value === 0 && !confirm("Le montant total compté est de 0 Ar. Voulez-vous vraiment valider ?")) {
+    return
+  }
+
   isSubmitting.value = true
   try {
     await apiClient.put(`/cash-register-sessions/${sessionId.value}`, {
       actual_cash_amount: totalCounted.value,
       is_bill_checked: true
     })
-    // Mettre à jour l'état local pour que varianceAmount utilise la bonne valeur
+    
+    // 🔥 Mise à jour immédiate de l'état local pour éviter l'affichage de 0
     if (sessionData.value) {
       sessionData.value.actual_cash_amount = totalCounted.value;
+      sessionData.value.is_bill_checked = true;
     }
+    
     successMessage.value = 'Billetage validé !'
     hasRecordedBilletage.value = true
     validationAttempted.value = true
@@ -355,12 +374,21 @@ const closeSession = async () => {
   if (!canCloseSession.value || !hasRecordedBilletage.value) return
   isSubmitting.value = true
   try {
+    // 🛡️ SÉCURITÉ : On ne doit pas écraser le montant validé par le caissier.
+    // Si le gérant ferme la session, totalCounted est souvent à 0.
+    // On utilise donc le montant déjà présent dans sessionData s'il existe.
+    const finalAmount = (sessionData.value?.actual_cash_amount !== null && sessionData.value?.actual_cash_amount !== undefined)
+      ? parseFloat(sessionData.value.actual_cash_amount) 
+      : totalCounted.value;
+
+    console.log('🛡️ Clôture session - Montant conservé:', finalAmount);
+
     await apiClient.put(`/cash-register-sessions/${sessionId.value}`, {
       is_closed: true,
-      actual_cash_amount: totalCounted.value,
+      actual_cash_amount: finalAmount,
       closed_at: new Date().toISOString()
     })
-    router.push({ name: 'dashboard-overview' })
+    router.push({ name: 'billetage-summary', params: { sessionId: sessionId.value } })
   } catch (err) {
     errorMessage.value = 'Erreur lors de la clôture.'
   } finally { isSubmitting.value = false }

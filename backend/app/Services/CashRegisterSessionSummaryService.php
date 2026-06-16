@@ -22,13 +22,13 @@ class CashRegisterSessionSummaryService
         // Récupération de toutes les ventes liées à cette session avec les relations nécessaires
         // orderLines.product.category : pour le détail par produits et catégories
         // payments.payment : pour le détail par modes de paiement (Espèces, CB, etc.)
-        $sales = Sale::with(['orderLines.product.category', 'payments.payment'])
+        $sales = Sale::with(['orderlines.product.category', 'payments.payment'])
             ->where('cash_register_session_id', $session->id)
             ->get();
 
         // --- 1. GÉNÉRATION DU RÉSUMÉ PAR CATÉGORIE ---
         // On aplatit toutes les lignes de commande de toutes les ventes de la session
-        $categorySummary = $sales->flatMap(fn($sale) => $sale->orderLines)
+        $categorySummary = $sales->flatMap(fn($sale) => $sale->orderlines)
             ->groupBy(fn($line) => optional($line->product)->category_id ?? 'uncategorized')
             ->map(function ($lines) {
                 $category = optional($lines->first()->product)->category;

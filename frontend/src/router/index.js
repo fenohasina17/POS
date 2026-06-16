@@ -217,6 +217,12 @@ const router = createRouter({
           props: true,
           meta: { requiresAdmin: true },
         },
+        {
+          path: 'sessions-history',
+          name: 'dashboard-sessions-history',
+          component: () => import('../views/SessionsHistory.vue'),
+          meta: { requiresAdmin: true },
+        },
       ],
     },
 
@@ -228,10 +234,10 @@ const router = createRouter({
     },
     { path: '/billetage', name: 'billetage', component: () => import('../views/Billetage.vue') },
     {
-      path: '/billetage/:sessionId/resume',
+      path: '/billetage/:sessionId/recapitulatif',
       name: 'billetage-summary',
       component: () => import('../views/BilletageSummary.vue'),
-      meta: { requiresAdmin: true },
+      meta: { requiresManagerOrAdmin: true },
     },
 
     // Redirections

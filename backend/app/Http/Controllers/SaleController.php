@@ -1744,8 +1744,9 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Cette vente n\'appartient pas à votre point de vente actif.'], 403);
             }
 
-            // Only admin can update status and discount percentage. Others can't.
-            if (!$isAdmin && ($request->has('status') || $request->has('discount_percentage'))) {
+            // Only admin and manager can update status and discount percentage. Others can't.
+            $isManager = $user->hasAnyRole(['gerant', 'gérant'], 'api');
+            if (!$isAdmin && !$isManager && ($request->has('status') || $request->has('discount_percentage'))) {
                 return response()->json(['message' => 'Vous n\'avez pas la permission de modifier le statut ou la remise de cette vente.'], 403);
             }
 

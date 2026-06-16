@@ -279,13 +279,14 @@ import {
   faChartLine,
   faLayerGroup,
   faListCheck,
-} from '@fortawesome/free-solid-svg-icons'
-import { useAuth } from '@/composables/useAuth'
-import { useCategories } from '@/composables/useCategories'
-import { storage } from '@/utils/storage'
+  faHistory,
+  } from '@fortawesome/free-solid-svg-icons'
+  import { useAuth } from '@/composables/useAuth'
+  import { useCategories } from '@/composables/useCategories'
+  import { storage } from '@/utils/storage'
 
-// Ajout des icônes à la bibliothèque FontAwesome
-library.add(
+  // Ajout des icônes à la bibliothèque FontAwesome
+  library.add(
   faArrowRotateLeft,
   faBars,
   faBell,
@@ -304,7 +305,8 @@ library.add(
   faChartLine,
   faLayerGroup,
   faListCheck,
-)
+  faHistory
+  )
 
 defineOptions({ name: 'DashboardLayout' })
 
@@ -550,6 +552,12 @@ const menuItems = filterAdminItems([
       label: 'Caisse',
       name: 'dashboard-cash-register-sessions',
       icon: faClipboardList,
+      adminOnly: true,
+    },
+    {
+      label: 'Sessions',
+      name: 'dashboard-sessions-history',
+      icon: faHistory,
       adminOnly: true,
     },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
