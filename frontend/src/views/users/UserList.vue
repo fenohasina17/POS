@@ -171,24 +171,7 @@ const loadUsers = async () => {
   try {
     loading.value = true
     const response = await userService.getAll()
-    const rawUsers = response.data?.data || response.data || []
-    
-    // Charger les rôles pour chaque utilisateur
-    users.value = await Promise.all(
-      rawUsers.map(async (user) => {
-        try {
-          const rolesRes = await userService.getRoles(user.id)
-          const rolesData = rolesRes.data?.data || rolesRes.data || []
-          return {
-            ...user,
-            roles: rolesData.map(r => r.name || r)
-          }
-        } catch (err) {
-          console.error(`Erreur rôles user ${user.id}:`, err)
-          return { ...user, roles: [] }
-        }
-      })
-    )
+    users.value = response.data?.data || response.data || []
   } catch (error) {
     console.error('Erreur lors du chargement des utilisateurs:', error)
   } finally {

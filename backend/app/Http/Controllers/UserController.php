@@ -10,17 +10,16 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
-    // Liste des utilisateurs
     public function index()
     {
         try {
-            $users = User::with(['pointsOfSale:id,name'])->get()->map(function ($user) {
+            $users = User::with(['pointsOfSale:id,name', 'roles:id,name'])->get()->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
-                    // 'point_of_sale_id' and 'point_of_sale_name' removed as the column no longer exists
                     'points_of_sale' => $user->pointsOfSale->map(fn($p) => ['id' => $p->id, 'name' => $p->name]),
+                    'roles' => $user->roles->pluck('name'),
                     'created_at' => $user->created_at,
                     'updated_at' => $user->updated_at,
                 ];
@@ -42,9 +41,9 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            // 'point_of_sale_id' is removed from validation rules
             'point_of_sale_ids' => 'nullable|array',
             'point_of_sale_ids.*' => 'exists:point_of_sales,id',
+            'role' => 'nullable|string|exists:roles,name',
         ]);
 
         // Si la validation échoue
@@ -60,15 +59,17 @@ class UserController extends Controller
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                // 'point_of_sale_id' is removed from here
             ]);
 
             if ($request->has('point_of_sale_ids')) {
                 $user->pointsOfSale()->sync($request->point_of_sale_ids);
             }
-            // Logic for 'point_of_sale_id' removed
 
-            return response()->json($user->load('pointsOfSale'), 201);
+            if ($request->filled('role')) {
+                $user->syncRoles([$request->role]);
+            }
+
+            return response()->json($user->load(['pointsOfSale', 'roles']), 201);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Erreur lors de la création de l\'utilisateur',
@@ -81,7 +82,7 @@ class UserController extends Controller
     public function show($id)
     {
         try {
-            $user = User::with('pointsOfSale')->findOrFail($id);
+            $user = User::with(['pointsOfSale', 'roles'])->findOrFail($id);
             return response()->json($user);
         } catch (ModelNotFoundException $e) {
             return response()->json([
@@ -106,9 +107,9 @@ class UserController extends Controller
                 'name' => 'string|max:255',
                 'email' => 'email|unique:users,email,' . $id,
                 'password' => 'string|min:8|nullable',
-                // 'point_of_sale_id' is removed from validation rules
                 'point_of_sale_ids' => 'nullable|array',
                 'point_of_sale_ids.*' => 'exists:point_of_sales,id',
+                'role' => 'nullable|string|exists:roles,name',
             ]);
 
             if ($validator->fails()) {
@@ -122,15 +123,17 @@ class UserController extends Controller
                 'name' => $request->name ?? $user->name,
                 'email' => $request->email ?? $user->email,
                 'password' => $request->password ? Hash::make($request->password) : $user->password,
-                // 'point_of_sale_id' is removed from here
             ]);
 
             if ($request->has('point_of_sale_ids')) {
                 $user->pointsOfSale()->sync($request->point_of_sale_ids);
-                // Logic for 'point_of_sale_id' removed
             }
 
-            return response()->json($user->load('pointsOfSale'));
+            if ($request->has('role')) {
+                $user->syncRoles([$request->role]);
+            }
+
+            return response()->json($user->load(['pointsOfSale', 'roles']));
         } catch (ModelNotFoundException $e) {
             return response()->json([
                 'message' => 'Utilisateur non trouvé'

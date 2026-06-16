@@ -235,10 +235,9 @@ const loadUser = async () => {
 
   try {
     const userId = route.params.id
-    const [userResponse, rolesResponse, userRolesResponse] = await Promise.all([
+    const [userResponse, rolesResponse] = await Promise.all([
       userService.getUser(userId),
-      roleService.getAll(),
-      userService.getRoles(userId)
+      roleService.getAll()
     ])
 
     const userData = userResponse.data;
@@ -246,20 +245,14 @@ const loadUser = async () => {
       ...userData, 
       password: '', 
       password_confirmation: '',
-      point_of_sale_ids: userData.points_of_sale?.map(p => p.id) || []
+      point_of_sale_ids: userData.points_of_sale?.map(p => p.id) || [],
+      role: userData.roles?.[0]?.name || userData.roles?.[0] || ''
     }
-    originalUser.value = { ...userData }
+    originalUser.value = { ...user.value }
 
     // Correction de l'affichage du rôle
     const allRoles = rolesResponse.data?.data || rolesResponse.data || []
     roles.value = Array.isArray(allRoles) ? allRoles : []
-    
-    const userRoles = userRolesResponse.data?.data || userRolesResponse.data || []
-    if (Array.isArray(userRoles) && userRoles.length > 0) {
-      const firstRole = userRoles[0]
-      user.value.role = firstRole.name || firstRole
-      console.log('User role identified:', user.value.role)
-    }
 
     const posResponse = await pointOfSaleService.getAll()
     console.log('POS Response:', posResponse);
@@ -340,7 +333,8 @@ const updateUser = async () => {
       id: user.value.id,
       name: user.value.name,
       email: user.value.email,
-      point_of_sale_ids: user.value.point_of_sale_ids
+      point_of_sale_ids: user.value.point_of_sale_ids,
+      role: user.value.role
     }
 
     if (user.value.password) {
@@ -349,10 +343,6 @@ const updateUser = async () => {
     }
 
     await userService.update(updateData)
-
-    if (user.value.role) {
-      await userService.assignRole(user.value.id, user.value.role)
-    }
 
     success.value = 'Utilisateur mis à jour avec succès !'
 
