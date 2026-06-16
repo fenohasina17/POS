@@ -199,8 +199,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tables/{id}/unlock', [TableController::class, 'unlock'])->name('tables.unlock');
     Route::get('/tables/statistics', [TableController::class, 'getStatistics'])->name('tables.statistics');
 
-    // ========== GESTION DES RÔLES ET PERMISSIONS ==========
-    Route::apiResource('roles', RoleController::class);
+    // ========== MONITORING ==========
+    Route::get('/admin/monitoring', [App\Http\Controllers\MonitoringController::class, 'index']);
+
+    // ========== RÔLES ET PERMISSIONS ==========
     Route::apiResource('permissions', PermissionController::class)->except(['update']);
 
     // Assignation / révocation permissions à un rôle

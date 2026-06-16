@@ -223,6 +223,12 @@ const router = createRouter({
           component: () => import('../views/SessionsHistory.vue'),
           meta: { requiresAdmin: true },
         },
+        {
+          path: 'monitoring',
+          name: 'dashboard-monitoring',
+          component: () => import('../views/Monitoring.vue'),
+          meta: { requiresAdmin: true },
+        },
       ],
     },
 

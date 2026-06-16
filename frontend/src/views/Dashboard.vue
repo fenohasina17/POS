@@ -286,6 +286,7 @@ import {
   faLayerGroup,
   faListCheck,
   faHistory,
+  faChartPie,
   } from '@fortawesome/free-solid-svg-icons'
   import { useAuth } from '@/composables/useAuth'
   import { useCategories } from '@/composables/useCategories'
@@ -311,7 +312,8 @@ import {
   faChartLine,
   faLayerGroup,
   faListCheck,
-  faHistory
+  faHistory,
+  faChartPie
   )
 
 defineOptions({ name: 'DashboardLayout' })
@@ -564,6 +566,12 @@ const menuItems = filterAdminItems([
       label: 'Sessions',
       name: 'dashboard-sessions-history',
       icon: faHistory,
+      adminOnly: true,
+    },
+    {
+      label: 'Monitoring',
+      name: 'dashboard-monitoring',
+      icon: faChartPie,
       adminOnly: true,
     },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
