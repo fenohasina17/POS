@@ -8,6 +8,7 @@ use App\Models\SalePayment;
 use App\Models\CashRegisterSession;
 use App\Models\CashTransaction;
 use App\Models\Payment;
+use App\Events\SaleCreated;
 use App\Exceptions\SaleServiceException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -268,6 +269,9 @@ class SaleService
                     $session->increment('total_sales', $sale->final_amount);
                     $this->createCashTransactions($sale, $session, 'sale');
                 }
+
+                // Déclencher l'événement pour le monitoring temps réel
+                event(new SaleCreated($sale));
 
                 return $sale->load(['orderlines.product', 'payments.payment', 'table', 'user', 'cashTransaction']);
             });
