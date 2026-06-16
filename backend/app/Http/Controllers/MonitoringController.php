@@ -19,6 +19,7 @@ class MonitoringController extends Controller
         }
 
         $posId = $request->query('pos_id');
+        $status = $request->query('status'); // 'open' or 'closed' session status
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
 
@@ -35,15 +36,26 @@ class MonitoringController extends Controller
             $query->whereDate('created_at', '<=', $endDate);
         }
 
+        if ($status) {
+            $query->whereHas('cashRegisterSession', function($q) use ($status) {
+                $q->where('is_closed', $status === 'closed');
+            });
+        }
+
         // 1. Récupération des données selon le filtrage
         if ($posId) {
-            $sales = Sale::where('point_of_sale_id', $posId)->get();
+            $sales = $query->get();
             $data = $this->aggregateData($sales, 'Global pour le site sélectionné');
         } else {
             // Vue globale : grouper par Point de Vente
-            $data = \App\Models\PointOfSale::with(['sales' => function($q) use ($startDate, $endDate) {
+            $data = \App\Models\PointOfSale::with(['sales' => function($q) use ($startDate, $endDate, $status) {
                 if ($startDate) $q->whereDate('created_at', '>=', $startDate);
                 if ($endDate) $q->whereDate('created_at', '<=', $endDate);
+                if ($status) {
+                    $q->whereHas('cashRegisterSession', function($sq) use ($status) {
+                        $sq->where('is_closed', $status === 'closed');
+                    });
+                }
             }])->get()->map(function($pos) {
                 return [
                     'pos_name' => $pos->name,
