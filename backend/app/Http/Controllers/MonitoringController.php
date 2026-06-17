@@ -44,22 +44,23 @@ class MonitoringController extends Controller
 
         // 1. Récupération des données selon le filtrage
         if ($posId) {
-            $sales = $query->get();
-            $data = $this->aggregateData($sales, 'Global pour le site sélectionné', $request);
+            $data = $this->aggregateData(clone $query, 'Global pour le site sélectionné', $request);
         } else {
             // Vue globale : grouper par Point de Vente
-            $data = \App\Models\PointOfSale::with(['sales' => function($q) use ($startDate, $endDate, $status) {
-                if ($startDate) $q->whereDate('created_at', '>=', $startDate);
-                if ($endDate) $q->whereDate('created_at', '<=', $endDate);
+            $data = \App\Models\PointOfSale::get()->map(function($pos) use ($request, $startDate, $endDate, $status) {
+                $posQuery = $pos->sales();
+                
+                if ($startDate) $posQuery->whereDate('created_at', '>=', $startDate);
+                if ($endDate) $posQuery->whereDate('created_at', '<=', $endDate);
                 if ($status) {
-                    $q->whereHas('cashRegisterSession', function($sq) use ($status) {
+                    $posQuery->whereHas('cashRegisterSession', function($sq) use ($status) {
                         $sq->where('is_closed', $status === 'closed');
                     });
                 }
-            }])->get()->map(function($pos) use ($request) {
+                
                 return [
                     'pos_name' => $pos->name,
-                    'data' => $this->aggregateData($pos->sales, $pos->name, $request)
+                    'data' => $this->aggregateData($posQuery, $pos->name, $request)
                 ];
             });
         }
@@ -67,19 +68,21 @@ class MonitoringController extends Controller
         return response()->json($data);
     }
 
-    private function aggregateData($sales, $label, $request)
+    private function aggregateData($query, $label, $request)
     {
-        $totalSales = $sales->count();
-        $totalRevenue = $sales->sum('final_amount');
+        $totalSales = (clone $query)->count();
+        $totalRevenue = (clone $query)->sum('final_amount');
         $averageTicket = $totalSales > 0 ? $totalRevenue / $totalSales : 0;
 
-        $paymentSummary = SalePayment::whereIn('sale_id', $sales->pluck('id'))
+        $salesIdsQuery = (clone $query)->select('sales.id');
+
+        $paymentSummary = SalePayment::whereIn('sale_id', clone $salesIdsQuery)
             ->join('payments', 'sale_payments.payment_id', '=', 'payments.id')
             ->select('payments.name as method', DB::raw('SUM(sale_payments.amount) as total'))
             ->groupBy('payments.name')
             ->get();
 
-        $productSummary = OrderLine::whereIn('sale_id', $sales->pluck('id'))
+        $productSummary = OrderLine::whereIn('sale_id', clone $salesIdsQuery)
             ->join('products', 'order_lines.product_id', '=', 'products.id')
             ->select('products.name', DB::raw('SUM(order_lines.quantity) as total_qty'), DB::raw('SUM(order_lines.total) as total_revenue'))
             ->groupBy('products.name')
@@ -87,23 +90,60 @@ class MonitoringController extends Controller
             ->limit(5)
             ->get();
 
+        $flopProducts = OrderLine::whereIn('sale_id', clone $salesIdsQuery)
+            ->join('products', 'order_lines.product_id', '=', 'products.id')
+            ->select('products.name', DB::raw('SUM(order_lines.quantity) as total_qty'), DB::raw('SUM(order_lines.total) as total_revenue'))
+            ->groupBy('products.name')
+            ->orderBy('total_qty', 'asc')
+            ->limit(5)
+            ->get();
+
+        $categorySummary = OrderLine::whereIn('sale_id', clone $salesIdsQuery)
+            ->join('products', 'order_lines.product_id', '=', 'products.id')
+            ->join('categories', 'products.category_id', '=', 'categories.id')
+            ->select('categories.name', DB::raw('SUM(order_lines.quantity) as total_qty'), DB::raw('SUM(order_lines.total) as total_revenue'))
+            ->groupBy('categories.name')
+            ->orderBy('total_revenue', 'desc')
+            ->get();
+
+        $cashierPerformance = Sale::whereIn('sales.id', clone $salesIdsQuery)
+            ->join('users', 'sales.user_id', '=', 'users.id')
+            ->select('users.name', DB::raw('COUNT(sales.id) as total_sales'), DB::raw('SUM(sales.final_amount) as total_revenue'))
+            ->groupBy('users.name')
+            ->orderBy('total_revenue', 'desc')
+            ->get();
+
+        $totalDiscounts = Sale::whereIn('sales.id', clone $salesIdsQuery)
+            ->select(DB::raw('SUM(total_amount - final_amount) as discount_amount'))
+            ->value('discount_amount') ?? 0;
+
         // Évolution des ventes (Heure ou Jour)
         $startDate = $request->query('start_date');
         $endDate = $request->query('end_date');
         $isSingleDay = ($startDate && $endDate && $startDate === $endDate);
+        $timeGranularity = $request->query('time_granularity', 'hour');
         
-        $evolutionQuery = Sale::whereIn('id', $sales->pluck('id'));
+        $evolutionQuery = clone $query;
         
         if ($isSingleDay) {
-            $evolution = $evolutionQuery
-                ->select(DB::raw('HOUR(created_at) as time'), DB::raw('SUM(final_amount) as total'))
-                ->groupBy('time')
-                ->orderBy('time', 'asc')
-                ->get()
-                ->map(fn($item) => ['date' => $item->time . 'h', 'total' => $item->total]);
+            if ($timeGranularity === 'minute') {
+                $evolution = $evolutionQuery
+                    ->select(DB::raw("TO_CHAR(sales.created_at, 'HH24:MI') as time"), DB::raw('SUM(sales.final_amount) as total'))
+                    ->groupBy('time')
+                    ->orderBy('time', 'asc')
+                    ->get()
+                    ->map(fn($item) => ['date' => $item->time, 'total' => $item->total]);
+            } else {
+                $evolution = $evolutionQuery
+                    ->select(DB::raw("TO_CHAR(sales.created_at, 'HH24:00') as time"), DB::raw('SUM(sales.final_amount) as total'))
+                    ->groupBy('time')
+                    ->orderBy('time', 'asc')
+                    ->get()
+                    ->map(fn($item) => ['date' => $item->time, 'total' => $item->total]);
+            }
         } else {
             $evolution = $evolutionQuery
-                ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(final_amount) as total'))
+                ->select(DB::raw("TO_CHAR(sales.created_at, 'YYYY-MM-DD') as date"), DB::raw('SUM(sales.final_amount) as total'))
                 ->groupBy('date')
                 ->orderBy('date', 'asc')
                 ->get()
@@ -116,9 +156,13 @@ class MonitoringController extends Controller
                 'total_sales' => $totalSales,
                 'total_revenue' => $totalRevenue,
                 'average_ticket' => $averageTicket,
+                'total_discounts' => $totalDiscounts,
             ],
             'payment_summary' => $paymentSummary,
             'top_products' => $productSummary,
+            'flop_products' => $flopProducts,
+            'category_summary' => $categorySummary,
+            'cashier_performance' => $cashierPerformance,
             'sales_evolution' => $evolution
         ];
     }

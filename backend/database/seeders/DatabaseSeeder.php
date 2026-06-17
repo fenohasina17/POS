@@ -16,6 +16,7 @@ use Database\Seeders\{
     PaymentSeeder,
     PointOfSaleSeeder,
     CategoryProductSeeder,
+    SalesSeeder,
 };
 
 class DatabaseSeeder extends Seeder
@@ -48,6 +49,7 @@ class DatabaseSeeder extends Seeder
             CategoryProductSeeder::class,
             PosTablesSeeder::class,
             PaymentSeeder::class,
+            SalesSeeder::class,
         ]);
     }
 }

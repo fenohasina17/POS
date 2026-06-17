@@ -54,6 +54,15 @@
             <option v-for="s in sessions" :key="s.id" :value="s.id">{{ s.cash_register?.name || s.id }} - {{ s.user?.name || '' }}</option>
           </select>
         </div>
+        <!-- Nouveau filtre : Statut Session -->
+        <div class="w-44 flex-shrink-0">
+          <label class="block text-xs font-medium text-slate-500 mb-1">Statut Session</label>
+          <select v-model="sessionStatusFilter" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+            <option value="">Toutes</option>
+            <option value="open">Ouvertes</option>
+            <option value="closed">Fermées</option>
+          </select>
+        </div>
         <div class="flex gap-3 flex-shrink-0">
           <div class="w-36">
             <label class="block text-xs font-medium text-slate-500 mb-1">Du</label>
@@ -201,6 +210,7 @@ const expandedCashiers = ref(new Set()) // Pour l'accordéon par caissier
 const pointOfSales = ref([])
 const sessions = ref([])
 const sessionFilter = ref('')
+const sessionStatusFilter = ref('') // Nouveau filtre
 const showEditModal = ref(false)
 const selectedSale = ref(null)
 
@@ -225,6 +235,13 @@ const filteredSales = computed(() => {
     result = result.filter(sale => {
       const sid = sale.cash_register_session_id ?? sale.cash_register_session?.id
       return sid == parseInt(sessionFilter.value)
+    })
+  }
+  // Logique du nouveau filtre
+  if (sessionStatusFilter.value) {
+    result = result.filter(sale => {
+      const isClosed = sale.cash_register_session?.is_closed ?? false
+      return sessionStatusFilter.value === 'closed' ? isClosed : !isClosed
     })
   }
   if (startDate.value) {

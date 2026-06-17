@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use App\Models\Sale;
@@ -15,194 +14,148 @@ use App\Models\Table;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Payment;
+use Illuminate\Support\Facades\DB;
 
 class SalesSeeder extends Seeder
 {
     public function run(): void
     {
-        $startDate = Carbon::create(today()->year, 1, 1)->startOfDay();
         $endDate = today()->startOfDay();
-
-        if ($startDate->greaterThan($endDate)) {
-            $startDate = $endDate->copy()->startOfYear();
-        }
-
-        $pointOfSale = PointOfSale::find(1);
-        if (!$pointOfSale) {
-            $pointOfSale = PointOfSale::firstOrCreate(['name' => 'PV101']);
-            if (!$pointOfSale->wasRecentlyCreated && $pointOfSale->id !== 1) {
-                $pointOfSale->id = 1;
-                $pointOfSale->save();
-            }
-        }
-
-        $cashier = User::role('caissier')->find(5) ?? User::find(5);
-        if (!$cashier) {
-            $cashier = User::factory()->create([
-                'id' => 5,
-                'point_of_sale_id' => $pointOfSale->id,
-            ]);
-        } else {
-            $cashier->update(['point_of_sale_id' => $pointOfSale->id]);
-        }
-        if (!$cashier->hasRole('caissier')) {
-            $cashier->assignRole('caissier');
-        }
-        $cashiers = collect([$cashier]);
-
-        $users = User::where('point_of_sale_id', $pointOfSale->id)->get();
-        if ($users->isEmpty()) {
-            $users = User::factory()->count(3)->create([
-                'point_of_sale_id' => $pointOfSale->id,
-            ]);
-        }
-
-        $tables = Table::where('point_of_sale_id', $pointOfSale->id)->get();
-        $tableIndex = $tables->count();
-        while ($tableIndex < 2) {
-            $tableIndex++;
-            $tables->push(Table::create([
-                'table_number' => sprintf('T-%02d', $tableIndex),
-                'name' => "Table $tableIndex",
-                'capacity' => random_int(2, 6),
-                'status' => 'available',
-                'description' => 'Table générée pour les ventes KPI.',
-                'point_of_sale_id' => $pointOfSale->id,
-                'location' => ['x' => $tableIndex * 2, 'y' => $tableIndex * 3],
-            ]));
-        }
+        $startDate = today()->subDays(6)->startOfDay(); // Exactement 1 semaine (7 jours)
 
         $products = Product::all();
-        if ($products->isEmpty()) {
-            $products = Product::factory()->count(25)->create();
-        }
-
-        $payment = Payment::firstOrCreate(['name' => 'Espèce']);
-
-        $registers = collect([
-            CashRegister::firstOrCreate(
-                ['name' => 'Caisse 1', 'point_of_sale_id' => $pointOfSale->id],
-                []
-            ),
-            CashRegister::firstOrCreate(
-                ['name' => 'Caisse 2', 'point_of_sale_id' => $pointOfSale->id],
-                []
-            ),
+        $payments = collect([
+            Payment::firstOrCreate(['name' => 'Espèce']),
+            Payment::firstOrCreate(['name' => 'Carte Bancaire']),
+            Payment::firstOrCreate(['name' => 'Mobile Money']),
+            Payment::firstOrCreate(['name' => 'Chèque']),
         ]);
+        $pointsOfSale = PointOfSale::take(4)->get();
 
-        Sale::where('point_of_sale_id', $pointOfSale->id)->delete();
-        CashRegisterSession::whereIn('cash_register_id', $registers->pluck('id'))->forceDelete();
+        foreach ($pointsOfSale as $pos) {
+            // Scope resources to this POS
+            $registers = CashRegister::where('point_of_sale_id', $pos->id)->get();
+            $users = $pos->assignedUsers->filter(fn($user) => $user->hasRole('caissier'));
+            $tables = Table::where('point_of_sale_id', $pos->id)->get();
 
-        $salesPerDay = 10;
-        $period = CarbonPeriod::create($startDate, $endDate);
-        $ticketSequence = 1;
-
-        foreach ($period as $day) {
-            $sessionsForDay = [];
-            $slots = [
-                'morning' => ['start' => [7, 30], 'end' => [14, 59]],
-                'evening' => ['start' => [15, 0], 'end' => [23, 0]],
-            ];
-
-            foreach ($registers as $registerIndex => $register) {
-                $sessionsForDay[$register->id] = [];
-                $slotNumber = 0;
-                foreach ($slots as $slot => $hours) {
-                    $cashier = $cashiers->first();
-                    $openedAt = $day->copy()->setTime($hours['start'][0], $hours['start'][1], 0);
-                    $closedAt = $day->copy()->setTime($hours['end'][0], $hours['end'][1], 0);
-
-                    $sessionsForDay[$register->id][$slot] = CashRegisterSession::create([
-                        'cash_register_id' => $register->id,
-                        'user_id' => $cashier->id,
-                        'starting_amount' => 500_000,
-                        'expected_cash_amount' => 500_000,
-                        'actual_cash_amount' => 500_000,
-                        'is_closed' => true,
-                        'opened_at' => $openedAt,
-                        'closed_at' => $closedAt,
-                        'start_ticket_number' => $ticketSequence,
-                    ]);
-                }
+            if ($registers->isEmpty() || $users->isEmpty() || $tables->isEmpty()) {
+                continue;
             }
 
-            $salesToday = [];
-            $targetLinesForDay = random_int(20, 50);
-            $remainingLines = $targetLinesForDay;
+            // Clear existing sales for this POS
+            Sale::where('point_of_sale_id', $pos->id)->delete();
+            CashRegisterSession::whereIn('cash_register_id', $registers->pluck('id'))->forceDelete();
 
-            for ($i = 0; $i < $salesPerDay; $i++) {
-                $register = $registers[$i % $registers->count()];
-                $user = $users->random();
-                $table = $tables->random();
+            $period = CarbonPeriod::create($startDate, $endDate);
+            $ticketSequence = 1;
 
-                $saleDateTime = $day->copy()->setTime(random_int(8, 21), random_int(0, 59), random_int(0, 59));
-                $discount = random_int(0, 10);
-                $slot = $saleDateTime->hour < 15 ? 'morning' : 'evening';
-                $session = $sessionsForDay[$register->id][$slot];
+            foreach ($period as $day) {
+                $sessionsForDay = [];
+                foreach ($registers as $register) {
+                    $sessionsForDay[$register->id] = [];
+                    foreach (['morning', 'evening'] as $slot) {
+                        $openedAt = $day->copy()->setTime($slot === 'morning' ? 7 : 15, 0);
+                        $closedAt = $day->copy()->setTime($slot === 'morning' ? 14 : 23, 59);
 
-                $sale = Sale::create([
-                    'ticket_number' => sprintf('PV101-%s-%04d', $day->format('Ymd'), $ticketSequence++),
-                    'user_id' => $user->id,
-                    'point_of_sale_id' => $pointOfSale->id,
-                    'table_id' => $table->id,
-                    'cash_register_session_id' => $session->id,
-                    'total_amount' => 0,
-                    'discount_percentage' => $discount,
-                    'final_amount' => 0,
-                    'status' => 'completed',
-                    'amount_received' => 0,
-                    'change_amount' => 0,
-                    'created_at' => $saleDateTime,
-                    'updated_at' => $saleDateTime,
-                ]);
-
-                $salesToday[] = $sale;
-            }
-
-            foreach ($salesToday as $index => $sale) {
-                $salesLeft = $salesPerDay - $index - 1;
-                if ($salesLeft < 0) {
-                    $salesLeft = 0;
+                        $sessionsForDay[$register->id][$slot] = CashRegisterSession::create([
+                            'cash_register_id' => $register->id,
+                            'user_id' => $users->random()->id,
+                            'starting_amount' => random_int(100000, 500000),
+                            'expected_cash_amount' => 500000,
+                            'actual_cash_amount' => 500000,
+                            'is_closed' => true,
+                            'opened_at' => $openedAt,
+                            'closed_at' => $closedAt,
+                        ]);
+                    }
                 }
 
-                $minLines = max(5, $remainingLines - ($salesLeft * 30));
-                $maxLines = max($minLines, min(30, $remainingLines - $salesLeft));
-                $lineCount = $salesLeft === 0 ? $remainingLines : random_int($minLines, $maxLines);
-                $remainingLines -= $lineCount;
+                $dayOfWeek = $day->dayOfWeekIso; // 1 (Lundi) à 7 (Dimanche)
+                
+                // Modèle prévisible des ventes pour avoir une belle courbe connue
+                $salesPattern = [
+                    1 => 10, // Lundi : calme
+                    2 => 15, // Mardi : hausse légère
+                    3 => 25, // Mercredi : pic milieu de semaine
+                    4 => 20, // Jeudi : baisse légère
+                    5 => 35, // Vendredi : forte hausse (début de weekend)
+                    6 => 50, // Samedi : le plus gros jour de la semaine
+                    7 => 30, // Dimanche : bonne journée mais calme le soir
+                ];
 
-                $saleTotal = 0;
+                $dailySalesCount = $salesPattern[$dayOfWeek] ?? 15;
 
-                for ($lineIndex = 0; $lineIndex < $lineCount; $lineIndex++) {
-                    $product = $products->random();
-                    $quantity = random_int(1, 5);
-                    $unitPrice = random_int(2_000, 50_000);
-                    $lineTotal = $quantity * $unitPrice;
+                for ($i = 0; $i < $dailySalesCount; $i++) {
+                    $register = $registers->random();
+                    $user = $users->random();
+                    $table = $tables->random();
 
-                    OrderLine::create([
-                        'sale_id' => $sale->id,
-                        'product_id' => $product->id,
-                        'quantity' => $quantity,
-                        'price' => $unitPrice,
-                        'total' => $lineTotal,
-                        'created_at' => $sale->created_at,
-                        'updated_at' => $sale->created_at,
+                    // Distribution pondérée pour créer des pics (midi et soir)
+                    $rand = random_int(1, 100);
+                    if ($rand <= 40) {
+                        $hour = random_int(12, 13); // Pic du midi (40%)
+                    } elseif ($rand <= 80) {
+                        $hour = random_int(19, 21); // Pic du soir (40%)
+                    } elseif ($rand <= 90) {
+                        $hour = random_int(8, 11);  // Matin (10%)
+                    } else {
+                        $hour = random_int(14, 18); // Après-midi (10%)
+                    }
+                    $saleDateTime = $day->copy()->setTime($hour, random_int(0, 59));
+                    $slot = $saleDateTime->hour < 15 ? 'morning' : 'evening';
+                    $session = $sessionsForDay[$register->id][$slot];
+
+                    $sale = Sale::create([
+                        'ticket_number' => sprintf('%s-%s-%04d', $pos->code ?? 'POS', $day->format('Ymd'), $ticketSequence++),
+                        'user_id' => $user->id,
+                        'point_of_sale_id' => $pos->id,
+                        'table_id' => $table->id,
+                        'cash_register_session_id' => $session->id,
+                        'total_amount' => 0,
+                        'final_amount' => 0,
+                        'status' => 'completed',
+                        'created_at' => $saleDateTime,
                     ]);
 
-                    $saleTotal += $lineTotal;
-                }
+                    // Add items
+                    $lineCount = random_int(1, 6);
+                    $saleTotal = 0;
+                    for ($j = 0; $j < $lineCount; $j++) {
+                        $product = $products->random();
+                        $qty = random_int(1, 3);
+                        $price = random_int(2000, 30000);
+                        OrderLine::create([
+                            'sale_id' => $sale->id,
+                            'product_id' => $product->id,
+                            'quantity' => $qty,
+                            'price' => $price,
+                            'total' => $qty * $price,
+                        ]);
+                        $saleTotal += ($qty * $price);
+                    }
 
-                $finalAmount = round($saleTotal * (1 - ($sale->discount_percentage / 100)), 2);
-                $amountReceived = $finalAmount + random_int(0, 5_000);
-                $changeAmount = max(0, $amountReceived - $finalAmount);
+                    // Simulation de marketing: environ 15% des ventes bénéficient d'une remise (Happy Hour, Fidélité...)
+                    $discountPct = 0;
+                    if (random_int(1, 100) <= 15) {
+                        $discountPct = collect([5, 10, 15, 20])->random();
+                    }
+                    $finalAmount = $saleTotal * (1 - ($discountPct / 100));
 
-                Sale::withoutTimestamps(function () use ($sale, $saleTotal, $finalAmount, $amountReceived, $changeAmount) {
                     $sale->update([
                         'total_amount' => $saleTotal,
                         'final_amount' => $finalAmount,
-                        'amount_received' => $amountReceived,
-                        'change_amount' => $changeAmount,
+                        'discount_percentage' => $discountPct,
                     ]);
-                });
+
+                    // Sélection d'un moyen de paiement (pondéré ou aléatoire, ici aléatoire)
+                    $payment = $payments->random();
+                    
+                    \App\Models\SalePayment::create([
+                        'sale_id' => $sale->id,
+                        'payment_id' => $payment->id,
+                        'amount' => $finalAmount,
+                    ]);
+                }
             }
         }
     }

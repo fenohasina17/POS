@@ -365,8 +365,8 @@ onMounted(async () => {
   await loadUserData()
   applyMachineName()
   await Promise.all([fetchPointOfSales(), fetchCashRegisters()])
-  if (!isAdmin.value && userPointOfSaleId.value) {
-    selectedPointOfSaleId.value = userPointOfSaleId.value
+  if (!isAdmin.value && activePos.value?.id) {
+    selectedPointOfSaleId.value = activePos.value.id
   }
 })
 

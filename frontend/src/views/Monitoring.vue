@@ -29,6 +29,10 @@
         </select>
         <input type="date" v-model="filters.start_date" @change="fetchData" class="rounded-2xl border-none bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 outline-none" />
         <input type="date" v-model="filters.end_date" @change="fetchData" class="rounded-2xl border-none bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 outline-none" />
+        <select v-if="filters.start_date && filters.start_date === filters.end_date" v-model="filters.time_granularity" @change="fetchData" class="rounded-2xl border-none bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 outline-none">
+          <option value="hour">Par Heure</option>
+          <option value="minute">Par Minute</option>
+        </select>
       </div>
     </header>
 
@@ -64,7 +68,11 @@
         v-if="selectedSection"
         :is-open="showModal"
         :pos-name="selectedSection.pos_name || selectedSection.label"
+        :kpis="selectedSection.data.kpis"
         :top-products="selectedSection.data.top_products"
+        :flop-products="selectedSection.data.flop_products"
+        :category-summary="selectedSection.data.category_summary"
+        :cashier-performance="selectedSection.data.cashier_performance"
         :payment-summary="selectedSection.data.payment_summary"
         :evolution-data="selectedSection.data.sales_evolution"
         @close="showModal = false"
@@ -93,7 +101,8 @@ const filters = reactive({
   pos_id: null,
   status: '',
   start_date: '',
-  end_date: ''
+  end_date: '',
+  time_granularity: 'hour'
 })
 
 const formatPrice = (price) => new Intl.NumberFormat('fr-FR').format(price) + ' Ar'
