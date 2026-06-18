@@ -1,0 +1,101 @@
+# ============================================================
+# PROMETHEUS — le coeur du système
+# ============================================================
+prometheus:
+  prometheusSpec:
+    # Découverte de tous les ServiceMonitors/PodMonitors sans filtrage par label helm
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+    # Combien de temps on garde les données avant de les écraser.
+    # 24h suffit pour apprendre/débugger ; en prod réelle on monterait
+    # à 15-30 jours avec un stockage externe (Thanos/Mimir).
+    retention: 24h
+
+    # Sans ça, les données sont perdues si le pod Prometheus redémarre.
+    # On demande un petit volume persistant via le storage-provisioner
+    # de minikube (déjà actif sur ton cluster).
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 2Gi
+
+    # Budget mémoire : Prometheus charge un index en RAM proportionnel
+    # au nombre de séries temporelles scrapées. Sur un mini-cluster
+    # avec peu de pods, 512Mi est large.
+    resources:
+      requests:
+        cpu: 200m
+        memory: 400Mi
+      limits:
+        cpu: 500m
+        memory: 768Mi
+
+# ============================================================
+# ALERTMANAGER — route les alertes (email, Slack, etc.)
+# ============================================================
+# On le garde actif : c'est lui qui transforme "CPU à 95% depuis 5 min"
+# en notification réelle. Sans lui, Prometheus détecte les problèmes
+# mais ne préviens personne.
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 1Gi
+
+# ============================================================
+# GRAFANA — visualisation
+# ============================================================
+grafana:
+  adminPassword: "Jenkins2024!"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    size: 1Gi
+  # Dashboards Kubernetes pré-construits, importés automatiquement
+  defaultDashboardsEnabled: true
+
+# ============================================================
+# NODE EXPORTER — métriques système par noeud
+# ============================================================
+nodeExporter:
+  enabled: true
+
+# ============================================================
+# KUBE-STATE-METRICS — métriques des objets Kubernetes
+# ============================================================
+kubeStateMetrics:
+  enabled: true
+
+# ============================================================
+# PROMETHEUS OPERATOR — le contrôleur qui gère tout ça
+# ============================================================
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi

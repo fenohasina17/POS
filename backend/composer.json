@@ -12,6 +12,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "mike42/escpos-php": "^4.0",
+        "promphp/prometheus_client_php": "^2.15",
         "spatie/laravel-permission": "^6.17"
     },
     "require-dev": {

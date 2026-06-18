@@ -65,6 +65,9 @@ Route::get('/logo', function () {
     return base64_encode($data);
 });
 
+use App\Http\Controllers\MetricsController;
+Route::get('/metrics', [MetricsController::class, 'index']);
+
 // Toutes les routes protégées par Sanctum
 Route::middleware('auth:sanctum')->group(function () {
 

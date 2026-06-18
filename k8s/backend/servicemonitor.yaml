@@ -1,0 +1,25 @@
+# ============================================================
+# SERVICEMONITOR BACKEND
+# Indique à Prometheus de scraper le endpoint /api/metrics
+# de chaque pod backend (via les Endpoints du Service).
+# ============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: backend-metrics
+  namespace: devops-app
+  labels:
+    # Label requis pour que le Prometheus du chart "monitoring" le découvre
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: backend
+  endpoints:
+    - port: http
+      path: /api/metrics
+      interval: 30s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - devops-app

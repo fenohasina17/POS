@@ -63,12 +63,15 @@ kind: Service
 metadata:
   name: backend-service
   namespace: devops-app
+  labels:
+    app: backend
 spec:
   type: ClusterIP
   selector:
     app: backend
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 80
 ---
 # ============================================================
@@ -80,7 +83,7 @@ metadata:
   name: backend
   namespace: devops-app
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: backend
