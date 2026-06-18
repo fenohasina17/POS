@@ -1,0 +1,105 @@
+# ============================================================
+# SECRET — DSN de connexion pour postgres-exporter
+# ============================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-exporter-secret
+  namespace: devops-app
+type: Opaque
+stringData:
+  DATA_SOURCE_NAME: "postgresql://giovanni:Giovanni09*@postgres-service:5432/pos_system?sslmode=disable"
+---
+# ============================================================
+# DEPLOYMENT — postgres-exporter
+# Se connecte à la DB et expose les métriques sur :9187/metrics
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-exporter
+  namespace: devops-app
+  labels:
+    app: postgres-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-exporter
+  template:
+    metadata:
+      labels:
+        app: postgres-exporter
+    spec:
+      containers:
+        - name: postgres-exporter
+          image: prometheuscommunity/postgres-exporter:latest
+          ports:
+            - containerPort: 9187
+              name: metrics
+          env:
+            - name: DATA_SOURCE_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-exporter-secret
+                  key: DATA_SOURCE_NAME
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9187
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9187
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+# ============================================================
+# SERVICE — expose le port métriques du postgres-exporter
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-exporter-service
+  namespace: devops-app
+  labels:
+    app: postgres-exporter
+spec:
+  selector:
+    app: postgres-exporter
+  ports:
+    - name: metrics
+      port: 9187
+      targetPort: 9187
+---
+# ============================================================
+# SERVICEMONITOR — Prometheus scrape postgres-exporter
+# ============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres-exporter
+  namespace: devops-app
+  labels:
+    release: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: postgres-exporter
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - devops-app
