@@ -55,11 +55,13 @@ class AuthController extends BaseController
                 'password' => 'required|string|min:8',
             ]);
 
-            if (!Auth::guard('web')->attempt($request->only('email', 'password'))) {
+            // Pas de Auth::guard('web')->attempt() : il créerait une session web,
+            // ce qui interfère avec Sanctum stateful sur les requêtes suivantes.
+            $user = User::where('email', $request->email)->first();
+            if (!$user || !Hash::check($request->password, $user->password)) {
                 return response()->json(['message' => 'Identifiants invalides'], 401);
             }
 
-            $user = Auth::guard('web')->user();
             $token = $user->createToken('auth_token')->plainTextToken;
 
             // Récupérer le nom du premier rôle Spatie
@@ -70,8 +72,14 @@ class AuthController extends BaseController
                 'token' => $token,
                 'user' => $user,
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'La validation a échoué',
+                'errors'  => $e->errors(),
+            ], 422);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Erreur: ' . $e->getMessage()], 500);
+            Log::error('Erreur lors de la connexion : ' . $e->getMessage());
+            return response()->json(['message' => 'Erreur interne du serveur'], 500);
         }
     }
 
@@ -86,7 +94,12 @@ class AuthController extends BaseController
                 return response()->json(['message' => 'Aucun utilisateur connecté'], 401);
             }
 
-            $user->currentAccessToken()->delete();
+            // currentAccessToken() peut renvoyer un TransientToken (auth session Sanctum).
+            // On ne supprime que les PersonalAccessToken réels pour éviter le crash.
+            $token = $user->currentAccessToken();
+            if ($token instanceof \Laravel\Sanctum\PersonalAccessToken) {
+                $token->delete();
+            }
 
             return response()->json(['message' => 'Déconnexion réussie']);
         } catch (\Exception $e) {
