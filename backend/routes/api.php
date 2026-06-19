@@ -191,18 +191,21 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ========== TABLES ==========
-    Route::apiResource('tables', TableController::class);
+    // Les routes spécifiques doivent être AVANT apiResource pour éviter que
+    // GET /tables/{table} (show) n'intercepte /tables/available, /tables/statistics, etc.
     Route::get('/tables/available', [TableController::class, 'getAvailableTables'])->name('tables.available');
     Route::get('/tables/occupied', [TableController::class, 'getOccupiedTables'])->name('tables.occupied');
+    Route::get('/tables/statistics', [TableController::class, 'getStatistics'])->name('tables.statistics');
+    Route::apiResource('tables', TableController::class);
     Route::patch('/tables/{id}/status', [TableController::class, 'updateStatus'])->name('tables.status.update');
     Route::post('/tables/{id}/lock', [TableController::class, 'lock'])->name('tables.lock');
     Route::post('/tables/{id}/unlock', [TableController::class, 'unlock'])->name('tables.unlock');
-    Route::get('/tables/statistics', [TableController::class, 'getStatistics'])->name('tables.statistics');
 
     // ========== MONITORING ==========
     Route::get('/admin/monitoring', [App\Http\Controllers\MonitoringController::class, 'index']);
 
     // ========== RÔLES ET PERMISSIONS ==========
+    Route::apiResource('roles', RoleController::class);
     Route::apiResource('permissions', PermissionController::class)->except(['update']);
 
     // Assignation / révocation permissions à un rôle
