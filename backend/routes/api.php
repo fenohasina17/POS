@@ -24,8 +24,14 @@ use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\SessionDiscrepancyController;
 use App\Http\Controllers\SalesExportController;
 
-// Endpoint de santé (non authentifié — utilisé par monitoring)
-Route::get('/health', function () {
+// Endpoint de santé — protégé par token secret (X-Health-Token header)
+// Configurer HEALTH_CHECK_TOKEN dans .env et dans Uptime Kuma (Custom Header)
+Route::get('/health', function (\Illuminate\Http\Request $request) {
+    $expectedToken = config('app.health_check_token');
+    if ($expectedToken && $request->header('X-Health-Token') !== $expectedToken) {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
+
     try {
         \DB::connection()->getPdo();
         $dbStatus = 'ok';
@@ -52,17 +58,6 @@ Route::get('/health', function () {
 // Routes publiques (non authentifiées)
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/register', [AuthController::class, 'register']);
-
-Route::get('/logo', function () {
-
-    $path = public_path('photos/logo.png');
-    if (!file_exists($path)) {
-        return response()->json(['error' => 'Logo not found'], 404);
-    }
-    $type = pathinfo($path, PATHINFO_EXTENSION);
-    $data = file_get_contents($path);
-    return base64_encode($data);
-});
 
 // Toutes les routes protégées par Sanctum
 Route::middleware('auth:sanctum')->group(function () {
