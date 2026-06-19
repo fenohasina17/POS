@@ -33,6 +33,10 @@ class Table extends Model
         'locked_at'
     ];
 
+    protected $casts = [
+        'location' => 'array',
+    ];
+
     // --- RELATIONS ---
 
     public function lockedBySession()
