@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: devops-app
+data:
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres-service
+  DB_PORT: "5432"
+  DB_DATABASE: pos_system
+  DB_USERNAME: giovanni
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_URL: https://pizza-pos.local
+  FRONTEND_URL: https://pizza-pos.local
+  SANCTUM_STATEFUL_DOMAINS: pizza-pos.local

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import axios from 'axios'
 import { storage } from '@/utils/storage'
 import Login from '../views/Login.vue'
+import Register from '../views/Register.vue'
 import DirectSale from '../views/DirectSale.vue'
 
 import Product from '../views/Product.vue'
@@ -94,6 +95,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'login', component: Login },
+    { path: '/register', name: 'register', component: Register },
     { path: '/direct', redirect: { name: 'dashboard-direct' } },
 
     // Dashboard avec routes enfants
@@ -257,8 +259,8 @@ const router = createRouter({
 // ==================== GUARD GLOBAL ====================
 
 router.beforeEach(async (to, from, next) => {
-  // Ignorer la page login
-  if (to.path === '/' || to.path === '/login') {
+  // Ignorer les pages login / inscription
+  if (to.path === '/' || to.path === '/login' || to.path === '/register') {
     next()
     return
   }

@@ -84,6 +84,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
     restart: always
     logging: *default-logging
     ports:
@@ -129,6 +131,7 @@ services:
   # --- Monitoring (Uptime Kuma) ---
   uptime-kuma:
     image: louislam/uptime-kuma:1
+    pull_policy: if_not_present
     restart: always
     ports:
       - "3001:3001"

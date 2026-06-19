@@ -8,6 +8,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
     "lint:oxlint": "oxlint . --fix -D correctness --ignore-path .gitignore",
     "lint:eslint": "eslint . --fix",
     "lint": "run-s lint:*",
@@ -37,8 +40,10 @@
     "@cypress/vue": "^6.0.2",
     "@eslint/js": "^9.22.0",
     "@vitejs/plugin-vue": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.9",
     "@vue/devtools-kit": "^8.0.5",
     "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/test-utils": "^2.4.11",
     "autoprefixer": "^10.4.21",
     "concurrently": "^10.0.3",
     "cypress": "^15.1.0",
@@ -47,6 +52,7 @@
     "eslint-plugin-oxlint": "^0.16.0",
     "eslint-plugin-vue": "~10.0.0",
     "globals": "^16.0.0",
+    "jsdom": "^28.1.0",
     "npm-run-all2": "^7.0.2",
     "oxlint": "^0.16.0",
     "postcss": "^8.5.6",
@@ -54,6 +60,7 @@
     "tailwindcss": "^3.4.17",
     "vite": "^7.2.4",
     "vite-plugin-vue-devtools": "^7.7.2",
+    "vitest": "^4.1.9",
     "wait-on": "^9.0.10"
   }
 }

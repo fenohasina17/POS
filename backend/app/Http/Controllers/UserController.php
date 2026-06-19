@@ -10,8 +10,12 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        if (!$request->user()?->can('view.users')) {
+            return response()->json(['message' => 'Action non autorisée'], 403);
+        }
+
         try {
             $users = User::with(['pointsOfSale:id,name', 'roles:id,name'])->get()->map(function ($user) {
                 return [
@@ -36,6 +40,10 @@ class UserController extends Controller
     // Créer un utilisateur
     public function store(Request $request)
     {
+        if (!$request->user()?->can('create.users')) {
+            return response()->json(['message' => 'Action non autorisée'], 403);
+        }
+
         // Validation des données
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -79,8 +87,12 @@ class UserController extends Controller
     }
 
     // Afficher un utilisateur spécifique
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        if (!$request->user()?->can('view.users')) {
+            return response()->json(['message' => 'Action non autorisée'], 403);
+        }
+
         try {
             $user = User::with(['pointsOfSale', 'roles'])->findOrFail($id);
             return response()->json($user);
@@ -99,6 +111,10 @@ class UserController extends Controller
     // Mettre à jour un utilisateur
     public function update(Request $request, $id)
     {
+        if (!$request->user()?->can('update.users')) {
+            return response()->json(['message' => 'Action non autorisée'], 403);
+        }
+
         try {
             $user = User::findOrFail($id);
 
@@ -147,8 +163,12 @@ class UserController extends Controller
     }
 
     // Supprimer un utilisateur
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        if (!$request->user()?->can('delete.users')) {
+            return response()->json(['message' => 'Action non autorisée'], 403);
+        }
+
         try {
             $user = User::findOrFail($id);
             $user->delete();

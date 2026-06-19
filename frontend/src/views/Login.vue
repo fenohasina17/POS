@@ -89,8 +89,12 @@
             </p>
           </form>
 
-          <div class="mt-10 text-xs text-slate-400">
-            <p>En vous connectant, vous acceptez les conditions d’utilisation et la politique de confidentialité d’IGP POS.</p>
+          <div class="mt-10 space-y-2 text-sm">
+            <p class="text-slate-500">
+              Pas encore de compte ?
+              <router-link to="/register" class="font-semibold text-indigo-600 hover:text-indigo-700">Créer un compte</router-link>
+            </p>
+            <p class="text-xs text-slate-400">En vous connectant, vous acceptez les conditions d’utilisation et la politique de confidentialité d’IGP POS.</p>
           </div>
         </div>
       </div>
