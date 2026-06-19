@@ -13,7 +13,7 @@
 
       <div class="payment-body">
         <!-- NOUVELLE COLONNE : Détails des articles (Style Reçu Moderne) -->
-        <div class="payment-col col-0 hidden md:flex">
+        <div class="payment-col col-0 flex">
           <div class="panel h-full flex flex-col bg-slate-50/50 border-dashed border-slate-200">
             <div class="flex items-center justify-between mb-4 px-1">
               <div class="section-title !mb-0">Détails commande</div>
@@ -46,7 +46,7 @@
               </div>
               <div class="flex justify-between text-sm font-black text-indigo-600 pt-1">
                 <span>TOTAL NET</span>
-                <span class="text-base">{{ formatPrice(totalAmount) }}</span>
+                <span class="text-base">{{ formatPrice(discountedTotal) }}</span>
               </div>
             </div>
           </div>
@@ -242,7 +242,7 @@
 
           <button
             type="button"
-            class="btn-add-payment"&
+            class="btn-add-payment"
             :disabled="!canAddPayment"
             @click="addPayment"
           >
@@ -282,8 +282,11 @@ import { faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScree
 import { saleService } from '@/services/saleService'
 import { storage } from '@/utils/storage'
 import apiClient from '@/services/apiClient'
+import { useAuth } from '@/composables/useAuth'
 
 library.add(faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck)
+
+const { activePos } = useAuth()
 
 const props = defineProps({
   saleId: { type: [Number, String], default: null },
@@ -326,7 +329,21 @@ const groupedItems = computed(() => {
 })
 
 const isMobilePayment = computed(() => mobilePayments.includes(selectedPayment.value))
+// Disable keypad when input is complete or overpaid
+const isKeypadDisabled = computed(() => {
+  if (!selectedPayment.value) return true
+  if (selectedPayment.value === 'Espèce') return isOverpay.value
+  if (isMobilePayment.value) return isPhoneNumberComplete.value
+  if (selectedPayment.value === 'TPE') return isTpeComplete.value
+  return false
+})
 
+const isOverpay = computed(() => selectedPayment.value === 'Espèce' && amountReceivedValue.value > remainingToPay.value)
+
+const sanitizeAmount = () => {
+  const maxDigits = remainingToPay.value.toString().length
+  amountReceived.value = amountReceived.value.replace(/[^0-9]/g, '').slice(0, maxDigits)
+}
 const mobileRegex = {
   'Airtel Money': /^033\d{7}$/,
   'MVola': /^034\d{7}$/,
@@ -349,12 +366,6 @@ const isTpeComplete = computed(() => {
 
 const amountReceivedValue = computed(() => parseInt(amountReceived.value.replace(/\D/g, '')) || 0)
 
-const isKeypadDisabled = computed(() => {
-  return (selectedPayment.value === 'Espèce' && amountReceivedValue.value >= remainingToPay.value) ||
-         (isMobilePayment.value && isPhoneNumberComplete.value) ||
-         (isMobilePayment.value && phoneNumber.value.replace(/\D/g, '').length >= 3 && !phoneNumber.value.replace(/\D/g, '').startsWith(selectedPayment.value === 'Airtel Money' ? '033' : selectedPayment.value === 'MVola' ? '034' : '032')) ||
-         (selectedPayment.value === 'TPE' && isTpeComplete.value)
-})
 
 const discountedTotal = computed(() => {
   const discount = (selectedDiscount.value / 100) * props.totalAmount
@@ -423,11 +434,11 @@ const fetchPayments = async () => {
   }
 }
 
-const sanitizeAmount = () => {
-  amountReceived.value = amountReceived.value.replace(/[^0-9]/g, '')
-}
+// Duplicate sanitizeAmount removed – extended version defined earlier
 
 const onKeypadPress = (digit) => {
+  // Prevent adding more digits if overpayment occurs (only allow delete)
+  if (isOverpay.value) return
   if (selectedPayment.value === 'Espèce') {
     amountReceived.value = (amountReceived.value + digit).replace(/^0+/, '') || '0'
   } else if (selectedPayment.value === 'TPE') {
@@ -525,7 +536,7 @@ const confirmPayment = async () => {
     })
 
     const payload = {
-      point_of_sale_id: props.saleData?.point_of_sale_id || auth.user?.point_of_sale_id,
+      point_of_sale_id: props.saleData?.point_of_sale_id || activePos.value?.id,
       cash_register_session_id: session?.id || null,
       table_id: props.saleData?.table_id || null,
       // Utiliser l'original_user_id (le caissier) s'il existe, sinon l'utilisateur authentifié

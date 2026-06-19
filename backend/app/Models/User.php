@@ -27,7 +27,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'point_of_sale_id',
     ];
     protected $guard_name = 'api';
 
@@ -53,10 +52,6 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    public function pointOfSale()
-    {
-        return $this->belongsTo(PointOfSale::class);
-    }
     public function pointsOfSale()
     {
         return $this->belongsToMany(PointOfSale::class, 'point_of_sale_user', 'user_id', 'point_of_sale_id')->withTimestamps();
@@ -70,4 +65,19 @@ class User extends Authenticatable
         return $this->hasMany(CashRegister::class);
     }
 
+    // Role Helpers
+    public function isAdmin(): bool
+    {
+        return $this->hasRole(\App\Enums\RoleEnum::ADMIN->value, 'api');
+    }
+
+    public function isManager(): bool
+    {
+        return $this->hasRole(\App\Enums\RoleEnum::MANAGER->value, 'api');
+    }
+
+    public function isCashier(): bool
+    {
+        return $this->hasRole(\App\Enums\RoleEnum::CASHIER->value, 'api');
+    }
 }

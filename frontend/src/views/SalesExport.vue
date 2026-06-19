@@ -118,9 +118,8 @@ const exportSales = async () => {
         params[periodType.value] = periodValue.value
     }
 
-    const response = await axios.get(`${API_BASE_URL}/sales/export`, {
+    const response = await apiClient.get('/sales/export', {
       params,
-      headers: { Authorization: `Bearer ${token}` },
       responseType: 'blob'
     })
 

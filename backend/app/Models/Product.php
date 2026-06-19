@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Models\Traits\ScopeByPos;
     protected $fillable = [
         'name',
         'ref',
@@ -28,7 +28,7 @@ class Product extends Model
     /**
      * Get the pricings for the product.
      */
-    public function pricing()
+    public function pricings()
     {
         return $this->hasMany(Pricing::class, 'product_id');
     }

@@ -6,6 +6,7 @@ use App\Models\SessionDiscrepancy;
 use App\Services\SessionDiscrepancyService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 
 class SessionDiscrepancyController extends Controller
 {
@@ -21,15 +22,37 @@ class SessionDiscrepancyController extends Controller
      */
     public function index(Request $request)
     {
-        $user = auth()->user();
-        
-        // Si gérant, filtrer par son POS
-        $pointOfSaleId = null;
-        if (!$user->hasRole('admin', 'api')) {
-            $pointOfSaleId = $user->point_of_sale_id;
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
         }
 
-        $discrepancies = $this->service->getUncheckedDiscrepancies($pointOfSaleId);
+        $isAdmin = $user->isAdmin();
+        $activePosId = $request->attributes->get('activePosId');
+        
+        // Admins can see all discrepancies or filter by query param
+        if ($isAdmin) {
+            $requestedPosId = $request->query('point_of_sale_id');
+            if ($requestedPosId) {
+                if (!$user->pointsOfSale->contains($requestedPosId)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                }
+                $discrepancies = $this->service->getUncheckedDiscrepancies($requestedPosId);
+            } else {
+                // Admin sees all if no specific POS is requested
+                $discrepancies = $this->service->getUncheckedDiscrepancies(null);
+            }
+        }
+        // Non-admins (including managers) are restricted by their active POS
+        else {
+            if (!$activePosId) {
+                return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+            }
+            $discrepancies = $this->service->getUncheckedDiscrepancies($activePosId);
+        }
         
         return response()->json($discrepancies);
     }
@@ -37,15 +60,36 @@ class SessionDiscrepancyController extends Controller
     /**
      * Valider un écart (le marquer comme vérifié).
      */
-    public function check($id)
+    public function check($id, Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Utilisateur non authentifié.'], 401);
+        }
+
         if (!$user->hasRole(['admin', 'gerant'], 'api')) {
             abort(403, 'Seuls les administrateurs et gérants peuvent valider les écarts.');
         }
 
-        $discrepancy = SessionDiscrepancy::findOrFail($id);
+        $discrepancy = SessionDiscrepancy::with('cashRegisterSession.cashRegister')->findOrFail($id);
         
+        $isAdmin = $user->isAdmin();
+        $activePosId = $request->attributes->get('activePosId');
+
+        // Non-admin (managers) specific checks
+        if (!$isAdmin) {
+            if (!$activePosId) {
+                return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
+            }
+            if (!$user->pointsOfSale->contains($activePosId)) {
+                return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+            }
+            // Ensure discrepancy belongs to the active POS
+            if (optional($discrepancy->cashRegisterSession->cashRegister)->point_of_sale_id !== $activePosId) {
+                return response()->json(['message' => 'Accès refusé : l\'écart n\'appartient pas à votre point de vente actif.'], 403);
+            }
+        }
+
         $this->service->markAsChecked($discrepancy);
 
         return response()->json([

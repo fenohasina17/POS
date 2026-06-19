@@ -10,12 +10,18 @@ const apiClient = axios.create({
   }
 })
 
-// Intercepteur pour ajouter le token à chaque requête
+// Intercepteur pour ajouter le token et le POS actif à chaque requête
 apiClient.interceptors.request.use(config => {
   const auth = storage.getAuth()
   if (auth?.token) {
     config.headers.Authorization = `Bearer ${auth.token}`
   }
+  
+  const activePos = storage.getActivePos()
+  if (activePos?.id) {
+    config.headers['X-Active-POS-ID'] = activePos.id
+  }
+  
   return config
 }, error => {
   return Promise.reject(error)

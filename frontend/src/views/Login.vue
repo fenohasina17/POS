@@ -105,6 +105,11 @@
       @key-pressed="handleKeyPress"
       @close="closeKeyboard"
     />
+    <PosSelectionModal 
+      :is-open="isPosModalOpen" 
+      :points-of-sale="userPointsOfSale" 
+      @select="handlePosSelection" 
+    />
   </div>
 </template>
 
@@ -112,6 +117,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { storage } from '@/utils/storage'
 import Keyboard from '../components/tools/Keyboard.vue'
+import PosSelectionModal from '../components/PosSelectionModal.vue'
 import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 
@@ -124,6 +130,8 @@ const keyboardVisible = ref(false)
 const activeField = ref(null)
 const user = ref(null)
 const keyboardPosition = ref(null)
+const isPosModalOpen = ref(false)
+const userPointsOfSale = ref([])
 
 const emailInput = ref(null)
 const passwordInput = ref(null)
@@ -143,14 +151,20 @@ const login = async () => {
     });
 
     if (response.data.token && response.data.user) {
-      // Stockage des informations avec l'utilitaire storage
       storage.setAuth(response.data.token, response.data.user);
-
-      // Mise à jour du state
       user.value = response.data.user;
+      
+      const posList = response.data.user.points_of_sale || [];
 
-      // Redirection
-      window.location.href = '/dashboard'
+      if (posList.length === 0) {
+        error.value = "Aucun point de vente associé à votre compte.";
+      } else if (posList.length === 1) {
+        storage.setActivePos(posList[0]);
+        window.location.href = '/dashboard';
+      } else {
+        userPointsOfSale.value = posList;
+        isPosModalOpen.value = true;
+      }
     } else {
       error.value = "Réponse du serveur invalide";
     }
@@ -161,6 +175,12 @@ const login = async () => {
       error.value = "Erreur de connexion au serveur";
     }
   }
+};
+
+const handlePosSelection = (pos) => {
+  storage.setActivePos(pos);
+  isPosModalOpen.value = false;
+  window.location.href = '/dashboard';
 };
 
 // Fonction pour récupérer l'utilisateur au chargement de l'app

@@ -60,135 +60,117 @@
         </router-link>
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <div
-          class="hidden min-w-[800px] items-center border-b border-slate-100 bg-slate-50 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 md:grid md:grid-cols-[1.5fr,1.5fr,1.5fr,1fr,auto]"
-        >
-          <span>Sites autorisés</span>
-          <span>Utilisateur</span>
-          <span>Email</span>
-          <span>Rôles</span>
-          <span class="text-right">Actions</span>
-        </div>
-
-        <ul class="divide-y divide-slate-100 min-w-[800px]">
-          <li
-            v-for="user in users"
-            :key="user.id"
-            class="grid gap-4 px-4 py-4 md:grid-cols-[1.5fr,1.5fr,1.5fr,1fr,auto] md:items-center md:px-6 hover:bg-slate-50/50 transition-colors"
+      <div v-else class="p-6 space-y-8">
+        <div v-for="group in usersByRole" :key="group.role" class="rounded-2xl border border-slate-100 bg-white">
+          <div 
+            @click="toggleRole(group.role)"
+            class="bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors rounded-t-2xl"
           >
-            <div class="flex flex-col gap-1.5">
-              <div class="flex flex-wrap gap-1.5">
-                <span 
-                  v-for="pos in user.points_of_sale" 
-                  :key="pos.id"
-                  class="rounded-md bg-slate-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-slate-500 border border-slate-200"
+            <h3 class="text-xs font-black text-slate-700 uppercase tracking-widest">{{ group.role }} ({{ group.users.length }})</h3>
+            <font-awesome-icon 
+              icon="fa-solid fa-chevron-down" 
+              class="text-slate-400 transition-transform duration-300"
+              :class="{ 'rotate-180': expandedRoles.has(group.role) }"
+            />
+          </div>
+          
+          <div v-if="!expandedRoles.has(group.role)" class="space-y-3 p-4">
+            <div
+              v-for="user in group.users"
+              :key="user.id"
+              class="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm hover:border-indigo-100 hover:shadow-md transition-all flex items-center justify-between gap-4"
+            >
+              <div class="flex items-center gap-4">
+                <div
+                  class="flex size-10 items-center justify-center rounded-2xl text-sm font-black text-white shadow-inner"
+                  :style="{ backgroundColor: user.avatarColor }"
                 >
-                  {{ pos.name }}
-                </span>
-                <span 
-                  v-if="!user.points_of_sale || user.points_of_sale.length === 0"
-                  class="text-[10px] text-slate-400 italic"
-                >
-                  Aucun site
-                </span>
+                  {{ user.name?.charAt(0)?.toUpperCase() || '?' }}
+                </div>
+                <div>
+                  <p class="text-sm font-black text-slate-800 uppercase tracking-tight">{{ user.name }}</p>
+                  <p class="text-[10px] font-bold text-slate-400">{{ user.email }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-6">
+                <div class="flex flex-wrap gap-1.5 justify-end">
+                  <span 
+                    v-for="pos in user.points_of_sale" 
+                    :key="pos.id"
+                    class="rounded-lg bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-500"
+                  >
+                    {{ pos.name }}
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <router-link
+                    :to="{ name: 'dashboard-users-edit', params: { id: user.id } }"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-indigo-600 hover:text-white transition-all"
+                    title="Modifier"
+                  >
+                    <font-awesome-icon icon="fa-solid fa-pencil" class="text-xs" />
+                  </router-link>
+                  <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-500 hover:bg-rose-600 hover:text-white transition-all"
+                    @click="deleteUser(user.id)"
+                    title="Supprimer"
+                  >
+                    <font-awesome-icon icon="fa-solid fa-trash" class="text-xs" />
+                  </button>
+                </div>
               </div>
             </div>
-
-            <div class="flex items-center gap-3">
-              <div
-                class="flex size-9 items-center justify-center rounded-xl text-xs font-black text-white shadow-sm"
-                :style="{ backgroundColor: getAvatarColor(user.name) }"
-              >
-                {{ user.name?.charAt(0)?.toUpperCase() || '?' }}
-              </div>
-              <div>
-                <p class="text-sm font-black text-slate-700 uppercase tracking-tight">{{ user.name || 'Nom non défini' }}</p>
-                <p class="text-[10px] font-bold text-slate-400">ID: #{{ user.id }}</p>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2 text-sm text-slate-600">
-              <font-awesome-icon icon="fa-solid fa-envelope" class="text-slate-300" />
-              <span class="font-medium text-slate-500">{{ user.email }}</span>
-            </div>
-
-            <div class="flex flex-wrap gap-1.5">
-              <span
-                v-for="role in user.roles"
-                :key="role"
-                class="rounded-lg bg-indigo-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-tighter text-indigo-600 border border-indigo-100"
-              >
-                {{ role }}
-              </span>
-              <span
-                v-if="!user.roles || user.roles.length === 0"
-                class="rounded-lg bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400 border border-slate-100"
-              >
-                AUCUN RÔLE
-              </span>
-            </div>
-
-            <div class="flex items-center justify-end gap-2">
-              <router-link
-                :to="{ name: 'dashboard-users-edit', params: { id: user.id } }"
-                class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 transition hover:border-indigo-200 hover:text-indigo-600 hover:shadow-sm active:scale-95"
-                title="Modifier"
-              >
-                <font-awesome-icon icon="fa-solid fa-pencil" class="text-xs" />
-              </router-link>
-              <button
-                type="button"
-                class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:text-rose-600 hover:shadow-sm active:scale-95"
-                @click="deleteUser(user.id)"
-                title="Supprimer"
-              >
-                <font-awesome-icon icon="fa-solid fa-trash" class="text-xs" />
-              </button>
-            </div>
-          </li>
-        </ul>
+          </div>
+        </div>
       </div>
     </section>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import userService from '@/services/userService'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faUsers, faPlus, faEnvelope, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faUsers, faPlus, faEnvelope, faPencil, faTrash, faChevronDown } from '@fortawesome/free-solid-svg-icons'
 
-library.add(faUsers, faPlus, faEnvelope, faPencil, faTrash)
+library.add(faUsers, faPlus, faEnvelope, faPencil, faTrash, faChevronDown)
 
 defineOptions({ name: 'UserList' })
 
 const users = ref([])
 const loading = ref(true)
+const expandedRoles = ref(new Set())
+
+const usersByRole = computed(() => {
+  const groups = {};
+  users.value.forEach(user => {
+    const role = user.roles && user.roles.length > 0 ? user.roles[0] : 'Sans rôle';
+    if (!groups[role]) {
+      groups[role] = [];
+    }
+    groups[role].push(user);
+  });
+  return Object.keys(groups).sort().map(role => ({ role, users: groups[role] }));
+});
+
+const toggleRole = (role) => {
+  if (expandedRoles.value.has(role)) expandedRoles.value.delete(role);
+  else expandedRoles.value.add(role);
+};
 
 const loadUsers = async () => {
   try {
     loading.value = true
     const response = await userService.getAll()
     const rawUsers = response.data?.data || response.data || []
-    
-    // Charger les rôles pour chaque utilisateur
-    users.value = await Promise.all(
-      rawUsers.map(async (user) => {
-        try {
-          const rolesRes = await userService.getRoles(user.id)
-          const rolesData = rolesRes.data?.data || rolesRes.data || []
-          return {
-            ...user,
-            roles: rolesData.map(r => r.name || r)
-          }
-        } catch (err) {
-          console.error(`Erreur rôles user ${user.id}:`, err)
-          return { ...user, roles: [] }
-        }
-      })
-    )
+    users.value = rawUsers.map(user => ({
+      ...user,
+      avatarColor: getAvatarColor(user.name)
+    }))
   } catch (error) {
     console.error('Erreur lors du chargement des utilisateurs:', error)
   } finally {

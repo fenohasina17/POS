@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, \App\Models\Traits\ScopeByPos;
     
     protected $fillable = [
         "name",

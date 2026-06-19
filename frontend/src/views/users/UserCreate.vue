@@ -238,14 +238,7 @@ const createUser = async () => {
 
   try {
     isCreating.value = true
-    const response = await userService.create(user.value)
-    const newUser = response.data?.data || response.data
-    
-    // Assigner le rôle si sélectionné
-    if (user.value.role && newUser.id) {
-      await userService.assignRole(newUser.id, user.value.role)
-    }
-
+    await userService.create(user.value)
     router.push({ name: 'dashboard-users' })
   } catch (error) {
     console.error('Erreur lors de la création de l\'utilisateur:', error)

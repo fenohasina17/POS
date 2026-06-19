@@ -1,88 +1,73 @@
-import axios from 'axios'
-import { API_BASE_URL } from '@/utils/api'
+import apiClient from './apiClient'
 
 /**
- * DataCacheService implements the Proxy Pattern to handle data fetching.
- * It provides a cache layer using localStorage to avoid redundant API calls.
+ * DataCacheService - Service d'accès direct aux données
+ * Utilise apiClient pour profiter des intercepteurs (auth + POS header)
  */
 class DataCacheService {
-  constructor() {
-    this.CACHE_KEY = 'pos_categories_data'
-    this.TTL = 1000 * 60 * 15 // 15 minutes
-  }
-
-  /**
-   * Gets categories from cache or fetches from API if cache is expired or missing.
-   * @param {number} pointOfSaleId
-   * @param {string} token
-   * @param {boolean} forceRefresh
-   */
-  async getCategories(pointOfSaleId, token, forceRefresh = false) {
-    if (!forceRefresh) {
-      const cached = this._getCache(pointOfSaleId)
-      if (cached) {
-        console.log('DataCacheService: Returning data from cache')
-        return cached
-      }
-    }
-
-    console.log('DataCacheService: Fetching data from API')
-    const response = await axios.get(`${API_BASE_URL}/categories`, {
-      params: {
-        'with_products': 1,
-        'point_of_sale_id': pointOfSaleId,
-        'with_pricing': 1,
-      },
+  async getCategories(posId, token, forceRefresh = false) {
+    console.log(`📡 Appel API: GET /categories`)
+    
+    const response = await apiClient.get(`/categories`, {
+      params: { 'with_products': 1, 'with_pricing': 1 },
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      }
+        'Cache-Control': 'no-cache'
+      },
+      timeout: 10000
     })
-    console.log('=== Réponse API complète ===', response);
-console.log('Status:', response.status);
-console.log('Headers:', response.headers);
-console.log('Données brutes:', response.data);
-
-    const data = Array.isArray(response.data) ? response.data : response.data.data || []
-    this._setCache(pointOfSaleId, data)
-    return data
+    
+    return Array.isArray(response.data) ? response.data : (response.data?.data || [])
   }
 
-  _getCache(pointOfSaleId) {
-    const raw = localStorage.getItem(this.CACHE_KEY)
-    if (!raw) return null
-
+  async getTables(posId, token) {
     try {
-      const cache = JSON.parse(raw)
-      if (cache.pointOfSaleId !== pointOfSaleId) return null
-
-      const now = new Date().getTime()
-      if (now > cache.expiry) {
-        localStorage.removeItem(this.CACHE_KEY)
-        return null
-      }
-
-      return cache.data
-    } catch (e) {
-      console.error('DataCacheService: Error parsing cache', e)
-      return null
+      console.log('📡 Appel API: GET /tables')
+      
+      const response = await apiClient.get(`/tables`, {
+        headers: {
+          'Cache-Control': 'no-cache'
+        },
+        timeout: 10000 // 10 secondes timeout
+      })
+      
+      const tables = response.data?.data || response.data || []
+      console.log(`✅ ${tables.length} tables récupérées`)
+      return tables
+      
+    } catch (error) {
+      console.error('❌ Erreur getTables:', error.message)
+      throw error
     }
   }
 
-  _setCache(pointOfSaleId, data) {
-    const expiry = new Date().getTime() + this.TTL
-    const cache = {
-      pointOfSaleId,
-      expiry,
-      data
+  async getPendingOrders(tableId, posId, token, forceRefresh = false) {
+    try {
+      const isAll = tableId === 'all'
+      const apiPath = isAll ? 'sales/pending' : `tables/${tableId}/pending-orders`
+      
+      console.log(`📡 Appel API: GET /${apiPath}`)
+      
+      const response = await apiClient.get(`/${apiPath}`, {
+        headers: {
+          'Cache-Control': 'no-cache'
+        },
+        timeout: 10000
+      })
+      
+      const orders = response.data?.data || response.data || []
+      console.log(`✅ ${orders.length} commandes en attente récupérées`)
+      return orders
+      
+    } catch (error) {
+      console.error('❌ Erreur getPendingOrders:', error.message)
+      return []
     }
-    localStorage.setItem(this.CACHE_KEY, JSON.stringify(cache))
   }
 
-  clearCache() {
-    localStorage.removeItem(this.CACHE_KEY)
+
+  invalidatePendingOrders(id) {
+    // Cache désactivé - rien à faire
   }
 }
 
-// Singleton instance
 export const dataCacheService = new DataCacheService()

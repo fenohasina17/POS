@@ -138,9 +138,9 @@
         class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
       >
         <div class="border-b border-slate-100 pb-1">
-          <h2 class="text-sm font-semibold text-slate-800">Détails</h2>
+          <h2 class="text-sm font-semibold text-slate-800">Détails de la vente</h2>
           <p class="text-[10px] text-slate-400">
-            {{ selectedSale ? 'Ticket ' + selectedSale.ticket_number : 'Sélectionnez une vente' }}
+            {{ selectedSale ? 'Ticket n° ' + (selectedSale.sale_number || selectedSale.ticket_number) : 'Sélectionnez une vente' }}
           </p>
         </div>
 
@@ -154,59 +154,64 @@
           </div>
 
           <div v-else class="flex h-full flex-col overflow-hidden">
+            <!-- Info Résumé -->
             <div class="rounded-xl border border-slate-100 bg-slate-50/60 p-2 text-xs text-slate-600">
               <div class="flex items-center justify-between">
-                <span class="font-semibold text-slate-800">Total</span>
-                <span class="text-indigo-600">{{ formatPrice(selectedSale.total_amount) }}</span>
+                <span class="font-semibold text-slate-800">Total payé</span>
+                <span class="font-bold text-indigo-600">{{ formatPrice(selectedSale.final_amount) }}</span>
               </div>
-              <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-                <span>Statut</span>
-                <span class="rounded-full bg-indigo-50 px-1.5 py-0.5 text-[9px] font-semibold text-indigo-600">
+              <div class="mt-1 flex items-center justify-between text-[10px]">
+                <span class="text-slate-400">Statut</span>
+                <span class="rounded-full bg-indigo-50 px-1.5 py-0.5 font-semibold text-indigo-600">
                   {{ formatStatus(selectedSale.status) }}
                 </span>
               </div>
-              <div class="mt-1 flex items-center justify-between text-[10px] text-slate-400">
-                <span>Créé le</span>
+              <div class="mt-1 flex items-center justify-between text-[10px]">
+                <span class="text-slate-400">Caissier</span>
+                <span class="font-medium text-slate-700">{{ selectedSale.user?.name || '—' }}</span>
+              </div>
+              <div class="mt-1 flex items-center justify-between text-[10px]">
+                <span class="text-slate-400">Date</span>
                 <span>{{ formatDate(selectedSale.created_at) }}</span>
               </div>
             </div>
 
-            <div class="mt-2 flex-1 overflow-hidden">
-              <div class="flex h-full flex-col overflow-hidden">
-                <div class="flex items-center justify-between border-b border-slate-100 pb-1">
-                  <h3 class="text-xs font-semibold text-slate-700">Articles</h3>
-                  <span class="text-[9px] text-slate-400">
-                    {{ selectedSale.order_lines?.length || 0 }}
-                  </span>
-                </div>
-
-                <div v-if="selectedSale.order_lines?.length" class="flex-1 overflow-y-auto text-[10px]">
-                  <div class="divide-y divide-slate-100">
-                    <div class="grid grid-cols-4 gap-1 px-1 py-1 text-[9px] font-semibold text-slate-400">
-                      <div>Produit</div>
-                      <div>Qté</div>
-                      <div>Prix</div>
-                      <div class="text-right">Total</div>
+            <!-- Paiements -->
+            <div class="mt-2">
+                <h3 class="text-[10px] font-semibold text-slate-700 uppercase tracking-wide">Paiements</h3>
+                <div class="text-[10px] mt-1 space-y-1">
+                    <div v-for="payment in selectedSale.payments" :key="payment.id" class="flex justify-between">
+                        <span class="text-slate-500">{{ payment.payment?.name }}</span>
+                        <span class="font-semibold text-slate-800">{{ formatPrice(payment.amount) }}</span>
                     </div>
-                    <div
-                      v-for="line in selectedSale.order_lines"
-                      :key="line.id"
-                      class="grid grid-cols-4 gap-1 px-1 py-1 text-[10px]"
-                    >
-                      <div class="truncate font-semibold text-slate-800">
-                        {{ line.product?.name || 'Supprimé' }}
-                      </div>
-                      <div class="text-slate-500">{{ line.quantity }}</div>
-                      <div class="text-slate-500">{{ formatPrice(line.price) }}</div>
-                      <div class="text-right font-semibold text-indigo-600">
-                        {{ formatPrice(line.total) }}
-                      </div>
+                </div>
+            </div>
+
+            <!-- Articles -->
+            <div class="mt-2 flex-1 overflow-hidden flex flex-col">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-1">
+                <h3 class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Articles</h3>
+              </div>
+
+              <div v-if="selectedSale.orderlines?.length || selectedSale.order_lines?.length" class="flex-1 overflow-y-auto text-[10px] mt-1">
+                <div class="divide-y divide-slate-100">
+                  <div
+                    v-for="line in (selectedSale.orderlines || selectedSale.order_lines)"
+                    :key="line.id"
+                    class="grid grid-cols-4 gap-1 px-1 py-1 text-[10px]"
+                  >
+                    <div class="col-span-2 truncate font-semibold text-slate-800">
+                      {{ line.product?.name || 'Supprimé' }}
+                    </div>
+                    <div class="text-center text-slate-500">{{ line.quantity }}</div>
+                    <div class="text-right font-semibold text-indigo-600">
+                      {{ formatPrice(line.total) }}
                     </div>
                   </div>
                 </div>
-                <div v-else class="flex flex-1 items-center justify-center text-[9px] text-slate-400">
-                  Aucun article
-                </div>
+              </div>
+              <div v-else class="flex flex-1 items-center justify-center text-[9px] text-slate-400">
+                Aucun article
               </div>
             </div>
           </div>
@@ -226,7 +231,7 @@
 <script setup>
 // (le script reste identique, aucun changement nécessaire)
 import { computed, onMounted, ref } from 'vue'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import { API_BASE_URL } from '@/utils/api'
 import EditSaleModal from './EditSaleModal.vue'
 import Profile from './Profile.vue'
@@ -237,6 +242,8 @@ import { useAuth } from '@/composables/useAuth'
 import { printingService } from '@/services/printing/PrintingService'
 
 library.add(faPen, faReceipt, faTrash)
+
+const { isAdmin } = useAuth()
 
 const props = defineProps({
   embedded: { type: Boolean, default: false },
@@ -260,12 +267,6 @@ const lastPage = ref(1)
 const total = ref(0)
 
 // Headers API
-const authHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error('Token manquant')
-  return { Authorization: `Bearer ${token}` }
-}
-
 const fetchAllSales = async () => {
   try {
     const userRaw = localStorage.getItem('user')
@@ -276,9 +277,8 @@ const fetchAllSales = async () => {
       cash_register_session_id: sessionId.value,
       user_id: user.id,
     }
-    const { data } = await axios.get(`${API_BASE_URL}/sales`, {
+    const { data } = await apiClient.get('/sales', {
       params,
-      headers: authHeaders(),
     })
 
     let items = []
@@ -302,12 +302,28 @@ const updateDisplayedSales = () => {
 
 const loadSales = async () => {
   loading.value = true
-  allSales.value = await fetchAllSales()
+  console.log('DEBUG: loadSales - sessionId:', sessionId.value, 'isAdmin:', isAdmin.value);
+
+  const all = await fetchAllSales()
+
+  // Filtrage explicite côté frontend pour s'assurer que seules les ventes 
+  // de la session en cours sont affichées pour le caissier
+  if (!isAdmin.value) {
+      if (sessionId.value) {
+        console.log('DEBUG: Filtering by session:', sessionId.value);
+        allSales.value = all.filter(sale => String(sale.cash_register_session_id) === String(sessionId.value));
+      } else {
+        console.warn('DEBUG: Non-admin user, but no sessionId available! Showing no sales.');
+        allSales.value = []; // Ou bien afficher tout si vous préférez, mais sécurisez-le.
+      }
+  } else {
+      allSales.value = all;
+  }
+
   currentPage.value = 1
   updateDisplayedSales()
   loading.value = false
 }
-
 const changePage = (newPage) => {
   if (newPage < 1 || newPage > lastPage.value) return
   currentPage.value = newPage
@@ -316,9 +332,7 @@ const changePage = (newPage) => {
 
 const fetchCurrentSession = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/my-active-session`, {
-      headers: authHeaders(),
-    })
+    const { data } = await apiClient.get('/my-active-session')
     return data?.data || data || null
   } catch (error) {
     console.error('Erreur session:', error)
@@ -328,9 +342,7 @@ const fetchCurrentSession = async () => {
 
 const fetchSaleDetails = async (saleId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/sales/${saleId}`, {
-      headers: authHeaders(),
-    })
+    const { data } = await apiClient.get(`/sales/${saleId}`)
     return data?.data || data
   } catch (error) {
     console.error('Erreur détails vente:', error)
@@ -397,9 +409,7 @@ const printDuplicateSale = async (sale) => {
 
 const deleteSale = async (sale) => {
   try {
-    await axios.delete(`${API_BASE_URL}/sales/${sale.id}`, {
-      headers: authHeaders(),
-    })
+    await apiClient.delete(`/sales/${sale.id}`)
     await loadSales()
     if (selectedSale.value?.id === sale.id) selectedSale.value = null
   } catch (error) {
@@ -433,9 +443,7 @@ const saveSale = async (updatedSale) => {
       })).filter(item => item.product_id)
     }
 
-    await axios.put(`${API_BASE_URL}/sales/${updatedSale.id}`, payload, {
-      headers: { 'Content-Type': 'application/json', ...authHeaders() }
-    })
+    await apiClient.put(`/sales/${updatedSale.id}`, payload)
 
     await loadSales()
     if (selectedSale.value?.id === updatedSale.id) {

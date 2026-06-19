@@ -123,7 +123,7 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'close'])
 
-const { isAdmin } = useAuth()
+const { isAdmin, activePos } = useAuth()
 
 const isOpen = ref(true)
 const categories = ref([])
@@ -151,13 +151,13 @@ const filteredProductsByCategory = computed(() => {
 const loadCategoriesAndProducts = async () => {
   try {
     const auth = storage.getAuth()
-    const user = auth?.user
-    if (!user?.point_of_sale_id) {
-      console.warn('Aucun point de vente associé')
+    const posId = activePos.value?.id
+    if (!posId) {
+      console.warn('Aucun point de vente actif associé')
       return
     }
     const data = await dataCacheService.getCategories(
-      user.point_of_sale_id,
+      posId,
       auth.token,
       false
     )

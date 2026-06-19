@@ -22,10 +22,10 @@
       </div>
     </div>
 
-    <div class="relative mx-4 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
+    <div class="relative mx-4 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white shadow-2xl flex flex-col max-h-[90vh]">
 
       <!-- Header -->
-      <header class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+      <header class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5 flex-shrink-0">
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Connexion caisse</p>
           <h1 class="mt-2 text-2xl font-semibold text-slate-900">Choisir une caisse</h1>
@@ -50,7 +50,8 @@
         </div>
       </header>
 
-      <div class="px-6 py-6">
+      <!-- Contenu scrollable du modal -->
+      <div class="px-6 py-6 overflow-y-auto flex-grow">
 
         <!-- Message machine détectée -->
         <div v-if="machineIdentifier" class="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-600">
@@ -81,64 +82,100 @@
           </div>
 
           <div v-if="loadingRegisters" class="py-8 text-center text-slate-500">
-            Chargement des caisses...
+            <div class="flex flex-col items-center gap-3">
+              <i class="fas fa-circle-notch animate-spin text-2xl text-indigo-500"></i>
+              <p class="text-sm font-medium">Chargement des caisses...</p>
+            </div>
           </div>
 
-          <div v-else>
-            <div v-if="cashRegisters.length" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div v-else class="space-y-6">
+            <!-- Barre de recherche moderne -->
+            <div class="relative group">
+              <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <i class="fas fa-search text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+              </div>
+              <input
+                v-model="searchRegister"
+                type="text"
+                placeholder="Rechercher une caisse..."
+                class="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 py-3.5 text-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none shadow-sm"
+              />
+            </div>
+
+            <!-- Conteneur Flex en 2 colonnes -->
+            <div class="flex flex-wrap gap-5 max-h-[600px] overflow-y-auto p-1 custom-scrollbar">
+              <!-- État vide -->
+              <div v-if="filteredRegisters.length === 0" class="w-full py-12 flex flex-col items-center justify-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                <i class="fas fa-desktop text-3xl text-slate-200 mb-3"></i>
+                <p class="text-slate-500 font-medium text-sm">Aucune caisse trouvée.</p>
+              </div>
+
+              <!-- Carte de Caisse (Largeur 50% moins le gap) -->
               <button
-                v-for="register in cashRegisters"
+                v-for="register in filteredRegisters"
                 :key="register.id"
                 type="button"
-                class="rounded-2xl border border-slate-200 px-5 py-5 text-left transition-all hover:border-indigo-200 hover:bg-indigo-50 disabled:cursor-not-allowed"
-                :class="{
-                  'selected': selectedCashRegister === register.id,
-                  'opacity-60 bg-slate-100 pointer-events-none': isRegisterLocked(register.id) && !isAdmin
-                }"
+                class="group relative flex flex-col p-5 bg-white rounded-[24px] border transition-all duration-300 shadow-sm hover:shadow-md active:scale-[0.98] w-[calc(50%-10px)]"
+                :class="[
+                  selectedCashRegister === register.id 
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/15 bg-indigo-50/30' 
+                    : 'border-slate-200 hover:border-indigo-200',
+                  (isRegisterLocked(register.id) && !isAdmin)
+                    ? 'grayscale opacity-60 cursor-not-allowed bg-slate-50'
+                    : 'cursor-pointer'
+                ]"
                 :disabled="isRegisterLocked(register.id) && !isAdmin"
                 @click="selectCashRegister(register.id)"
               >
-                <div class="flex items-start gap-4">
-                  <span class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
-                    <i class="fas fa-desktop text-xl"></i>
-                  </span>
-                  <div class="flex-1 min-w-0">
-                    <p class="font-semibold text-slate-900 truncate">{{ register.name }}</p>
-                    <p class="text-xs text-slate-400 mt-0.5 truncate">
-                      {{ register.point_of_sale?.name || 'Sans point de vente' }}
-                    </p>
-                    <p v-if="register.current_session?.user?.name" class="text-xs text-indigo-600 mt-1">
-                      👤 Occupé par: {{ register.current_session.user.name }}
-                    </p>
+                <!-- Statut & Icône -->
+                <div class="flex items-center justify-between w-full mb-3">
+                  <div 
+                    class="size-10 flex items-center justify-center rounded-xl transition-colors"
+                    :class="selectedCashRegister === register.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'"
+                  >
+                    <i class="fas fa-desktop text-base"></i>
                   </div>
-                </div>
-
-                <div class="mt-4">
+                  
                   <span
                     v-if="statusBadgeText(register.id)"
-                    :class="['inline-block px-3.5 py-1 rounded-xl text-xs font-semibold', statusBadgeClass(register.id)]"
+                    :class="['px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider', statusBadgeClass(register.id)]"
                   >
                     {{ statusBadgeText(register.id) }}
                   </span>
                 </div>
 
-                <!-- Panneau de debug -->
-                <div v-if="debugMode" class="mt-2 pt-2 border-t border-slate-200 text-[10px] font-mono text-slate-400 space-y-0.5">
-                  <div>🔍 Status: {{ registerStatuses[register.id] || '?' }}</div>
-                  <div>👤 Owner: {{ registerOwners[register.id] || '-' }}</div>
-                  <div>🔒 Locked: {{ isRegisterLocked(register.id) }}</div>
+                <!-- Textes -->
+                <div class="space-y-0.5 mb-3">
+                  <h3 class="font-bold text-slate-900 text-sm truncate">
+                    {{ register.name }}
+                  </h3>
+                  <p class="text-[11px] text-slate-400 truncate flex items-center">
+                    <i class="fas fa-store mr-1 text-[10px]"></i>
+                    {{ register.point_of_sale?.name || 'Standard' }}
+                  </p>
                 </div>
-              </button>
-            </div>
 
-            <div v-else class="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
-              Aucune caisse disponible.
-              <button
-                type="button"
-                class="ml-2 text-indigo-600 underline hover:text-indigo-700"
-                @click="goToMachineManagement"
-              >
-                Créer une caisse
+                <!-- Badge Utilisateur (Style Compact Figma) -->
+                <div v-if="register.current_session?.user?.name" class="mt-auto pt-3 border-t border-slate-100 w-full">
+                  <div class="flex items-center gap-2">
+                    <div class="size-5 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] text-indigo-600 font-bold border border-indigo-200">
+                      {{ register.current_session.user.name.charAt(0) }}
+                    </div>
+                    <p class="text-[10px] font-medium text-slate-600 truncate">
+                      {{ register.current_session.user.name }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Lock Icon -->
+                <div v-if="isRegisterLocked(register.id) && !isAdmin" class="absolute top-2 right-2 text-slate-300">
+                  <i class="fas fa-lock text-[10px]"></i>
+                </div>
+
+                <!-- Debug -->
+                <div v-if="debugMode" class="mt-2 text-[8px] font-mono text-slate-300 uppercase tracking-tighter">
+                  ID: {{ register.id }} | L: {{ isRegisterLocked(register.id) }} | Owner: {{ registerOwners[register.id] || '-' }}
+                </div>
               </button>
             </div>
           </div>
@@ -151,18 +188,19 @@
         <p v-if="isAdminVirtualSession" class="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-600">
           👑 Mode supervision Admin - Session virtuelle active
         </p>
+      </div>
 
-        <!-- Bouton principal -->
+      <!-- Footer (Bouton principal et message d'erreur) -->
+      <div class="px-6 py-6 flex-shrink-0 border-t border-slate-100">
         <button
           type="button"
-          class="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="connectButtonDisabled"
           @click="onConnectButtonClick"
         >
           <i class="fas fa-link"></i> {{ connectButtonText }}
         </button>
 
-        <!-- Message d'erreur -->
         <div v-if="errorMessage" class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
           {{ errorMessage }}
         </div>
@@ -176,7 +214,7 @@
     @send="handleAmountModalSend"
   />
 
-  <!-- Modal résumé session -->
+  <!-- Modal résumé session (une seule fois) -->
   <div v-if="isSummaryModalOpen" class="summary-overlay" @click.self="closeSummaryModal">
     <div class="summary-modal">
       <div class="summary-modal-head">
@@ -241,26 +279,47 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import { useRouter } from 'vue-router'
 import AmountModal from './AmountModal.vue'
 import { useAuth } from '@/composables/useAuth'
-import { API_BASE_URL } from '@/utils/api'
 
 const router = useRouter()
-const { isAdmin, user: currentUser, hasRole, loadUserData } = useAuth()
+const auth = useAuth()
+const { isAdmin, user: currentUser, hasRole, loadUserData } = auth
+const activePos = auth.activePos
 
 // ========== ÉTATS ==========
 const debugMode = ref(window.location.search.includes('debug=true'))
 const isAmountModalOpen = ref(false)
 const isProcessing = ref(false)
 const loadingRegisters = ref(false)
+const searchRegister = ref('')
+
+const filteredRegisters = computed(() => {
+  const posId = activePos.value?.id
+  if (!posId) return []
+
+  let filtered = cashRegisters.value
+
+  // 🔒 CAISSIER DÉJÀ CONNECTÉ : Ne voit que SA caisse
+  if (!isAdmin.value && isSelfConnected.value && activeRegisterId.value) {
+    return filtered.filter(r => r.id === activeRegisterId.value)
+  }
+
+  if (searchRegister.value) {
+    const query = searchRegister.value.toLowerCase()
+    filtered = filtered.filter(r => r.name.toLowerCase().includes(query))
+  }
+
+  return filtered.filter(r => (r.point_of_sale_id || r.point_of_sale?.id) === posId)
+})
+
 const cashRegisters = ref([])
 const registerStatuses = ref({})
 const registerOwners = ref({})
 const selectedCashRegister = ref(null)
 
-// ⚡ CHARGEMENT IMMÉDIAT POUR VERROUILLAGE INSTANTANÉ
 const getStoredSession = () => {
   try {
     const s = localStorage.getItem('cashRegisterSession') || localStorage.getItem('cash_register_session')
@@ -302,7 +361,6 @@ const hasActiveSession = computed(() => isSessionOpen(activeSession.value))
 const activeRegisterId = computed(() => hasActiveSession.value ? activeSession.value.cash_register_id : null)
 const isSelfConnected = computed(() => hasActiveSession.value && activeSession.value?.user_id === currentUserId.value)
 
-// 🔒 Vérifier si la session actuelle de l'utilisateur est déjà billetée
 const isSessionBilleted = computed(() => {
   const session = activeSession.value
   if (!session) return false
@@ -336,11 +394,6 @@ const connectButtonDisabled = computed(() => {
 })
 
 // ========== FONCTIONS UTILITAIRES ==========
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
-  if (!token) throw new Error("Token d'authentification manquant")
-  return { Authorization: `Bearer ${token}` }
-}
 
 const statusBadgeClass = (registerId) => {
   const text = statusBadgeText(registerId)
@@ -376,17 +429,8 @@ const statusBadgeText = (registerId) => {
   }
 
   const status = registerStatuses.value[registerId]
-  const owner = registerOwners.value[registerId]
-
-  if (status === 'connected') {
-    const userId = currentUserId.value
-    const userName = currentUserName.value
-
-    const isOwn = (typeof owner === 'number' && owner === userId) ||
-                  (typeof owner === 'string' && owner === userName)
-
-    if (isOwn) return 'Occupée (vous)'
-    return owner ? `Occupée par ${owner}` : 'Occupée'
+  if (status === 'connected' || (isRegisterLocked(registerId) && !isAdmin.value)) {
+    return 'Occupée'
   }
 
   if (status === 'error') return 'Erreur'
@@ -421,7 +465,7 @@ const fetchCashRegisters = async () => {
   loadingRegisters.value = true
   errorMessage.value = ''
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-registers`, { headers: getAuthHeaders() })
+    const { data } = await apiClient.get('/cash-registers')
     let registers = []
     if (Array.isArray(data)) registers = data
     else if (data?.data && Array.isArray(data.data)) registers = data.data
@@ -456,6 +500,13 @@ const fetchCashRegisters = async () => {
     })
     registerStatuses.value = newStatuses
     registerOwners.value = newOwners
+
+    // Auto-select first available
+    const firstAvailable = registers.find(r => newStatuses[r.id] === 'available')
+    if (firstAvailable) {
+        selectedCashRegister.value = firstAvailable.id
+    }
+
   } catch (error) {
     console.error('Erreur chargement caisses:', error)
     errorMessage.value = error.response?.data?.message || 'Impossible de charger les caisses'
@@ -464,10 +515,9 @@ const fetchCashRegisters = async () => {
     loadingRegisters.value = false
   }
 }
-
 const fetchMyActiveSession = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/my-active-session`, { headers: getAuthHeaders() })
+    const { data } = await apiClient.get('/my-active-session')
 
     if (data?.has_active_session === false || !data?.data) {
       activeSession.value = null
@@ -509,9 +559,7 @@ const fetchMyActiveSession = async () => {
 
 const getCurrentSessionForRegister = async (registerId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-registers/${registerId}/current-session`, {
-      headers: getAuthHeaders()
-    })
+    const { data } = await apiClient.get(`/cash-registers/${registerId}/current-session`)
     return data?.data || null
   } catch (error) {
     console.error('Erreur récupération session:', error)
@@ -521,7 +569,7 @@ const getCurrentSessionForRegister = async (registerId) => {
 
 const fetchSessionSummary = async (sessionId) => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${sessionId}/summary`, { headers: getAuthHeaders() })
+    const { data } = await apiClient.get(`/cash-register-sessions/${sessionId}/summary`)
     return data?.data || data || null
   } catch (error) {
     if (error.response?.status === 409) {
@@ -533,24 +581,22 @@ const fetchSessionSummary = async (sessionId) => {
 
 // ========== GESTION DES SESSIONS ADMIN ==========
 const createAdminSupervisionSession = (registerId, occupantSession, selectedRegister) => {
-  // Récupérer les informations du caissier occupant
   const occupantId = occupantSession.user_id || occupantSession.user?.id
   const occupantName = occupantSession.user?.name || occupantSession.user_name
-  const realSessionId = occupantSession.id // 🔥 C'est ça qu'on veut pour cash_register_session_id
+  const realSessionId = occupantSession.id
 
   console.log('👤 Session supervision - Détails:', {
-    real_session_id: realSessionId,    // ID de la session réelle (ex: 1)
-    occupant_user_id: occupantId,       // ID du caissier (ex: 2)
+    real_session_id: realSessionId,
+    occupant_user_id: occupantId,
     occupant_name: occupantName
   })
 
   const adminSession = {
-    // 🔥 Pour les requêtes SQL, on utilise l'ID de la session réelle
-    id: realSessionId,  // ⚠️ Changement: utiliser realSessionId au lieu de occupantId
+    id: realSessionId,
     cash_register_id: registerId,
-    admin_user_id: currentUserId.value,    // Qui est l'admin (ex: 1)
-    original_user_id: occupantId,          // Caissier d'origine (ex: 2)
-    original_session_id: realSessionId,    // Session réelle (ex: 1)
+    admin_user_id: currentUserId.value,
+    original_user_id: occupantId,
+    original_session_id: realSessionId,
     user_name: currentUserName.value,
     occupant_name: occupantName,
     is_closed: false,
@@ -564,9 +610,9 @@ const createAdminSupervisionSession = (registerId, occupantSession, selectedRegi
   localStorage.setItem('cash_register_session', JSON.stringify(adminSession))
 
   console.log('✅ Session supervision créée:', {
-    cash_register_session_id: adminSession.id,  // Sera 1 (ID session réelle)
-    admin_id: adminSession.admin_user_id,       // Sera 1 (ID admin)
-    occupant_id: adminSession.original_user_id  // Sera 2 (ID caissier)
+    cash_register_session_id: adminSession.id,
+    admin_id: adminSession.admin_user_id,
+    occupant_id: adminSession.original_user_id
   })
 
   return adminSession
@@ -613,9 +659,7 @@ const sendFondDeCaisse = async ({ amount, ticketNumber, note }) => {
       start_ticket_number: ticketNumber ?? null
     }
 
-    const { data } = await axios.post(`${API_BASE_URL}/cash-register-sessions`, payload, {
-      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }
-    })
+    const { data } = await apiClient.post('/cash-register-sessions', payload)
 
     const createdSession = data?.data || data || null
     if (createdSession) {
@@ -747,7 +791,6 @@ const initializeSessions = async () => {
 const onConnectButtonClick = async () => {
   if (isProcessing.value) return
 
-  // ADMIN
   if (isAdmin.value) {
     if (!selectedCashRegister.value) {
       alert('Veuillez sélectionner une caisse')
@@ -774,7 +817,6 @@ const onConnectButtonClick = async () => {
     return
   }
 
-  // CAISSIER
   if (!selectedCashRegister.value) {
     alert('Sélectionnez une caisse')
     return
@@ -791,10 +833,9 @@ const onConnectButtonClick = async () => {
 
   if (status === 'connected') {
     try {
-      const { data } = await axios.get(`${API_BASE_URL}/cash-registers/${registerId}/current-session`, {
-        headers: getAuthHeaders()
-      })
+      const { data } = await apiClient.get(`/cash-registers/${registerId}/current-session`)
       const session = data?.data
+
       if (session && session.id) {
         await openSummaryModalForSession(session.id)
       } else {
@@ -825,14 +866,67 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ... vos styles existants ... */
-.selected {
-  border-color: #4f46e5 !important;
-  background-color: #eef2ff !important;
-  box-shadow: 0 0 0 2px #4f46e5;
-  transition: all 0.2s ease;
+/* ========== STYLES POUR LA CARTE SELECTIONNÉE ========== */
+.cash-register-card {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  border: 2px solid transparent;
 }
 
+.cash-register-card.selected {
+  border-color: #4f46e5 !important;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25), 0 0 0 2px rgba(79, 70, 229, 0.1);
+  transform: scale(1.02);
+}
+
+.cash-register-card.selected .text-slate-900 {
+  color: #1e1b4b !important;
+}
+
+.cash-register-card.selected .bg-slate-100 {
+  background-color: #4f46e5 !important;
+  color: white !important;
+}
+
+.cash-register-card.selected .fas {
+  color: white !important;
+}
+
+/* Hover effect */
+.cash-register-card:hover:not(.selected):not(.opacity-60) {
+  border-color: #c7d2fe;
+  background-color: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* Scrollbar pour la liste des caisses */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Style de focus pour la recherche */
+input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* ========== STYLES POUR LE MODAL RÉSUMÉ ========== */
 .summary-overlay {
   position: fixed;
   inset: 0;
@@ -992,6 +1086,7 @@ onMounted(async () => {
   color: rgb(15 23 42);
 }
 
+/* Responsive */
 @media (max-width: 640px) {
   .summary-overlay {
     padding: 0.85rem;

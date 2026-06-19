@@ -45,12 +45,12 @@
           <!-- Calcul Écart -->
           <div class="pt-4 border-t-2 border-slate-900 mt-4 space-y-1">
             <div class="flex justify-between text-sm">
-              <span class="font-bold">Total Ventes Espèces</span>
-              <span class="font-black">{{ formatPrice(paymentSummary.find(p => p.payment_name === 'Espèce')?.total || 0) }}</span>
+              <span class="font-bold">Théorique (Fond + Ventes Espèces)</span>
+              <span class="font-black">{{ formatPrice(expectedCashAmount) }}</span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="font-bold">Montant compté (Billetage)</span>
-              <span class="font-black">{{ formatPrice(sessionInfo?.actual_cash_amount || 0) }}</span>
+              <span class="font-bold">Réel (Montant compté)</span>
+              <span class="font-black">{{ sessionInfo?.actual_cash_amount || 0 }}</span>
             </div>
             <div class="flex justify-between text-base font-black pt-2 mt-2" :class="variance >= 0 ? 'text-emerald-700' : 'text-rose-700'">
               <span>ÉCART</span>
@@ -78,7 +78,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import Profile from './Profile.vue'
 import { API_BASE_URL } from '@/utils/api'
 import { storage } from '@/utils/storage'
@@ -137,10 +137,29 @@ const groupedProducts = computed(() => {
 
 // Calcul écart
 const variance = computed(() => {
+  const starting = Number(sessionInfo.value?.starting_amount || 0)
   const actual = Number(sessionInfo.value?.actual_cash_amount || 0)
-  const cashPayments = paymentSummary.value.find(p => p.payment_name === 'Espèce')
-  const cashTotal = Number(cashPayments?.total || 0)
-  return actual - cashTotal
+  const cashTotal = Number(cashPaymentsInfo.value?.total || 0)
+
+  // Formule : Ce qu'on a physiquement - Ce qu'on devrait avoir (Fond + Ventes Espèces)
+  const expected = starting + cashTotal
+  return actual - expected
+})
+
+const expectedCashAmount = computed(() => {
+  const starting = Number(sessionInfo.value?.starting_amount || 0)
+  const cashTotal = Number(cashPaymentsInfo.value?.total || 0)
+  return starting + cashTotal
+})
+
+const isCashPayment = (name) => {
+  if (!name) return false;
+  const normalized = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return ['esp', 'cash', 'liq'].some(keyword => normalized.includes(keyword));
+};
+
+const cashPaymentsInfo = computed(() => {
+  return paymentSummary.value.find(p => isCashPayment(p.payment_name)) || { total: 0 }
 })
 
 const formatDate = (date) => date ? new Date(date).toLocaleString('fr-FR') : '-'
@@ -156,12 +175,7 @@ const formatPrice = (price) => {
 const fetchSummary = async () => {
   if (!sessionId.value) return
   try {
-    const auth = storage.getAuth()
-    if (!auth?.token) return
-
-    const { data } = await axios.get(`${API_BASE_URL}/cash-register-sessions/${sessionId.value}/summary`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
+    const { data } = await apiClient.get(`/cash-register-sessions/${sessionId.value}/summary`)
     console.log("DEBUG: Structure complète du résumé :", data)
 
     summaryData.value = data?.data || data

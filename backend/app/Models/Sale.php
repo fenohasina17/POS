@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
 
 class Sale extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, \App\Models\Traits\ScopeByPos;
 
     protected $table = 'sales';
 

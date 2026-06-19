@@ -21,7 +21,7 @@ import RoleCreate from '@/views/roles/RoleCreate.vue'
 import RoleEdit from '@/views/roles/RoleEdit.vue'
 import PermissionList from '@/views/permissions/PermissionList.vue'
 // Import PermissionCreate view
-import PermissionCreate from '@/views/permissions/PermissionCreate.vue' 
+import PermissionCreate from '@/views/permissions/PermissionCreate.vue'
 
 import UserList from '@/views/users/UserList.vue'
 import UserCreate from '@/views/users/UserCreate.vue' // Assuming UserCreate exists
@@ -48,6 +48,27 @@ const ensureAdminAccess = async () => {
     return roles.includes('admin');
   } catch (error) {
     console.error('Erreur chargement des rôles:', error.response?.data || error.message);
+    return false;
+  }
+};
+
+const ensureManagerOrAdminAccess = async () => {
+  const auth = storage.getAuth();
+  if (!auth?.user) return false;
+
+  const hasAccess = (roles) => roles.includes('admin') || roles.includes('gerant') || roles.includes('gérant');
+
+  if (auth.user.roles && hasAccess(auth.user.roles)) return true;
+
+  try {
+    const { data } = await axios.get(`${API_BASE_URL}/users/${auth.user.id}/roles`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    });
+
+    const roles = (data?.data || data || []).map((role) => role.name);
+    storage.setAuth(auth.token, auth.user, roles, auth.user.permissions);
+    return hasAccess(roles);
+  } catch (error) {
     return false;
   }
 };
@@ -109,7 +130,7 @@ const router = createRouter({
           path: 'ventes',
           name: 'dashboard-ventes',
           component: () => import('../views/SalesList.vue'),
-          meta: { requiresAdmin: true, bypassSessionForAdmin: true },
+          meta: { requiresManagerOrAdminOrCaissier: true, bypassSessionForAdmin: true },
         },
         {
           path: 'user-sales',
@@ -135,12 +156,11 @@ const router = createRouter({
           component: () => import('../views/CashRegisterSessions.vue'),
           meta: { requiresAdmin: true },
         },
-        // Nouvelle route pour l'exportation des ventes
         {
           path: '/dashboard/sales-export',
           name: 'dashboard-sales-export',
           component: () => import('../views/SalesExport.vue'),
-          meta: { requiresAdmin: true },
+          meta: { requiresManagerOrAdmin: true },
         },
         { path: 'printers', name: 'dashboard-printers', component: Printer },
 
@@ -199,6 +219,18 @@ const router = createRouter({
           props: true,
           meta: { requiresAdmin: true },
         },
+        {
+          path: 'sessions-history',
+          name: 'dashboard-sessions-history',
+          component: () => import('../views/SessionsHistory.vue'),
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: 'monitoring',
+          name: 'dashboard-monitoring',
+          component: () => import('../views/Monitoring.vue'),
+          meta: { requiresAdmin: true },
+        },
       ],
     },
 
@@ -210,15 +242,15 @@ const router = createRouter({
     },
     { path: '/billetage', name: 'billetage', component: () => import('../views/Billetage.vue') },
     {
-      path: '/billetage/:sessionId/resume',
+      path: '/billetage/:sessionId/recapitulatif',
       name: 'billetage-summary',
       component: () => import('../views/BilletageSummary.vue'),
-      meta: { requiresAdmin: true },
+      meta: { requiresManagerOrAdmin: true },
     },
 
     // Redirections
     { path: '/user-sales', redirect: { name: 'dashboard-user-sales' } },
-    { path: '/retour', redirect: { name: 'dashboard-retour' } },
+   { path: '/retour', redirect: { name: 'dashboard-retour' } },
     { path: '/point-of-sale', redirect: { name: 'dashboard-point-of-sale' } },
     { path: '/cash-register-sessions', redirect: { name: 'dashboard-cash-register-sessions' } },
   ],
@@ -253,6 +285,7 @@ router.beforeEach(async (to, from, next) => {
   )
 
   const requiresAdminAccess = to.matched.some((record) => record.meta?.requiresAdmin)
+  const requiresManagerOrAdminAccess = to.matched.some((record) => record.meta?.requiresManagerOrAdmin)
   const adminBypassSession = to.matched.some((record) => record.meta?.bypassSessionForAdmin)
 
   const sessionData =
@@ -286,6 +319,12 @@ router.beforeEach(async (to, from, next) => {
   if (requiresAdminAccess) {
     const isAdminUser = await verifyAdminAccess()
     if (!isAdminUser) {
+      next({ name: 'dashboard-overview' })
+      return
+    }
+  } else if (requiresManagerOrAdminAccess) {
+    const isManagerOrAdminUser = await ensureManagerOrAdminAccess()
+    if (!isManagerOrAdminUser) {
       next({ name: 'dashboard-overview' })
       return
     }

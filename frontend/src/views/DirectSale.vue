@@ -43,35 +43,35 @@
       </div>
 
       <!-- Section Produits -->
-      <section class="flex min-h-0 flex-col overflow-hidden rounded-[2rem] border border-white bg-white/80 backdrop-blur-md p-5 shadow-xl shadow-slate-200/50">
-        <div class="flex flex-col gap-5 border-b border-slate-100 pb-5">
-          <div class="flex flex-wrap items-center justify-between gap-4">
+      <section class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-white bg-white/80 backdrop-blur-md p-4 shadow-xl shadow-slate-200/50">
+        <div class="flex flex-col gap-3 border-b border-slate-100 pb-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 class="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+              <h2 class="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
                 Menu Digital
               </h2>
-              <p class="text-xs text-slate-400 font-medium">Sélectionnez les articles pour la vente</p>
+              <p class="text-[10px] text-slate-400 font-medium">Sélectionnez les articles</p>
             </div>
 
-            <div class="relative w-full sm:max-w-xs group">
+            <div class="relative w-full sm:max-w-[200px] group">
               <FontAwesomeIcon
                 icon="fa-solid fa-search"
-                class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500 text-xs"
               />
               <input
                 type="text"
-                placeholder="Rechercher un délice..."
+                placeholder="Rechercher..."
                 v-model="searchQuery"
-                class="w-full rounded-2xl border-none bg-slate-100/80 py-3 pl-11 pr-4 text-sm text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                class="w-full rounded-xl border-none bg-slate-100/80 py-2 pl-9 pr-3 text-xs text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
           </div>
 
           <!-- Catégories Style "Grid" -->
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+          <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
             <button
               type="button"
-              class="rounded-xl px-2 py-3 text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border"
+              class="rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border"
               :class="[
                 activeCategoryId === null
                   ? 'bg-slate-900 text-white border-slate-900 shadow-slate-200'
@@ -85,74 +85,77 @@
               v-for="category in categories"
               :key="category.id"
               type="button"
-              class="rounded-xl px-2 py-3 text-[11px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border"
+              class="rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-sm border truncate"
               :class="[
                 activeCategoryId === category.id
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100 ring-2 ring-indigo-500 ring-offset-2'
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100 ring-1 ring-indigo-500 ring-offset-1'
                   : 'bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50/30 border-slate-100'
               ]"
               @click="setActiveCategory(category.id)"
             >
               {{ category.name }}
             </button>
+
           </div>
         </div>
 
         <!-- Grid Produits -->
-        <div class="mt-5 flex-1 overflow-hidden">
-          <div
+        <div class="mt-4 flex-1 overflow-hidden">
+          <TransitionGroup
             v-if="filteredProducts.length"
-            class="grid h-full grid-cols-2 gap-4 overflow-y-auto pr-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+            name="bounce"
+            tag="div"
+            class="grid h-full grid-cols-3 gap-3 overflow-y-auto pr-2 sm:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
           >
             <button
               v-for="product in filteredProducts"
               :key="product.id"
               type="button"
-              class="group relative flex flex-col items-center rounded-3xl border border-slate-100 bg-white p-3 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-2xl hover:shadow-indigo-100/50 active:scale-95"
+              class="group relative flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-2 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/30 active:scale-95"
               @click="addToCart(product)"
             >
-              <div class="relative aspect-square w-full overflow-hidden rounded-2xl bg-slate-50">
+              <div class="relative aspect-square w-full overflow-hidden rounded-xl bg-slate-50">
                 <img
                   :src="getProductImageUrl(product)"
                   class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                   @error="handleImageError"
                   loading="lazy"
                 />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
               </div>
 
-              <div class="mt-3 w-full space-y-1">
-                <p class="truncate text-sm font-bold text-slate-800">{{ product.name }}</p>
-                <div class="flex items-center justify-center gap-1.5">
-                  <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
-                  <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <div class="mt-2 w-full space-y-0.5">
+                <p class="truncate text-xs font-bold text-slate-800">{{ product.name }}</p>
+                <div class="flex items-center justify-center gap-1">
+                  <span class="h-1 w-1 rounded-full bg-emerald-500"></span>
+                  <p class="text-[9px] font-semibold uppercase tracking-wider text-slate-400 truncate">
                     {{ product.category_name || 'Divers' }}
                   </p>
                 </div>
-                <div class="pt-1">
-                  <span class="inline-block rounded-lg bg-indigo-50 px-2 py-1 text-xs font-black text-indigo-600">
+                <div class="pt-0.5">
+                  <span class="inline-block rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-black text-indigo-600">
                     {{ formatPrice(product.price) }}
                   </span>
                 </div>
               </div>
 
               <!-- Badge flottant "Plus" -->
-              <div class="absolute right-2 top-2 scale-0 rounded-full bg-indigo-600 p-1.5 text-white shadow-lg transition-transform group-hover:scale-100">
-                <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[10px]" />
+              <div class="absolute right-1.5 top-1.5 scale-0 rounded-full bg-indigo-600 p-1 text-white shadow-lg transition-transform duration-300 group-hover:scale-100">
+                <FontAwesomeIcon icon="fa-solid fa-plus" class="text-[8px]" />
               </div>
             </button>
-          </div>
+          </TransitionGroup>
 
           <!-- Empty State -->
           <div
             v-else
-            class="flex h-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-100 bg-slate-50/30 py-20"
+            class="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-100 bg-slate-50/30 py-12"
           >
-            <div class="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-sm">
-              <FontAwesomeIcon icon="fa-solid fa-boxes" class="text-3xl text-slate-200" />
+            <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
+              <FontAwesomeIcon icon="fa-solid fa-boxes" class="text-xl text-slate-200" />
             </div>
-            <p class="text-base font-bold text-slate-400">Aucun produit trouvé</p>
-            <p class="text-sm text-slate-300">Essayez une autre catégorie ou recherche</p>
+            <p class="text-sm font-bold text-slate-400">Aucun produit trouvé</p>
+            <p class="text-[11px] text-slate-300">Essayez une autre recherche</p>
           </div>
         </div>
       </section>
@@ -264,20 +267,20 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, shallowRef, onMounted, computed, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router' // 👈 AJOUTER useRoute
-import axios from 'axios'
+import { useAuth } from '@/composables/useAuth'
+import { useRoute, useRouter } from 'vue-router'
+import apiClient from '@/services/apiClient'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { dataCacheService } from '@/services/dataCacheService'
 import { storage } from '@/utils/storage'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faBoxes, faSearch, faShoppingCart,
-  faTrash, faMinus, faPlus, faCheck, faXmark, faLock
-} from '@fortawesome/free-solid-svg-icons'
+import { faBoxes, faSearch, faShoppingCart, faTrash, faMinus, faPlus, faCheck, faXmark, faLock } from '@fortawesome/free-solid-svg-icons'
+const { activePos } = useAuth()
+const route = useRoute()
+const router = useRouter()
 
 import PaymentModal from './PaymentModal.vue'
 import InvoiceModal from './InvoiceModal.vue'
@@ -294,7 +297,11 @@ const currentInvoiceNumber = ref('')
 const currentPaymentMethod = ref('')
 const paymentsList = ref([])
 
-const cart = ref([])
+import { useCart } from '@/composables/useCart'
+import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
+
+const { cart, totalPrice, addToCart, removeFromCart, clearCart } = useCart()
+
 const categories = ref([])
 const products = shallowRef([])
 const activeCategoryId = ref(null)
@@ -302,18 +309,7 @@ const searchQuery = ref('')
 const user = ref(null)
 const selectedDiscount = ref(0)
 const isLoading = ref(false)
-const isSessionBilleted = ref(false) // 👈 Gère le verrouillage après billetage
-
-// Router pour redirection
-const router = useRouter()
-const route = useRoute() // 👈 AJOUTER ceci
-
-// ========== COMPUTED ==========
-const totalPrice = computed(() => {
-  return cart.value.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-})
-
-// Désactiver la vente si session billetée (sauf pour Admin)
+const { isSessionBilleted, checkActiveSession } = useCashRegisterSession()
 const canSell = computed(() => {
   return !isSessionBilleted.value || isAdmin.value
 })
@@ -388,7 +384,7 @@ const saleDataForModal = computed(() => {
     })),
     total_amount: Math.round(totalPrice.value),
     customer_id: null,
-    point_of_sale_id: user.value?.point_of_sale_id || null,
+    point_of_sale_id: activePos.value?.id || null,
     cash_register_session_id: cashRegisterSessionId,  // 🔥 ID session réelle (1)
     user_id: saleUserId  // 🔥 ID caissier (2)
   }
@@ -418,7 +414,8 @@ const shouldBypassSession = computed(() => {
 // ========== MÉTHODES ==========
 const formatPrice = (price) => {
   const value = Number.parseFloat(price) || 0
-  return `${value.toLocaleString('fr-FR')} Ar`
+  // Always show two decimal places for currency clarity
+  return `${value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar`
 }
 
 const getProductImageUrl = (product) => {
@@ -438,37 +435,19 @@ const handleImageError = (event) => {
 }
 
 // Gestion du panier
-const addToCart = (product) => {
-  const uniqueId = product.id || product.product_id;
-  const existing = cart.value.find(p => (p.id || p.product_id) === uniqueId);
-
-  if (existing) {
-    existing.quantity++;
-  } else {
-    cart.value.push({
-      ...product,
-      id: uniqueId,
-      quantity: 1,
-      price: Number(product.price) || 0,
-      category: product.category || { name: product.category_name },
-      printer: product.printer || product.category?.printer || null
-    });
-  }
-}
-
+// Use composable's addToCart, removeFromCart, and clearCart directly
+// Increment and decrement adjust quantity on the composable's cart items
 const incrementQuantity = (item) => { item.quantity++ }
 const decrementQuantity = (item) => {
   if (item.quantity > 1) item.quantity--
-  else removeItem(item)
+  else removeFromCart(item.id)
 }
 
 const removeItem = (item) => {
-  cart.value = cart.value.filter(i => i.id !== item.id)
+  removeFromCart(item.id)
 }
 
-const clearCart = () => {
-  cart.value = []
-}
+// clearCart already imported from useCart; no extra implementation needed
 
 const setActiveCategory = (categoryId) => {
   activeCategoryId.value = categoryId
@@ -483,21 +462,19 @@ const processData = (data) => {
       category_id: category.id,
       category_name: category.name,
       printer: category.printer,
-      price: product.pricing?.[0]?.price
-        ? Number.parseFloat(product.pricing[0].price)
-        : 0,
-    }))
+      // Use 'pricings' (plural) as returned by the API; if missing, omit price
+      ...(product.pricings?.[0]?.price ? { price: Number.parseFloat(product.pricings[0].price) } : {})    }))
   ))
 }
 
 const loadData = async (forceRefresh = false) => {
   const auth = storage.getAuth()
-  if (!user.value?.point_of_sale_id || !auth?.token) return
+  if (!activePos.value?.id || !auth?.token) return
 
   try {
     isLoading.value = true
     const data = await dataCacheService.getCategories(
-      user.value.point_of_sale_id,
+      activePos.value.id,
       auth.token,
       forceRefresh
     )
@@ -528,35 +505,19 @@ const checkActiveSessionAndRedirect = async () => {
         const parsed = JSON.parse(localSession)
         if (parsed.is_admin_session === true && parsed.cash_register_id) {
           if (auth.user) {
-            auth.user.point_of_sale_id = parsed.cash_register_id
             user.value = auth.user
           }
         }
       } catch (e) {}
     }
 
-    // Si toujours pas de point_of_sale_id, essayer d'en charger un
-    if (!user.value?.point_of_sale_id && auth.user) {
-      const savedPos = localStorage.getItem('lastUsedPointOfSale')
-      if (savedPos) {
-        auth.user.point_of_sale_id = parseInt(savedPos)
-        user.value = auth.user
-      } else if (auth.user.point_of_sale_id) {
-        user.value = auth.user
-      } else {
-        // Optionnel: définir un point de vente par défaut
-        console.warn('Admin: Aucun point de vente configuré')
-      }
-    }
 
     return true
   }
 
   // 👤 Caissier normal : vérifier la session active
   try {
-    const response = await axios.get(`${API_BASE_URL}/my-active-session`, {
-      headers: { Authorization: `Bearer ${auth.token}` }
-    })
+    const response = await apiClient.get('/my-active-session')
 
     const isAdminVirtualSession = (
       localStorage.getItem('cashRegisterSession') &&
@@ -623,12 +584,12 @@ onMounted(async () => {
   const sessionOk = await checkActiveSessionAndRedirect()
   if (!sessionOk) return
 
-  // Chargement des données si point_of_sale_id disponible
-  if (user.value?.point_of_sale_id) {
+  // Chargement des données si point de vente actif disponible
+  if (activePos.value?.id) {
     await loadData(false)
     setTimeout(() => loadData(true), 1000)
   } else if (isAdmin.value) {
-    console.warn('Admin: Aucun point_of_sale_id trouvé, certaines fonctionnalités peuvent être limitées')
+    console.warn('Admin: Aucun point de vente actif trouvé, certaines fonctionnalités peuvent être limitées')
   }
 })
 
@@ -688,46 +649,29 @@ const openPaymentModal = () => {
 }
 </script>
 
-<style scoped>
-.direct-sale-layout {
-  min-height: calc(100vh - 5rem);
-  min-height: calc(100dvh - 5rem);
+<style>
+@import '@/assets/styles/DirectSale.css';
+
+/* Transition Bounce ludique pour les produits */
+.bounce-enter-active {
+  animation: bounce-in 0.45s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+.bounce-leave-active {
+  animation: bounce-in 0.3s reverse ease-in;
 }
 
-@media (min-width: 1024px) {
-  .direct-sale-layout {
-    height: calc(100vh - 5.5rem);
-    height: calc(100dvh - 5.5rem);
-    max-height: calc(100vh - 5.5rem);
-    max-height: calc(100dvh - 5.5rem);
-    overflow: hidden;
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.overflow-y-auto::-webkit-scrollbar {
-  width: 4px;
-}
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
-}
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-}
-
-erflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
-}
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
+.bounce-move {
+  transition: transform 0.4s ease;
 }
 </style>

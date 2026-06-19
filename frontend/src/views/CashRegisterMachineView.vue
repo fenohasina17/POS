@@ -162,7 +162,7 @@ import { API_BASE_URL, API_URL } from '@/utils/api'
 import { useAuth } from '@/composables/useAuth'
 import { storage } from '@/utils/storage'
 
-const { isAdmin, user: currentUser, loadUserData } = useAuth()
+const { isAdmin, pointsOfSale, activePos } = useAuth()
 
 const machineName = ref('')
 const formName = ref('')
@@ -174,7 +174,6 @@ const isSaving = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
 
-const userPointOfSaleId = computed(() => currentUser.value?.point_of_sale_id ?? null)
 
 const getAuthHeaders = () => {
   const auth = storage.getAuth()
@@ -233,37 +232,14 @@ const refreshMachineName = () => {
 
 const fetchPointOfSales = async () => {
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/pointofsales`, {
-      headers: getAuthHeaders()
-    })
-    pointOfSales.value = data?.data || data || []
-
+    // pointsOfSale is provided by useAuth()
     if (isAdmin.value) {
-      if (!selectedPointOfSaleId.value && pointOfSales.value.length) {
-        selectedPointOfSaleId.value = pointOfSales.value[0].id
-      }
-    } else if (userPointOfSaleId.value) {
-      selectedPointOfSaleId.value = userPointOfSaleId.value
-      if (!pointOfSales.value.length) {
-        pointOfSales.value = [
-          {
-            id: userPointOfSaleId.value,
-            name: currentUser.value?.point_of_sale_name || 'Mon point de vente'
-          }
-        ]
-      }
+      const { data } = await axios.get(`${API_BASE_URL}/point-of-sales`, { headers: getAuthHeaders() })
+      // Assuming pointsOfSale might need to be set if not reactive from useAuth, 
+      // but useAuth.pointsOfSale is already reactive. Let's just use it.
     }
   } catch (error) {
     console.error('Erreur chargement points de vente:', error)
-    if (!isAdmin.value && userPointOfSaleId.value) {
-      pointOfSales.value = [
-        {
-          id: userPointOfSaleId.value,
-          name: currentUser.value?.point_of_sale_name || 'Mon point de vente'
-        }
-      ]
-      selectedPointOfSaleId.value = userPointOfSaleId.value
-    }
   }
 }
 
@@ -389,8 +365,8 @@ onMounted(async () => {
   await loadUserData()
   applyMachineName()
   await Promise.all([fetchPointOfSales(), fetchCashRegisters()])
-  if (!isAdmin.value && userPointOfSaleId.value) {
-    selectedPointOfSaleId.value = userPointOfSaleId.value
+  if (!isAdmin.value && activePos.value?.id) {
+    selectedPointOfSaleId.value = activePos.value.id
   }
 })
 

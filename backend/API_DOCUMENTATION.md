@@ -94,7 +94,7 @@ curl -X POST http://localhost/api/sales/123/validate \
 - PATCH/PUT /cash-register-sessions/{id} — mettre à jour / fermer (is_closed + actual_cash_amount + closed_at)
 - GET /cash-register-sessions/{id}/summary — récapitulatif (nécessite session fermée)
 - POST /cash-register-sessions/{id}/reopen — rouvrir
-- GET /cash-register-session/my-active-session — session active de l'utilisateur
+- GET /my-active-session — session active de l'utilisateur
 - GET /cash-register-sessions/{id}/discrepancies — lister écarts
 - POST /cash-register-sessions/{id}/discrepancies — ajouter écart
 - GET /cash-registers-sessions/{id}/status — obtenir status (open/available)

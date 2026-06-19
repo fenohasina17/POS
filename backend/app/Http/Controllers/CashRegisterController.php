@@ -18,17 +18,23 @@ class CashRegisterController extends Controller
     {
         try {
             $user = Auth::user();
-            $pointOfSaleId = $request->query('point_of_sale_id');
+            $requestedPosId = $request->query('point_of_sale_id'); // From query parameter
 
-            // Vérifie si l'utilisateur a le rôle 'admin' en utilisant le package Spatie.
-            if ($user && $user->hasRole('admin')) {
-                // Si l'utilisateur est un admin, on lui permet de filtrer par point de vente
+            if (!$user) {
+                return response()->json(['message' => 'Utilisateur non authentifié'], 401);
+            }
+            
+            $isAdmin = $user->isAdmin();
+            $activePosId = $request->attributes->get('activePosId'); // From middleware
+
+            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+
+            // Admins can see all or filter by requested POS ID
+            if ($isAdmin) {
                 $query = CashRegister::with(['pointOfSale', 'currentSession.user']);
-
-                if (!empty($pointOfSaleId)) {
-                    $query->where('point_of_sale_id', $pointOfSaleId);
+                if ($requestedPosId) {
+                    $query->where('point_of_sale_id', $requestedPosId);
                 }
-
                 $cashRegisters = $query->get();
                 return response()->json([
                     'success' => true,
@@ -37,26 +43,30 @@ class CashRegisterController extends Controller
                 ]);
             }
 
-            // Pour les utilisateurs non-admins, on vérifie s'ils sont liés à au moins un point de vente.
-            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-            
-            if (empty($assignedPosIds) && !$user->point_of_sale_id) {
+            // Non-admins must have an active POS set by middleware
+            if (!$activePosId) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Aucun point de vente associé à l\'utilisateur.'
+                    'message' => 'Point de vente actif non défini pour l\'utilisateur.'
                 ], 403);
             }
 
-            // Récupère uniquement les caisses des points de vente assignés
-            $query = CashRegister::whereIn('point_of_sale_id', !empty($assignedPosIds) ? $assignedPosIds : [$user->point_of_sale_id])
-                ->with(['pointOfSale', 'currentSession.user']);
+            // Non-admins can only see registers from their active POS
+            if (!in_array($activePosId, $assignedPosIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé pour ce point de vente.'
+                ], 403);
+            }
 
-            $cashRegisters = $query->get();
+            $cashRegisters = CashRegister::where('point_of_sale_id', $activePosId)
+                ->with(['pointOfSale', 'currentSession.user'])
+                ->get();
 
             return response()->json([
                 'success' => true,
                 'data' => $cashRegisters,
-                'message' => 'Caisses enregistreuses récupérées pour le point de vente de l\'utilisateur.'
+                'message' => 'Caisses enregistreuses récupérées pour le point de vente actif de l\'utilisateur.'
             ]);
 
         } catch (\Exception $e) {
@@ -70,23 +80,26 @@ class CashRegisterController extends Controller
 
 
     // 📌 Affiche une caisse spécifique associée à l'utilisateur
-    public function show($id)
+    public function show($id, Request $request)
     {
         try {
             $user = Auth::user();
             if (!$user) return response()->json(['error' => 'Non authentifié'], 401);
             
-            $isAdmin = $user->hasRole('admin');
-            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-            if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
-
-            if (!$isAdmin && empty($assignedPosIds)) {
-                return response()->json(['error' => 'Aucun point de vente associé à l\'utilisateur'], 403);
-            }
+            $isAdmin = $user->isAdmin();
+            $activePosId = $request->attributes->get('activePosId'); // From middleware
 
             $query = CashRegister::query();
+            
             if (!$isAdmin) {
-                $query->whereIn('point_of_sale_id', $assignedPosIds);
+                if (!$activePosId) {
+                    return response()->json(['error' => 'Point de vente actif non défini pour l\'utilisateur'], 403);
+                }
+                $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+                if (!in_array($activePosId, $assignedPosIds)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                }
+                $query->where('point_of_sale_id', $activePosId);
             }
             
             $cashRegister = $query->findOrFail($id);
@@ -108,30 +121,40 @@ class CashRegisterController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié'], 401);
             }
 
+            $isAdmin = $user->isAdmin();
+            $activePosId = $request->attributes->get('activePosId');
+
             $rules = [
-                'name' => ['required', 'string', 'max:255', Rule::unique('cash_registers', 'name')],
+                'name' => ['required', 'string', 'max:255', Rule::unique('cash_registers', 'name')->where(function ($query) use ($request, $isAdmin, $activePosId) {
+                    $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                    if ($targetPosId) {
+                        return $query->where('point_of_sale_id', $targetPosId);
+                    }
+                    return $query; // Should not happen for non-admins
+                })],
             ];
 
-            $isAdmin = $user->hasRole('admin');
             if ($isAdmin) {
                 $rules['point_of_sale_id'] = 'required|exists:point_of_sales,id';
             }
 
             $validated = $request->validate($rules);
 
-            $pointOfSaleId = $isAdmin
-                ? $validated['point_of_sale_id'] ?? null
-                : $user->point_of_sale_id;
+            $targetPointOfSaleId = $isAdmin
+                ? $validated['point_of_sale_id'] ?? $activePosId
+                : $activePosId;
 
-            if (!$pointOfSaleId) {
+            if (!$targetPointOfSaleId) {
                 return response()->json([
-                    'error' => 'Aucun point de vente associé à l\'utilisateur'
+                    'error' => 'Point de vente actif non défini ou manquant.'
                 ], 403);
             }
 
+
+            
             $cashRegister = CashRegister::create([
                 'name' => $validated['name'],
-                'point_of_sale_id' => $pointOfSaleId,
+                'point_of_sale_id' => $targetPointOfSaleId,
             ]);
 
             return response()->json([
@@ -155,10 +178,21 @@ class CashRegisterController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
+            $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin && !$activePosId) {
+                return response()->json(['error' => 'Point de vente actif non défini pour l\'utilisateur'], 403);
+            }
 
             $rules = [
-                'name' => ['nullable', 'string', 'max:255', Rule::unique('cash_registers', 'name')->ignore($id)],
+                'name' => ['nullable', 'string', 'max:255', Rule::unique('cash_registers', 'name')->ignore($id)->where(function ($query) use ($request, $isAdmin, $activePosId) {
+                    $targetPosId = $isAdmin ? ($request->input('point_of_sale_id') ?? $activePosId) : $activePosId;
+                    if ($targetPosId) {
+                        return $query->where('point_of_sale_id', $targetPosId);
+                    }
+                    return $query; // Should not happen for non-admins
+                })],
             ];
             if ($isAdmin) {
                 $rules['point_of_sale_id'] = 'nullable|exists:point_of_sales,id';
@@ -166,14 +200,17 @@ class CashRegisterController extends Controller
 
             $validated = $request->validate($rules);
 
-            if ($isAdmin) {
-                $cashRegister = CashRegister::findOrFail($id);
-            } else {
-                if (!$user->point_of_sale_id) {
-                    return response()->json(['error' => 'Aucun point de vente associé à l\'utilisateur'], 403);
+            $cashRegister = CashRegister::query();
+            if (!$isAdmin) {
+                $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+                if (!in_array($activePosId, $assignedPosIds)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
                 }
-                $cashRegister = CashRegister::where('point_of_sale_id', $user->point_of_sale_id)->findOrFail($id);
+                $cashRegister->where('point_of_sale_id', $activePosId);
             }
+            $cashRegister = $cashRegister->findOrFail($id);
+
+
 
             if (array_key_exists('name', $validated)) {
                 $cashRegister->name = $validated['name'] ?? $cashRegister->name;
@@ -200,7 +237,7 @@ class CashRegisterController extends Controller
     }
 
     // ❌ Supprime une caisse uniquement si elle appartient à l'utilisateur
-    public function destroy($id)
+    public function destroy($id, Request $request)
     {
         try {
             $user = Auth::user();
@@ -208,16 +245,22 @@ class CashRegisterController extends Controller
                 return response()->json(['error' => 'Utilisateur non authentifié'], 401);
             }
 
-            $isAdmin = $user->hasRole('admin');
+            $isAdmin = $user->isAdmin();
+            $activePosId = $request->attributes->get('activePosId');
 
-            if ($isAdmin) {
-                $cashRegister = CashRegister::findOrFail($id);
-            } else {
-                if (!$user->point_of_sale_id) {
-                    return response()->json(['error' => 'Aucun point de vente associé à l\'utilisateur'], 403);
-                }
-                $cashRegister = CashRegister::where('point_of_sale_id', $user->point_of_sale_id)->findOrFail($id);
+            if (!$isAdmin && !$activePosId) {
+                return response()->json(['error' => 'Point de vente actif non défini pour l\'utilisateur'], 403);
             }
+
+            $cashRegister = CashRegister::query();
+            if (!$isAdmin) {
+                $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+                if (!in_array($activePosId, $assignedPosIds)) {
+                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+                }
+                $cashRegister->where('point_of_sale_id', $activePosId);
+            }
+            $cashRegister = $cashRegister->findOrFail($id);
 
             $cashRegister->delete();
 
@@ -255,12 +298,19 @@ class CashRegisterController extends Controller
             return response()->json(['message' => 'Utilisateur non authentifié'], Response::HTTP_UNAUTHORIZED);
         }
 
-        if (!$user->hasRole('admin')) {
-            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
-            if (empty($assignedPosIds) && $user->point_of_sale_id) $assignedPosIds = [$user->point_of_sale_id];
+        $activePosId = $request->attributes->get('activePosId');
 
-            if (!in_array($cashRegister->point_of_sale_id, $assignedPosIds)) {
+        if (!$user->isAdmin()) {
+            if (!$activePosId) {
+                return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur'], Response::HTTP_FORBIDDEN);
+            }
+            $assignedPosIds = $user->pointsOfSale()->pluck('point_of_sales.id')->toArray();
+            if (!in_array($activePosId, $assignedPosIds)) {
                 return response()->json(['message' => 'Accès refusé pour ce point de vente'], Response::HTTP_FORBIDDEN);
+            }
+            // Ensure the cash register belongs to the active POS
+            if ($cashRegister->point_of_sale_id !== $activePosId) {
+                return response()->json(['message' => 'Caisse non associée au point de vente actif'], Response::HTTP_FORBIDDEN);
             }
         }
 

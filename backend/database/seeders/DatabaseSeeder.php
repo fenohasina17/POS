@@ -1,5 +1,7 @@
 <?php
 
+namespace Database\Seeders;
+
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\PointOfSale;
@@ -8,7 +10,13 @@ use Database\Seeders\{
     PermissionSeeder,
     RolePermissionRelationSeeder,
     CashRegisterSeeder,
-    PaymentSeeder
+    CashierSeeder,
+    ManagerSeeder,
+    PosTablesSeeder,
+    PaymentSeeder,
+    PointOfSaleSeeder,
+    CategoryProductSeeder,
+    SalesSeeder,
 };
 
 class DatabaseSeeder extends Seeder
@@ -22,19 +30,27 @@ class DatabaseSeeder extends Seeder
             RolePermissionRelationSeeder::class,
         ]);
 
-        // 2. Création de base : Admin (sans POS par défaut)
-        User::firstOrCreate(
+        // 2. Création de base : Admin
+        $admin = User::firstOrCreate(
             ['email' => 'admin@igp.com'],
             [
                 'name' => 'Administrateur',
                 'password' => bcrypt('password'),
             ]
         );
+        $admin->assignRole('admin');
 
-        // 3. Création de base : Paiements
+        // 3. Création de base : Points de vente, Caisses, Caissiers, Tables et Paiements
         $this->call([
+            PointOfSaleSeeder::class,
+            CashRegisterSeeder::class,
+            CashierSeeder::class,
+            ManagerSeeder::class,
+            CategoryProductSeeder::class,
+            PosTablesSeeder::class,
             PaymentSeeder::class,
+            SalesSeeder::class,
         ]);
-        }
-        }
+    }
+}
 

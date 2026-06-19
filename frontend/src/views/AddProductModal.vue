@@ -153,8 +153,13 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import axios from 'axios'
-import { API_BASE_URL, API_URL } from '@/utils/api'
+import apiClient from '@/services/apiClient'
+import { API_URL } from '@/utils/api'
+import { useAuth } from '@/composables/useAuth'
+import { useCategories } from '@/composables/useCategories';
+
+const { activePos } = useAuth()
+const { categories, loadCategories, loadProducts } = useCategories();
 
 const props = defineProps({
   isOpen: Boolean
@@ -171,7 +176,6 @@ const localProduct = reactive({
   imagePreview: ''
 })
 
-const categories = ref([])
 const imageError = ref('')
 const fileInput = ref(null)
 const isSaving = ref(false)
@@ -180,36 +184,29 @@ const saveError = ref('')
 // Récupération des catégories avec gestion de la réponse
 const fetchCategories = async () => {
   try {
-    const token = localStorage.getItem('token')
-    const user = JSON.parse(localStorage.getItem('user') || '{}')
-    const pointOfSaleId = user?.point_of_sale_id
-
-    if (!pointOfSaleId) {
-      console.warn('Point de vente non trouvé pour l’utilisateur')
-      categories.value = []
-      return
+    const token = localStorage.getItem('token');
+    const posId = activePos.value?.id;
+    if (!token || !posId) {
+      console.warn('Missing token or POS ID');
+      categories.value = [];
+      return;
     }
-
-    const response = await axios.get(`${API_BASE_URL}/categories`, {
-      params: { point_of_sale_id: pointOfSaleId },
-      headers: { Authorization: `Bearer ${token}` }
-    })
-
-    // Extraction flexible du tableau de catégories
-    let data = response.data
-    if (data?.data && Array.isArray(data.data)) data = data.data
-    if (data?.categories && Array.isArray(data.categories)) data = data.categories
+    const response = await apiClient.get('/categories', { params: { point_of_sale_id: posId } });
+    let data = response.data;
+    if (data?.data && Array.isArray(data.data)) data = data.data;
+    if (data?.categories && Array.isArray(data.categories)) data = data.categories;
     if (!Array.isArray(data)) {
-      console.warn('Format de réponse inattendu:', data)
-      categories.value = []
-      return
+      console.warn('Unexpected response format:', data);
+      categories.value = [];
+      return;
     }
-
-    categories.value = data
-    console.log(`${categories.value.length} catégories chargées`)
+    categories.value = data;
+    console.log(`${categories.value.length} catégories chargées`);
+    // After categories are loaded, load products
+    loadProducts();
   } catch (error) {
-    console.error('Erreur chargement catégories:', error.response?.data || error.message)
-    categories.value = []
+    console.error('Erreur chargement catégories:', error.response?.data || error.message);
+    categories.value = [];
   }
 }
 
@@ -281,16 +278,14 @@ const addProduct = async () => {
   try {
     const token = localStorage.getItem('token')
     const payload = {
-      name: localProduct.name,
-      ref: localProduct.ref,
-      price: localProduct.price,
-      status: localProduct.status,
-      category_id: localProduct.category_id,
-      image: localProduct.image ? await convertFileToBase64(localProduct.image) : null
+        name: localProduct.name,
+        ref: localProduct.ref,
+        price: localProduct.price,
+        status: localProduct.status,
+        category_id: localProduct.category_id,
+        image: localProduct.image ? await convertFileToBase64(localProduct.image) : null
     }
-    const response = await axios.post(`${API_BASE_URL}/products`, payload, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-    })
+    const response = await apiClient.post('/products', payload)
     const updatedProductData = {
       ...response.data.product,
       price: localProduct.price

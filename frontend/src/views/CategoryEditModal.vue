@@ -28,26 +28,6 @@
               required
             />
           </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-semibold text-slate-700">Imprimante de destination</label>
-            <select
-              v-model="category.printer"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
-            >
-              <optgroup label="Imprimantes configurées">
-                <option v-for="p in availablePrinters" :key="p.id" :value="p.name">
-                  {{ p.name }}
-                </option>
-              </optgroup>
-              <optgroup label="Rôles logiques">
-                <option value="receipt">receipt (Caisse)</option>
-                <option value="kitchen">kitchen (Cuisine)</option>
-                <option value="cook">cook (Cuisson)</option>
-                <option value="bar">bar (Bar)</option>
-              </optgroup>
-            </select>
-          </div>
         </section>
 
         <footer class="mt-6 flex justify-end gap-3">
@@ -62,9 +42,9 @@
             type="button"
             class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
             @click="submit"
-            :disabled="!category.name.trim() || isLoadingPrinters"
+            :disabled="!category.name.trim()"
           >
-            <span v-if="isLoadingPrinters" class="mr-2"><i class="fas fa-spinner fa-spin"></i></span>
+
             Sauvegarder
           </button>
         </footer>
@@ -75,7 +55,7 @@
 
 <script setup>
 import { ref, watch, defineEmits, defineProps, onMounted } from 'vue'
-import printerService from '../services/printerService.js'
+
 
 const props = defineProps({
   isOpen: Boolean,
@@ -85,37 +65,13 @@ const props = defineProps({
 const emit = defineEmits(['close', 'updated'])
 
 const category = ref({ id: null, name: '', printer: 'receipt' })
-const availablePrinters = ref([])
-const isLoadingPrinters = ref(false)
 
-const fetchPrinters = async () => {
-  try {
-    isLoadingPrinters.value = true
-    const response = await printerService.getAll()
-    availablePrinters.value = response.data.data ? response.data.data : response.data
-  } catch (error) {
-    console.error('Erreur lors du chargement des imprimantes:', error)
-  } finally {
-    isLoadingPrinters.value = false
-  }
-}
 
-onMounted(() => {
-  fetchPrinters()
-})
 
-watch(() => props.isOpen, (newVal) => {
-  if (newVal) {
-    fetchPrinters()
-    if (props.categoryData) {
-      category.value = {
-        id: props.categoryData.id ?? null,
-        name: props.categoryData.name ?? '',
-        printer: props.categoryData.printer ?? 'receipt',
-      }
-    }
-  }
-})
+
+
+
+
 
 const close = () => {
   emit('close')

@@ -156,9 +156,7 @@ const formatDate = (dateString) => {
 
 const getAvailableUsersForPos = (pos) => {
   const currentUserIds = pos.users?.map(u => u.id) || []
-  return allUsers.value.filter(user => 
-    !currentUserIds.includes(user.id) && (user.point_of_sale_id === null || user.point_of_sale_id === pos.id)
-  )
+  return allUsers.value.filter(user => !currentUserIds.includes(user.id))
 }
 
 // ========== ACTIONS ==========

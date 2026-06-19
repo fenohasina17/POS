@@ -51,5 +51,23 @@ export const storage = {
   // Alias pour rétrocompatibilité
   clearSession() {
     this.removeSession()
+  },
+
+  setActivePos(pos) {
+    localStorage.setItem('active_pos', JSON.stringify(pos))
+  },
+
+  getActivePos() {
+    try {
+      const posStr = localStorage.getItem('active_pos')
+      return posStr && posStr !== 'undefined' ? JSON.parse(posStr) : null
+    } catch (e) {
+      console.error('Error reading active pos from storage:', e)
+      return null
+    }
+  },
+
+  removeActivePos() {
+    localStorage.removeItem('active_pos')
   }
 }

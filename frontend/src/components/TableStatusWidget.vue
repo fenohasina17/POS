@@ -55,7 +55,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import apiClient from '@/services/apiClient'
 import { API_BASE_URL } from '@/utils/api'
 
 export default {
@@ -263,12 +263,8 @@ export default {
     const fetchSaleDetails = async (saleId) => {
       if (!saleId) return null
       try {
-        const token = localStorage.getItem('token')
-        const response = await axios.get(`${API_BASE_URL}/sales/${saleId}`, {
-          params: { with_lines: 1, with_order_lines: 1 },
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const response = await apiClient.get(`/sales/${saleId}`, {
+          params: { with_lines: 1, with_order_lines: 1 }
         })
         return response.data?.data || response.data || null
       } catch (error) {
@@ -303,17 +299,13 @@ export default {
 
     const loadPendingOrders = async (tableList = []) => {
       if (!Array.isArray(tableList) || !tableList.length) return
-      const token = localStorage.getItem('token')
       const tasks = []
 
       tableList.forEach(table => {
         if (!table || !table.id) return
-        const url = `${API_BASE_URL}/tables/${table.id}/pending-orders`
         tasks.push((async () => {
           try {
-            const response = await axios.get(url, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
+            const response = await apiClient.get(`/tables/${table.id}/pending-orders`)
 
             const pendingOrders = Array.isArray(response.data)
               ? response.data
@@ -369,13 +361,8 @@ export default {
     const loadTables = async () => {
       loading.value = true
       try {
-        const token = localStorage.getItem('token')
-        const response = await axios.get(`${API_BASE_URL}/tables`, {
-          params: { with_sales: 1 },
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+        const response = await apiClient.get('/tables', {
+          params: { with_sales: 1 }
         })
 
         const rawTables = Array.isArray(response.data) ? response.data : response.data.data || []

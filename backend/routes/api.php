@@ -54,6 +54,7 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::get('/logo', function () {
+
     $path = public_path('photos/logo.png');
     if (!file_exists($path)) {
         return response()->json(['error' => 'Logo not found'], 404);
@@ -102,14 +103,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // ========== VENTES ==========
     Route::put('/sales/{sale}/order-lines', [SaleController::class, 'replaceOrderLines']);
     Route::get('/sales/export', [SalesExportController::class, 'export'])->name('sales.export'); // Added sales export route
-    Route::apiResource('sales', SaleController::class);
 
     // Routes pour les commandes en attente
     Route::post('/sales/pending-order', [SaleController::class, 'createPendingOrder'])->name('sales.pending.create');
+    Route::get('/sales/pending', [SaleController::class, 'getAllPendingOrders'])->name('sales.pending.all');
     Route::post('/sales/{saleId}/add-products', [SaleController::class, 'addToPendingOrder'])->name('sales.pending.add');
     Route::post('/sales/{saleId}/remove-products', [SaleController::class, 'removeFromPendingOrder'])->name('sales.pending.remove');
     Route::post('/sales/{saleId}/validate', [SaleController::class, 'validatePendingOrder'])->name('sales.pending.validate');
     Route::get('/tables/{tableId}/pending-orders', [SaleController::class, 'getPendingOrdersForTable'])->name('tables.pending.orders');
+
+    Route::apiResource('sales', SaleController::class);
 
     // Routes pour l'annulation de vente
     Route::post('/sales/{saleId}/cancel', [SaleController::class, 'cancelSale'])->name('sales.cancel');
@@ -147,10 +150,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('cash-registers', CashRegisterController::class);
 
     // ========== SESSIONS DE CAISSE ==========
+    // Route pour la session active doit être avant la ressource pour éviter les collisions
+    Route::get('/my-active-session', [CashRegisterSessionController::class, 'myActiveSession'])->name('my-active-session');
     Route::get('/cash-register-sessions/open', [CashRegisterSessionController::class, 'openSessions']);
     Route::apiResource('cash-register-sessions', CashRegisterSessionController::class);
-    // Dans routes/api.php
-    Route::get('/my-active-session', [CashRegisterSessionController::class, 'myActiveSession'])->name('my-active-session');
     Route::post('/cash-register-sessions/{id}/reopen', [CashRegisterSessionController::class, 'reopen'])->name('cash-register-sessions.reopen');
     Route::get('/cash-register-sessions/{id}/discrepancies', [CashRegisterSessionController::class, 'listDiscrepancies'])->name('cash-register-sessions.discrepancies.list');
     Route::post('/cash-register-sessions/{id}/discrepancies', [CashRegisterSessionController::class, 'addDiscrepancy'])->name('cash-register-sessions.discrepancies.add');
@@ -192,10 +195,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tables/available', [TableController::class, 'getAvailableTables'])->name('tables.available');
     Route::get('/tables/occupied', [TableController::class, 'getOccupiedTables'])->name('tables.occupied');
     Route::patch('/tables/{id}/status', [TableController::class, 'updateStatus'])->name('tables.status.update');
+    Route::post('/tables/{id}/lock', [TableController::class, 'lock'])->name('tables.lock');
+    Route::post('/tables/{id}/unlock', [TableController::class, 'unlock'])->name('tables.unlock');
     Route::get('/tables/statistics', [TableController::class, 'getStatistics'])->name('tables.statistics');
 
-    // ========== GESTION DES RÔLES ET PERMISSIONS ==========
-    Route::apiResource('roles', RoleController::class);
+    // ========== MONITORING ==========
+    Route::get('/admin/monitoring', [App\Http\Controllers\MonitoringController::class, 'index']);
+
+    // ========== RÔLES ET PERMISSIONS ==========
     Route::apiResource('permissions', PermissionController::class)->except(['update']);
 
     // Assignation / révocation permissions à un rôle

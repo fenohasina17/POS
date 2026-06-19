@@ -33,12 +33,10 @@ const loading = ref(true)
 
 onMounted(async () => {
   try {
-    // Utilisation directe de window.qz pour le test si disponible
-    if (window.qz) {
-      await printingService.qzTrayAdapter.connect()
-      printers.value = await window.qz.printers.list()
+    if (window.electronAPI) {
+      printers.value = await window.electronAPI.getPrinters()
     } else {
-      alert("La bibliothèque QZ Tray n'est pas chargée. Vérifiez index.html.")
+      console.warn("Electron API indisponible. Détection d'imprimantes impossible en mode Web.")
     }
   } catch (err) {
     console.error('Erreur détection imprimantes:', err)
@@ -48,13 +46,10 @@ onMounted(async () => {
 })
 
 const testPrint = async (name) => {
-  const dummyTable = { name: 'TABLE TEST' }
-  const dummyItems = [{ name: 'PRODUIT TEST', quantity: 1 }]
+  const dummyTable = { name: 'TABLE TEST', ticketNumber: '123' }
+  const dummyItems = [{ name: 'PRODUIT TEST', quantity: 1, price: 0 }]
   try {
-    await printingService.sendRawCommands(
-      printingService.qzTrayAdapter.formatEscPosOrder(dummyTable, dummyItems),
-      name
-    )
+    await printingService.printOrder(dummyTable, dummyItems)
     alert('Impression envoyée vers ' + name)
   } catch (err) {
     alert('Erreur: ' + err.message)
