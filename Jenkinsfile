@@ -17,6 +17,15 @@ pipeline {
     }
 
     // ============================================================
+    // TRIGGERS — Déclenchement automatique
+    // ============================================================
+    // githubPush : webhook GitHub → Jenkins se déclenche sur push/PR
+    // Nécessite : job configuré en "Multibranch Pipeline" dans Jenkins
+    triggers {
+        githubPush()
+    }
+
+    // ============================================================
     // PARAMÈTRES DU PIPELINE
     // ============================================================
     parameters {
@@ -39,7 +48,7 @@ pipeline {
         ROLLOUT_TIMEOUT = '300s'
 
         // Branche qui déclenche le déploiement
-        DEPLOY_BRANCH  = 'infra/kubernetes'
+        DEPLOY_BRANCH  = 'main'
 
         // Indicateurs de succès de build — mis à 'true' dans Build Images
         BACKEND_BUILT  = 'false'
@@ -263,9 +272,12 @@ pipeline {
         // Les autres branches buildent et testent, mais ne déploient pas
         stage('Push Images') {
             when {
-                expression {
-                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
-                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                allOf {
+                    expression { return env.CHANGE_TARGET == null }
+                    expression {
+                        return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                               env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                    }
                 }
             }
             steps {
@@ -307,17 +319,37 @@ pipeline {
         }
 
         // ============================================================
-        // STAGE 6 — Déploiement Kubernetes
+        // STAGE PR — Résumé pour les Pull Requests
         // ============================================================
-        // sed en pipe vers kubectl — les fichiers YAML ne sont jamais modifiés
+        // Sur une PR : build + test + scan sont passés, pas de déploiement.
+        // CHANGE_TARGET est défini automatiquement par Multibranch Pipeline.
+        stage('PR Check') {
+            when {
+                expression { return env.CHANGE_TARGET != null }
+            }
+            steps {
+                echo """
+                    ✅ Pull Request #${env.CHANGE_ID} vérifiée
+                    Branche : ${env.CHANGE_BRANCH} → ${env.CHANGE_TARGET}
+                    Build   : OK
+                    Tests   : ${currentBuild.result ?: 'SUCCESS'}
+                    Le déploiement se fera après merge sur ${DEPLOY_BRANCH}.
+                """
+            }
+        }
+
         // ============================================================
         // STAGE 6 — Déploiement STAGING (toujours, même si tests UNSTABLE)
         // ============================================================
+        // Skippé sur les PR — déploiement uniquement après merge sur main
         stage('Deploy Staging') {
             when {
-                expression {
-                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
-                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                allOf {
+                    expression { return env.CHANGE_TARGET == null }
+                    expression {
+                        return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                               env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                    }
                 }
             }
             steps {
@@ -371,9 +403,12 @@ pipeline {
         // ============================================================
         stage('Attente Staging') {
             when {
-                expression {
-                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
-                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                allOf {
+                    expression { return env.CHANGE_TARGET == null }
+                    expression {
+                        return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                               env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                    }
                 }
             }
             steps {
@@ -398,9 +433,12 @@ pipeline {
         // ============================================================
         stage('Migrate Staging') {
             when {
-                expression {
-                    return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
-                           env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                allOf {
+                    expression { return env.CHANGE_TARGET == null }
+                    expression {
+                        return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
+                               env.BRANCH_NAME == "${DEPLOY_BRANCH}"
+                    }
                 }
             }
             steps {
@@ -420,6 +458,7 @@ pipeline {
         stage('Deploy Prod') {
             when {
                 allOf {
+                    expression { return env.CHANGE_TARGET == null }
                     expression {
                         return env.GIT_BRANCH == "origin/${DEPLOY_BRANCH}" ||
                                env.BRANCH_NAME == "${DEPLOY_BRANCH}"

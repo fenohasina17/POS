@@ -1,0 +1,140 @@
+# ============================================================
+# PrometheusRule — Alertes pour l'application POS
+# ============================================================
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: pos-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    # ==========================================================
+    # GROUPE 1 — Santé des Pods
+    # ==========================================================
+    - name: pod-health
+      rules:
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total{namespace=~"devops-app|devops-app-staging"}[10m]) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} en CrashLoop"
+            description: "Le pod {{ $labels.pod }} dans {{ $labels.namespace }} redémarre en boucle depuis 5 min."
+
+        - alert: PodNotReady
+          expr: kube_pod_status_ready{condition="true", namespace=~"devops-app|devops-app-staging"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.pod }} pas prêt"
+            description: "Le pod {{ $labels.pod }} dans {{ $labels.namespace }} n'est pas Ready depuis 5 min."
+
+        - alert: DeploymentReplicasMismatch
+          expr: kube_deployment_spec_replicas{namespace=~"devops-app|devops-app-staging"} != kube_deployment_status_ready_replicas{namespace=~"devops-app|devops-app-staging"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Deployment {{ $labels.deployment }} — réplicas manquants"
+            description: "{{ $labels.deployment }} dans {{ $labels.namespace }} n'a pas le bon nombre de réplicas depuis 10 min."
+
+    # ==========================================================
+    # GROUPE 2 — Ingress NGINX (trafic HTTP)
+    # ==========================================================
+    - name: ingress-nginx
+      rules:
+        - alert: HighErrorRate5xx
+          expr: sum(rate(nginx_ingress_controller_requests{status=~"5.."}[5m])) / sum(rate(nginx_ingress_controller_requests[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Taux d'erreurs 5xx > 5%"
+            description: "Plus de 5% des requêtes passant par l'ingress renvoient une erreur 5xx depuis 5 min."
+
+        - alert: HighLatencyP95
+          expr: histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket[5m])) by (le)) > 2
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Latence P95 > 2s"
+            description: "La latence au 95e percentile dépasse 2 secondes depuis 5 min."
+
+    # ==========================================================
+    # GROUPE 3 — PostgreSQL
+    # ==========================================================
+    - name: postgresql
+      rules:
+        - alert: PostgresDown
+          expr: pg_up == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PostgreSQL est DOWN"
+            description: "L'exporter PostgreSQL ne peut plus se connecter à la base depuis 2 min."
+
+        - alert: PostgresTooManyConnections
+          expr: pg_stat_activity_count / pg_settings_max_connections > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL — 80%+ des connexions utilisées"
+            description: "{{ $value | humanizePercentage }} des connexions max sont utilisées."
+
+    # ==========================================================
+    # GROUPE 4 — Ressources (CPU / Mémoire)
+    # ==========================================================
+    - name: resources
+      rules:
+        - alert: ContainerMemoryNearLimit
+          expr: container_memory_working_set_bytes{namespace=~"devops-app|devops-app-staging", container!=""} / container_spec_memory_limit_bytes{namespace=~"devops-app|devops-app-staging", container!=""} > 0.85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.container }} utilise 85%+ de sa mémoire"
+            description: "Le container {{ $labels.container }} dans {{ $labels.pod }} approche de son limit mémoire — risque d'OOMKill."
+
+        - alert: ContainerCPUThrottling
+          expr: rate(container_cpu_cfs_throttled_periods_total{namespace=~"devops-app|devops-app-staging", container!=""}[5m]) / rate(container_cpu_cfs_periods_total{namespace=~"devops-app|devops-app-staging", container!=""}[5m]) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "{{ $labels.container }} — CPU throttlé à 50%+"
+            description: "Le container {{ $labels.container }} est régulièrement limité en CPU depuis 10 min."
+
+    # ==========================================================
+    # GROUPE 5 — Stockage (PVC)
+    # ==========================================================
+    - name: storage
+      rules:
+        - alert: PVCAlmostFull
+          expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes > 0.85
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.persistentvolumeclaim }} rempli à 85%+"
+            description: "Le volume {{ $labels.persistentvolumeclaim }} dans {{ $labels.namespace }} est presque plein."
+
+    # ==========================================================
+    # GROUPE 6 — Certificats TLS
+    # ==========================================================
+    - name: certificates
+      rules:
+        - alert: CertificateExpiringSoon
+          expr: certmanager_certificate_expiration_timestamp_seconds - time() < 7 * 24 * 3600
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Certificat {{ $labels.name }} expire dans < 7 jours"
+            description: "Le certificat {{ $labels.name }} dans {{ $labels.namespace }} expire bientôt."
