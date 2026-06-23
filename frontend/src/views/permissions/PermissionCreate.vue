@@ -1,362 +1,157 @@
 <template>
-  <div class="permission-create">
-    <div class="header">
-      <h2>Créer une nouvelle permission</h2>
-      <router-link :to="{ name: 'dashboard-permissions' }" class="btn btn-back">
-        <FontAwesomeIcon :icon="faArrowLeft" />
-        <span>Retour à la liste</span>
+  <div class="space-y-6">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
+        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
+          <font-awesome-icon icon="fa-solid fa-key" class="text-indigo-500" />
+          Créer une Permission
+        </h1>
+        <p class="mt-2 text-sm text-slate-500">Définissez un nouveau droit d'accès dans le système.</p>
+      </div>
+      <router-link
+        :to="{ name: 'dashboard-permissions' }"
+        class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+      >
+        <font-awesome-icon icon="fa-solid fa-arrow-left" />
+        Retour
       </router-link>
-    </div>
+    </header>
 
-    <div v-if="error" class="alert alert-danger">
-      <FontAwesomeIcon :icon="faExclamationTriangle" />
+    <div v-if="error" class="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+      <font-awesome-icon icon="fa-solid fa-circle-exclamation" />
       {{ error }}
     </div>
 
-    <form @submit.prevent="createPermission" class="permission-form">
-      <div class="form-group">
-        <label for="name">Nom de la permission *</label>
-        <input type="text" id="name" v-model="permission.name" required class="form-control"
-          placeholder="Ex: edit_posts, delete_users" :class="{ 'is-invalid': nameError }" @input="validateName">
-        <div v-if="nameError" class="invalid-feedback">
-          <FontAwesomeIcon :icon="faExclamationCircle" />
-          {{ nameError }}
-        </div>
-        <small class="form-text text-muted">
-          Format recommandé: verbe.tables
-        </small>
+    <div v-if="successMessage" class="rounded-3xl border border-emerald-200 bg-emerald-50 px-6 py-5">
+      <div class="flex items-center gap-3 text-sm font-semibold text-emerald-700">
+        <font-awesome-icon icon="fa-solid fa-circle-check" />
+        {{ successMessage }}
       </div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
-          <span v-if="isSubmitting">
-            <FontAwesomeIcon :icon="faSpinner" spin />
-            Création en cours...
-          </span>
-          <span v-else>
-            <FontAwesomeIcon :icon="faPlus" />
-            Créer la permission
-          </span>
-        </button>
-
-        <button type="button" class="btn btn-outline-secondary" @click="resetForm" :disabled="isSubmitting">
-          <FontAwesomeIcon :icon="faUndo" />
-          Réinitialiser
-        </button>
-      </div>
-    </form>
-
-    <div v-if="successMessage" class="alert alert-success mt-4">
-      <FontAwesomeIcon :icon="faCheckCircle" />
-      {{ successMessage }}
-      <div class="mt-3">
-        <router-link :to="{ name: 'dashboard-permissions' }" class="btn btn-sm btn-outline-success">
-          <FontAwesomeIcon :icon="faList" />
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <router-link
+          :to="{ name: 'dashboard-permissions' }"
+          class="inline-flex items-center gap-2 rounded-2xl border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+        >
+          <font-awesome-icon icon="fa-solid fa-list" />
           Voir toutes les permissions
         </router-link>
-        <button class="btn btn-sm btn-outline-primary ml-2" @click="createAnother">
-          <FontAwesomeIcon :icon="faPlus" />
-          Créer une autre permission
+        <button
+          @click="createAnother"
+          class="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700"
+        >
+          <font-awesome-icon icon="fa-solid fa-plus" />
+          Créer une autre
         </button>
       </div>
     </div>
+
+    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-100 px-6 py-4">
+        <h2 class="text-base font-semibold text-slate-800">Informations de la permission</h2>
+      </div>
+      <div class="px-6 py-6">
+        <form @submit.prevent="createPermission">
+          <div class="mb-6">
+            <label class="text-sm font-medium text-slate-600" for="perm-name">
+              Nom de la permission <span class="text-rose-500">*</span>
+            </label>
+            <input
+              id="perm-name"
+              v-model="permissionName"
+              type="text"
+              required
+              placeholder="Ex: edit.posts, delete.users"
+              @input="validateName"
+              class="mt-1.5 w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:outline-none focus:ring-2"
+              :class="nameError
+                ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
+                : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'"
+            />
+            <p v-if="nameError" class="mt-1.5 flex items-center gap-1 text-xs text-rose-600">
+              <font-awesome-icon icon="fa-solid fa-circle-exclamation" />
+              {{ nameError }}
+            </p>
+            <p class="mt-1.5 text-xs text-slate-400">Format recommandé : verbe.ressource (ex: view.sales)</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              :disabled="isSubmitting"
+              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <font-awesome-icon v-if="isSubmitting" icon="fa-solid fa-spinner" class="animate-spin" />
+              <font-awesome-icon v-else icon="fa-solid fa-plus" />
+              {{ isSubmitting ? 'Création...' : 'Créer la permission' }}
+            </button>
+            <button
+              type="button"
+              @click="resetForm"
+              :disabled="isSubmitting"
+              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 disabled:opacity-50"
+            >
+              <font-awesome-icon icon="fa-solid fa-rotate-left" />
+              Réinitialiser
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
   </div>
 </template>
 
-<script>
-import permissionService from '@/services/permissionService';
-import { validatePermissionName } from '@/utils/validators';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import {
-  faArrowLeft,
-  faExclamationTriangle,
-  faExclamationCircle,
-  faSpinner,
-  faPlus,
-  faUndo,
-  faCheckCircle,
-  faList
-} from '@fortawesome/free-solid-svg-icons';
+<script setup>
+import { ref, nextTick } from 'vue'
+import permissionService from '@/services/permissionService'
+import { validatePermissionName } from '@/utils/validators'
 
-export default {
-  components: {
-    FontAwesomeIcon
-  },
-  data() {
-    return {
-      permission: {
-        name: '',
-        description: ''
-      },
-      isSubmitting: false,
-      error: null,
-      nameError: null,
-      successMessage: null,
-      faArrowLeft,
-      faExclamationTriangle,
-      faExclamationCircle,
-      faSpinner,
-      faPlus,
-      faUndo,
-      faCheckCircle,
-      faList
-    };
-  },
-  methods: {
-    validateName() {
-      this.nameError = validatePermissionName(this.permission.name);
-      return !this.nameError;
-    },
+const permissionName = ref('')
+const isSubmitting = ref(false)
+const error = ref(null)
+const nameError = ref(null)
+const successMessage = ref(null)
 
-    async createPermission() {
-      if (!this.validateName()) return;
+const validateName = () => {
+  nameError.value = validatePermissionName(permissionName.value)
+  return !nameError.value
+}
 
-      try {
-        this.isSubmitting = true;
-        this.error = null;
-
-        const response = await permissionService.create({
-          name: this.permission.name,
-        });
-
-        this.successMessage = `Permission "${response.data.name}" créée avec succès !`;
-        this.permission = { name: '', description: '' };
-
-      } catch (error) {
-        console.error('Erreur création permission:', error);
-
-        if (error.response?.status === 422) {
-          const errors = error.response.data.errors;
-          if (errors.name) {
-            this.nameError = errors.name[0];
-          } else {
-            this.error = "Veuillez corriger les erreurs dans le formulaire";
-          }
-        } else {
-          this.error = error.response?.data?.message ||
-            "Une erreur est survenue lors de la création de la permission. Veuillez réessayer.";
-        }
-      } finally {
-        this.isSubmitting = false;
+const createPermission = async () => {
+  if (!validateName()) return
+  try {
+    isSubmitting.value = true
+    error.value = null
+    const response = await permissionService.create({ name: permissionName.value })
+    successMessage.value = `Permission "${response.data.name}" créée avec succès !`
+    permissionName.value = ''
+  } catch (e) {
+    if (e.response?.status === 422) {
+      const errors = e.response.data.errors
+      if (errors?.name) {
+        nameError.value = errors.name[0]
+      } else {
+        error.value = 'Veuillez corriger les erreurs dans le formulaire'
       }
-    },
-
-    resetForm() {
-      this.permission = { name: '', description: '' };
-      this.error = null;
-      this.nameError = null;
-      this.successMessage = null;
-    },
-
-    createAnother() {
-      this.successMessage = null;
-      this.resetForm();
-      this.$nextTick(() => {
-        document.getElementById('name').focus();
-      });
+    } else {
+      error.value = e.response?.data?.message || 'Une erreur est survenue lors de la création.'
     }
+  } finally {
+    isSubmitting.value = false
   }
-};
+}
+
+const resetForm = () => {
+  permissionName.value = ''
+  error.value = null
+  nameError.value = null
+  successMessage.value = null
+}
+
+const createAnother = () => {
+  resetForm()
+  nextTick(() => {
+    document.getElementById('perm-name')?.focus()
+  })
+}
 </script>
-
-<style scoped>
-.permission-create {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 2rem;
-  background-color: #f8f9fa;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #e9ecef;
-}
-
-h2 {
-  color: #2c3e50;
-  margin: 0;
-  font-size: 1.75rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.btn-back {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  border: 1px solid #90caf9;
-}
-
-.btn-back:hover {
-  background-color: #bbdefb;
-  border-color: #64b5f6;
-}
-
-.permission-form {
-  background-color: #ffffff;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #1976d2;
-  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
-}
-
-.form-control.is-invalid {
-  border-color: #dc3545;
-}
-
-.invalid-feedback {
-  color: #dc3545;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.form-text {
-  color: #6c757d;
-  font-size: 0.875rem;
-}
-
-.form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-
-.btn-primary {
-  background-color: #1976d2;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #1565c0;
-}
-
-.btn-primary:disabled {
-  background-color: #90caf9;
-  cursor: not-allowed;
-}
-
-.btn-outline-secondary {
-  background-color: transparent;
-  color: #6c757d;
-  border: 1px solid #6c757d;
-}
-
-.btn-outline-secondary:hover:not(:disabled) {
-  background-color: #6c757d;
-  color: white;
-}
-
-.alert {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.alert-danger {
-  background-color: #ffebee;
-  color: #c62828;
-  border: 1px solid #ef9a9a;
-}
-
-.alert-success {
-  background-color: #e8f5e8;
-  color: #2e7d32;
-  border: 1px solid #a5d6a7;
-}
-
-.ml-2 {
-  margin-left: 0.5rem;
-}
-
-.mt-3 {
-  margin-top: 1rem;
-}
-
-.mt-4 {
-  margin-top: 1.5rem;
-}
-
-/* Responsive styles */
-@media screen and (max-width: 768px) {
-  .permission-create {
-    margin: 1rem;
-    padding: 1.5rem;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-  }
-
-  h2 {
-    font-size: 1.5rem;
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  .btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .permission-create {
-    margin: 0.5rem;
-    padding: 1rem;
-  }
-
-  .permission-form {
-    padding: 1.5rem;
-  }
-
-  h2 {
-    font-size: 1.25rem;
-  }
-}
-</style>
