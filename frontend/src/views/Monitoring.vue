@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4 md:p-6 bg-slate-50 min-h-screen">
+  <div class="space-y-6">
     <header class="mb-6 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <h1 class="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">

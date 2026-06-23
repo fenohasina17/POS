@@ -1,22 +1,20 @@
 <template>
-  <section class="max-w-7xl mx-auto px-4 py-8">
-    <!-- Header (inchangé) -->
-      <header class="mb-6">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-widest text-indigo-600">RAPPORTS</p>
-          <h1 class="mt-1 text-2xl font-bold text-slate-900">Historique des Ventes</h1>
-          <p class="mt-1 text-xs text-slate-600">Consultez, filtrez et gérez vos transactions</p>
+  <section class="space-y-6">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Rapports</p>
+        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
+          <FontAwesomeIcon :icon="faReceipt" class="text-indigo-500" />
+          Historique des Ventes
+        </h1>
+        <p class="mt-2 text-sm text-slate-500">Consultez, filtrez et gérez vos transactions.</p>
+      </div>
+      <div v-if="filteredSales.length" class="flex items-center gap-3">
+        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
+          <span class="text-lg font-bold text-emerald-600">{{ totalAmount }} Ar</span>
         </div>
-        <div v-if="filteredSales.length" class="flex items-center gap-3">
-          <div class="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-            <span class="text-emerald-600 font-bold text-lg">
-              {{ totalAmount }} Ar
-            </span>
-          </div>
-          <div class="bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm text-sm">
-            {{ filteredSales.length }} vente{{ filteredSales.length > 1 ? 's' : '' }}
-          </div>
+        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+          {{ filteredSales.length }} vente{{ filteredSales.length > 1 ? 's' : '' }}
         </div>
       </div>
     </header>
@@ -190,7 +188,7 @@ import { storage } from '@/utils/storage'
 import { useAuth } from '@/composables/useAuth'
 import apiClient from '@/services/apiClient'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faSearch, faPenToSquare, faTrash, faChevronUp, faChevronDown, faCheckCircle, faTimesCircle, faClock, faUser } from '@fortawesome/free-solid-svg-icons'
+import { faSearch, faPenToSquare, faTrash, faChevronUp, faChevronDown, faCheckCircle, faTimesCircle, faClock, faUser, faReceipt } from '@fortawesome/free-solid-svg-icons'
 import { API_BASE_URL } from '@/utils/api'
 import EditSaleModal from './EditSaleModal.vue'
 

@@ -1,21 +1,21 @@
 <template>
-  <div class="pos-manage-view min-h-screen bg-slate-50/50 p-4 lg:p-8">
+  <div class="space-y-6">
     <div class="mx-auto max-w-6xl">
-      <!-- Header Premium -->
-      <header class="mb-8 flex flex-wrap items-center justify-between gap-6">
+      <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
         <div>
-          <h1 class="text-3xl font-black bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent">
+          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
+          <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
+            <FontAwesomeIcon icon="fa-solid fa-store" class="text-indigo-500" />
             Points de Vente
           </h1>
-          <p class="text-slate-500 font-medium">Gérez vos sites et affectez vos collaborateurs</p>
+          <p class="mt-2 text-sm text-slate-500">Gérez vos sites et affectez vos collaborateurs.</p>
         </div>
-        
-        <button 
+        <button
           @click="openCreate"
-          class="flex items-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 active:scale-95"
+          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95"
         >
           <FontAwesomeIcon icon="fa-solid fa-plus" />
-          NOUVEAU SITE
+          Nouveau site
         </button>
       </header>
 

@@ -1,278 +1,168 @@
 <template>
-  <div class="role-create role-management-page">
-    <div class="container is-fluid">
-      <div class="columns is-centered">
-        <div class="column is-12">
-          <div class="card">
-            <header class="card-header">
-              <p class="card-header-title">
-                <i class="fas fa-user-tag me-2"></i>
-                Créer un Nouveau Rôle
-              </p>
-            </header>
-            <div class="card-content">
-              <form @submit.prevent="createRole">
-                <div class="field">
-                  <label class="label">Nom du rôle *</label>
-                  <div class="control">
-                    <input v-model="role.name" class="input is-large" :class="{ 'is-danger': errors.name }" type="text"
-                      placeholder="Ex: Administrateur, Utilisateur, Modérateur" maxlength="50" required />
-                  </div>
-                  <p v-if="errors.name" class="help is-danger">{{ errors.name }}</p>
-                  <p class="help">Le nom du rôle doit être unique et contenir entre 3 et 50 caractères.</p>
-                </div>
+  <div class="space-y-6">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
+        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
+          <font-awesome-icon icon="fa-solid fa-user-tag" class="text-indigo-500" />
+          Créer un Rôle
+        </h1>
+        <p class="mt-2 text-sm text-slate-500">Définissez un nouveau rôle et assignez des permissions.</p>
+      </div>
+      <router-link
+        :to="{ name: 'dashboard-roles' }"
+        class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+      >
+        <font-awesome-icon icon="fa-solid fa-arrow-left" />
+        Retour
+      </router-link>
+    </header>
 
-                <div class="field">
-                  <label class="label is-size-4">Permissions</label>
-                  <div v-if="loading" class="has-text-centered">
-                    <div class="button is-loading is-large"></div>
-                    <p class="is-size-5">Chargement des permissions...</p>
-                  </div>
-                  <div v-if="error" class="notification is-danger">
-                    <strong>Erreur:</strong> {{ error }}
-                  </div>
-                  <div v-if="!loading && !error">
-                    <div v-if="permissions.length === 0" class="notification is-warning">
-                      <strong>Aucune permission disponible.</strong>
-                    </div>
-                    <div v-else>
-                      <div class="columns is-multiline is-mobile">
-                        <div v-for="permission in permissions" :key="permission.id"
-                          class="column is-12-mobile is-6-tablet is-4-desktop is-3-widescreen">
-                          <div class="field">
-                            <div class="control">
-                              <label class="checkbox is-size-5">
-                                <input type="checkbox" :value="permission.name" v-model="selectedPermissions" />
-                                {{ permission.name }}
-                              </label>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <br>
-                <div class="field is-grouped is-grouped-right">
+    <div v-if="error" class="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+      <font-awesome-icon icon="fa-solid fa-circle-exclamation" />
+      {{ error }}
+    </div>
 
-                  <div class="control">
-                    <router-link :to="{ name: 'dashboard-roles' }" class="button is-light is-large">
-                      <i class="fas fa-arrow-left me-1"></i> Annuler
-                    </router-link>
-                  </div>
-                  <div class="control">
-                    <button type="submit" class="button is-primary is-large"
-                      :disabled="isCreating || !role.name.trim() || loading">
-                      <span v-if="isCreating">
-                        <span class="icon">
-                          <i class="fas fa-spinner fa-pulse"></i>
-                        </span>
-                        <span>Création...</span>
-                      </span>
-                      <span v-else>
-                        <i class="fas fa-plus me-1"></i> Créer
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-            <footer class="card-footer">
-              <div class="card-footer-item">
-                <div class="notification is-info is-light">
-                </div>
-              </div>
-            </footer>
+    <form @submit.prevent="createRole" class="space-y-6">
+      <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-100 px-6 py-4">
+          <h2 class="text-base font-semibold text-slate-800">Informations du rôle</h2>
+        </div>
+        <div class="px-6 py-6">
+          <div>
+            <label class="text-sm font-medium text-slate-600" for="role-name">
+              Nom du rôle <span class="text-rose-500">*</span>
+            </label>
+            <input
+              id="role-name"
+              v-model="name"
+              type="text"
+              maxlength="50"
+              required
+              placeholder="Ex: Administrateur, Gérant, Modérateur"
+              class="mt-1.5 w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:outline-none focus:ring-2"
+              :class="nameError
+                ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
+                : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'"
+            />
+            <p v-if="nameError" class="mt-1.5 text-xs text-rose-600">{{ nameError }}</p>
+            <p class="mt-1.5 text-xs text-slate-400">Entre 3 et 50 caractères, unique dans le système.</p>
           </div>
         </div>
+      </section>
+
+      <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-100 px-6 py-4">
+          <h2 class="text-base font-semibold text-slate-800">Permissions</h2>
+        </div>
+        <div class="px-6 py-6">
+          <div v-if="loadingPerms" class="flex items-center justify-center py-10 text-sm text-slate-500">
+            <font-awesome-icon icon="fa-solid fa-spinner" class="mr-2 animate-spin text-indigo-500" />
+            Chargement des permissions...
+          </div>
+          <div v-else-if="permError" class="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+            <font-awesome-icon icon="fa-solid fa-circle-exclamation" />
+            {{ permError }}
+          </div>
+          <p v-else-if="permissions.length === 0" class="py-8 text-center text-sm text-slate-400">
+            Aucune permission disponible.
+          </p>
+          <div v-else class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <label
+              v-for="permission in permissions"
+              :key="permission.id"
+              class="flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/50"
+              :class="selectedPermissions.includes(permission.name)
+                ? 'border-indigo-200 bg-indigo-50'
+                : 'border-slate-100'"
+            >
+              <input
+                type="checkbox"
+                :value="permission.name"
+                v-model="selectedPermissions"
+                class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span class="text-sm text-slate-700">{{ permission.name }}</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <div class="flex items-center justify-end gap-3">
+        <router-link
+          :to="{ name: 'dashboard-roles' }"
+          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+        >
+          Annuler
+        </router-link>
+        <button
+          type="submit"
+          :disabled="isCreating || !name.trim() || loadingPerms"
+          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+        >
+          <font-awesome-icon v-if="isCreating" icon="fa-solid fa-spinner" class="animate-spin" />
+          <font-awesome-icon v-else icon="fa-solid fa-plus" />
+          {{ isCreating ? 'Création...' : 'Créer le rôle' }}
+        </button>
       </div>
-    </div>
+    </form>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import roleService from '@/services/roleService'
 import permissionService from '@/services/permissionService'
 
-export default {
-  name: 'RoleCreate',
-  data() {
-    return {
-      role: {
-        name: '',
-      },
-      permissions: [],
-      selectedPermissions: [],
-      errors: {},
-      isCreating: false,
-      loading: false,
-      error: null,
+const router = useRouter()
+
+const name = ref('')
+const nameError = ref('')
+const permissions = ref([])
+const selectedPermissions = ref([])
+const isCreating = ref(false)
+const loadingPerms = ref(false)
+const error = ref(null)
+const permError = ref(null)
+
+const fetchPermissions = async () => {
+  loadingPerms.value = true
+  permError.value = null
+  try {
+    const response = await permissionService.getAll()
+    permissions.value = response.data
+  } catch {
+    permError.value = 'Impossible de charger les permissions. Veuillez réessayer.'
+  } finally {
+    loadingPerms.value = false
+  }
+}
+
+const createRole = async () => {
+  nameError.value = ''
+  error.value = null
+  if (!name.value.trim()) {
+    nameError.value = 'Le nom du rôle est requis'
+    return
+  }
+  if (name.value.trim().length < 3) {
+    nameError.value = 'Le nom du rôle doit contenir au moins 3 caractères'
+    return
+  }
+  try {
+    isCreating.value = true
+    const roleResponse = await roleService.create({ name: name.value.trim() })
+    for (const permissionName of selectedPermissions.value) {
+      await roleService.assignPermission(roleResponse.data.id, permissionName)
     }
-  },
-  async mounted() {
-    await this.fetchPermissions()
-  },
-  methods: {
-    async fetchPermissions() {
-      this.loading = true
-      this.error = null
-      try {
-        const response = await permissionService.getAll()
-        this.permissions = response.data
-      } catch (error) {
-        console.error('Erreur lors du chargement des permissions:', error)
-        this.error = 'Impossible de charger les permissions. Veuillez réessayer.'
-      } finally {
-        this.loading = false
-      }
-    },
-    async createRole() {
-      this.errors = {}
-      if (!this.role.name.trim()) {
-        this.errors.name = 'Le nom du rôle est requis'
-        return
-      }
-      if (this.role.name.trim().length < 3) {
-        this.errors.name = 'Le nom du rôle doit contenir au moins 3 caractères'
-        return
-      }
-      try {
-        this.isCreating = true
-        const roleResponse = await roleService.create({
-          name: this.role.name.trim(),
-        })
-        if (this.selectedPermissions.length > 0) {
-          for (const permissionName of this.selectedPermissions) {
-            await roleService.assignPermission(roleResponse.data.id, permissionName)
-          }
-        }
-        this.$router.push({ name: 'dashboard-roles' })
-      } catch (error) {
-        console.error('Erreur lors de la création du rôle:', error)
-        this.error = 'Erreur lors de la création du rôle. Veuillez réessayer.'
-      } finally {
-        this.isCreating = false
-      }
-    },
-  },
+    router.push({ name: 'dashboard-roles' })
+  } catch {
+    error.value = 'Erreur lors de la création du rôle. Veuillez réessayer.'
+  } finally {
+    isCreating.value = false
+  }
 }
+
+onMounted(fetchPermissions)
 </script>
-
-<style scoped>
-.role-create {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 0;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-.card {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.card-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.card-header-title {
-  color: white;
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.card-content {
-  padding: 2.5rem;
-}
-
-.field {
-  margin-bottom: 1.5rem;
-}
-
-.label {
-  color: #2d3748;
-  font-weight: 600;
-  font-size: 1.1rem;
-}
-
-.input {
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
-}
-
-.input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.checkbox {
-  color: #4a5568;
-  font-size: 1.1rem;
-  transition: color 0.3s ease;
-}
-
-.checkbox:hover {
-  color: #667eea;
-}
-
-.notification {
-  border-radius: 8px;
-  border: none;
-}
-
-.button {
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.button.is-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border: none;
-}
-
-.button.is-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-}
-
-.button.is-light {
-  border: 1px solid #e2e8f0;
-}
-
-.button.is-light:hover {
-  background: #f7fafc;
-  transform: translateY(-1px);
-}
-
-.columns.is-multiline {
-  margin: -0.5rem;
-}
-
-.column {
-  padding: 0.5rem;
-}
-
-@media screen and (max-width: 768px) {
-  .container.is-fluid {
-    padding: 0 1rem;
-  }
-
-  .card-content {
-    padding: 1.5rem;
-  }
-
-  .role-create {
-    padding: 1rem 0;
-  }
-}
-</style>
