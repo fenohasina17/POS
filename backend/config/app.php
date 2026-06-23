@@ -16,6 +16,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'health_check_token' => env('HEALTH_CHECK_TOKEN'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
