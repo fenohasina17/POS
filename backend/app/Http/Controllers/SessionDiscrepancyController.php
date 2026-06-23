@@ -71,7 +71,7 @@ class SessionDiscrepancyController extends Controller
             abort(403, 'Seuls les administrateurs et gérants peuvent valider les écarts.');
         }
 
-        $discrepancy = SessionDiscrepancy::with('cashRegisterSession.cashRegister')->findOrFail($id);
+        $discrepancy = SessionDiscrepancy::with('session.cashRegister')->findOrFail($id);
         
         $isAdmin = $user->isAdmin();
         $activePosId = $request->attributes->get('activePosId');
@@ -85,7 +85,7 @@ class SessionDiscrepancyController extends Controller
                 return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
             }
             // Ensure discrepancy belongs to the active POS
-            if (optional($discrepancy->cashRegisterSession->cashRegister)->point_of_sale_id !== $activePosId) {
+            if (optional($discrepancy->session->cashRegister)->point_of_sale_id !== $activePosId) {
                 return response()->json(['message' => 'Accès refusé : l\'écart n\'appartient pas à votre point de vente actif.'], 403);
             }
         }
