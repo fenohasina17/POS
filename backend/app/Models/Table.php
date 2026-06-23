@@ -71,6 +71,21 @@ class Table extends Model
         return $query->where('status', 'available');
     }
 
+    public function scopeOccupied($query)
+    {
+        return $query->where('status', 'occupied');
+    }
+
+    public function scopeReserved($query)
+    {
+        return $query->where('status', 'reserved');
+    }
+
+    public function scopeOutOfOrder($query)
+    {
+        return $query->where('status', 'out_of_order');
+    }
+
     public function scopeInZone($query, $zone)
     {
         // Recherche dans le champ JSON location
