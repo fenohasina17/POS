@@ -86,6 +86,10 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL}
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${REVERB_HOST}
+        VITE_REVERB_PORT: ${REVERB_PORT}
+        VITE_REVERB_SCHEME: ${REVERB_SCHEME}
     restart: always
     logging: *default-logging
     ports:
