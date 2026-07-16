@@ -4,6 +4,8 @@ metadata:
   name: app-config
   namespace: devops-app
 data:
+  REDIS_HOST: redis-service
+  REDIS_PORT: "6379"
   DB_CONNECTION: pgsql
   DB_HOST: postgres-service
   DB_PORT: "5432"
