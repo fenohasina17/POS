@@ -18,6 +18,6 @@ return [
 
     'max_age' => 0,
 
-    // Important: si * dans allowed_origins => credentials doit être false
-    'supports_credentials' => false,
+    // credentials requis pour Sanctum (cookies de session cross-origin)
+    'supports_credentials' => true,
 ];

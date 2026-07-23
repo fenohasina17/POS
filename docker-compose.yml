@@ -107,8 +107,10 @@ services:
         VITE_API_URL: ${VITE_API_URL}
         VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
         VITE_REVERB_HOST: ${REVERB_HOST}
-        VITE_REVERB_PORT: ${REVERB_PORT}
-        VITE_REVERB_SCHEME: ${REVERB_SCHEME}
+
+        VITE_REVERB_PORT: ${REVERB_PORT:-8443}
+        VITE_REVERB_SCHEME: ${REVERB_SCHEME:-https}
+
     restart: always
     logging: *default-logging
     ports:
