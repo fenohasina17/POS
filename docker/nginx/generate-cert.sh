@@ -22,7 +22,7 @@ openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
     -keyout "$KEY" \
     -out "$CERT" \
     -subj "/C=MG/ST=Local/L=Local/O=POS-System/CN=$SERVER_IP" \
-    -addext "subjectAltName=IP:$SERVER_IP,IP:127.0.0.1" \
+    -addext "subjectAltName=IP:$SERVER_IP,IP:127.0.0.1,DNS:localhost" \
     2>/dev/null
 
 echo "✅ Certificat SSL généré pour IP: $SERVER_IP (valide 10 ans)"
