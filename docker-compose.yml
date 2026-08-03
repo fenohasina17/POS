@@ -94,7 +94,7 @@ services:
       - backend
     volumes:
       - storage_data:/var/www/storage
-      - ssl_nginx_data:/etc/nginx/ssl
+      - ./docker/certs:/etc/nginx/ssl:ro
     networks:
       - pos_network
 
@@ -107,10 +107,8 @@ services:
         VITE_API_URL: ${VITE_API_URL}
         VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
         VITE_REVERB_HOST: ${REVERB_HOST}
-
         VITE_REVERB_PORT: ${REVERB_PORT:-8443}
         VITE_REVERB_SCHEME: ${REVERB_SCHEME:-https}
-
     restart: always
     logging: *default-logging
     ports:
@@ -121,7 +119,7 @@ services:
     depends_on:
       - nginx
     volumes:
-      - ssl_frontend_data:/etc/nginx/ssl
+      - ./docker/certs:/etc/nginx/ssl:ro
     networks:
       - pos_network
 
@@ -193,6 +191,4 @@ volumes:
   jenkins_data:
   storage_data:
   backup_data:
-  ssl_nginx_data:
-  ssl_frontend_data:
   uptime_kuma_data:
