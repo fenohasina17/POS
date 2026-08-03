@@ -128,7 +128,8 @@ services:
     environment:
       - SERVER_IP=${SERVER_IP:-localhost}
     depends_on:
-      - backend
+      backend:
+        condition: service_started
       cert-init:
         condition: service_completed_successfully
     volumes:
@@ -156,7 +157,8 @@ services:
     environment:
       - SERVER_IP=${SERVER_IP:-localhost}
     depends_on:
-      - nginx
+      nginx:
+        condition: service_started
       cert-init:
         condition: service_completed_successfully
     volumes:
