@@ -5,6 +5,43 @@ x-logging: &default-logging
     max-file: "5"
 
 services:
+  # --- Génération automatique des certificats SSL (mkcert) ---
+  cert-init:
+    image: alpine:3.19
+    restart: "no"
+    environment:
+      - SERVER_IP=${SERVER_IP:-localhost}
+    volumes:
+      - ssl_certs:/certs
+    entrypoint: >
+      sh -c "
+        set -e;
+        if [ -f /certs/cert.pem ] && [ -f /certs/key.pem ]; then
+          echo '✅ Certificats SSL déjà présents — aucune action.';
+          exit 0;
+        fi;
+        echo '🔐 Génération des certificats SSL avec mkcert...';
+        apk add --no-cache curl ca-certificates > /dev/null 2>&1;
+        ARCH=$$(uname -m);
+        case $$ARCH in
+          x86_64)  MKCERT_ARCH='linux-amd64' ;;
+          aarch64) MKCERT_ARCH='linux-arm64' ;;
+          armv7l)  MKCERT_ARCH='linux-arm'   ;;
+          *) echo \"Architecture non supportée: $$ARCH\"; exit 1 ;;
+        esac;
+        curl -fsSL https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-$${MKCERT_ARCH} \
+          -o /usr/local/bin/mkcert && chmod +x /usr/local/bin/mkcert;
+        mkdir -p /certs/ca;
+        CAROOT=/certs/ca mkcert -install 2>/dev/null || true;
+        CAROOT=/certs/ca mkcert \
+          -cert-file /certs/cert.pem \
+          -key-file  /certs/key.pem \
+          $${SERVER_IP} localhost 127.0.0.1;
+        cp /certs/ca/rootCA.pem /certs/pos-ca.crt;
+        chmod 644 /certs/cert.pem /certs/key.pem /certs/pos-ca.crt;
+        echo \"✅ Certificats générés pour: $${SERVER_IP}\";
+      "
+
   # --- Base de Données (Postgres) ---
   db:
     image: postgres:15
@@ -20,7 +57,7 @@ services:
     networks:
       - pos_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-giovanni} -d ${DB_DATABASE:-pos_system}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-pos_user} -d ${DB_DATABASE:-pos_system}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -86,15 +123,17 @@ services:
     restart: always
     logging: *default-logging
     ports:
-      - "8000:80"    # HTTP → redirige vers HTTPS
+      - "8000:80"    # HTTP (+ endpoint /ca.crt pour télécharger la CA)
       - "8443:443"   # HTTPS (API)
     environment:
-      - SERVER_IP=${SERVER_IP:-192.168.0.9}
+      - SERVER_IP=${SERVER_IP:-localhost}
     depends_on:
       - backend
+      cert-init:
+        condition: service_completed_successfully
     volumes:
       - storage_data:/var/www/storage
-      - ./docker/certs:/etc/nginx/ssl:ro
+      - ssl_certs:/etc/nginx/ssl:ro
     networks:
       - pos_network
 
@@ -112,14 +151,16 @@ services:
     restart: always
     logging: *default-logging
     ports:
-      - "5173:80"    # HTTP → redirige vers HTTPS
+      - "5173:80"
       - "5443:443"   # HTTPS (Frontend)
     environment:
-      - SERVER_IP=${SERVER_IP:-192.168.0.9}
+      - SERVER_IP=${SERVER_IP:-localhost}
     depends_on:
       - nginx
+      cert-init:
+        condition: service_completed_successfully
     volumes:
-      - ./docker/certs:/etc/nginx/ssl:ro
+      - ssl_certs:/etc/nginx/ssl:ro
     networks:
       - pos_network
 
@@ -191,4 +232,5 @@ volumes:
   jenkins_data:
   storage_data:
   backup_data:
+  ssl_certs:
   uptime_kuma_data:
