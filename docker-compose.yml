@@ -22,26 +22,21 @@ services:
           echo "Certificats SSL deja presents."
           exit 0
         fi
-        echo "Generation des certificats SSL (openssl)..."
-        apk add --no-cache openssl
+        apk add --no-cache openssl iproute2 > /dev/null 2>&1
+        IP="${SERVER_IP}"
+        [ -z "$IP" ] && IP=$(ip route get 1.1.1.1 2>/dev/null | awk '/src/{print $7}' | head -1)
+        [ -z "$IP" ] && IP="localhost"
+        echo "Generation des certificats SSL pour: $IP"
         mkdir -p /certs
         openssl genrsa -out /certs/ca.key 4096 2>/dev/null
-        openssl req -new -x509 -days 3650 -key /certs/ca.key \
-          -subj "/C=FR/ST=Local/L=Local/O=POS-CA/CN=POS Local CA" \
-          -out /certs/ca.crt
+        openssl req -new -x509 -days 3650 -key /certs/ca.key -subj "/C=FR/O=POS-CA/CN=POS Local CA" -out /certs/ca.crt
         openssl genrsa -out /certs/key.pem 2048 2>/dev/null
-        openssl req -new -key /certs/key.pem \
-          -subj "/C=FR/ST=Local/L=Local/O=POS/CN=${SERVER_IP}" \
-          -out /certs/server.csr
-        printf "subjectAltName=IP:%s,IP:127.0.0.1,DNS:localhost" "${SERVER_IP}" > /certs/ext.cnf
-        openssl x509 -req -days 3650 \
-          -in /certs/server.csr \
-          -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial \
-          -extfile /certs/ext.cnf \
-          -out /certs/cert.pem
+        openssl req -new -key /certs/key.pem -subj "/C=FR/O=POS/CN=$IP" -out /certs/server.csr
+        printf "subjectAltName=IP:%s,IP:127.0.0.1,DNS:localhost" "$IP" > /certs/ext.cnf
+        openssl x509 -req -days 3650 -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial -extfile /certs/ext.cnf -out /certs/cert.pem
         cp /certs/ca.crt /certs/pos-ca.crt
         chmod 644 /certs/cert.pem /certs/key.pem /certs/pos-ca.crt
-        echo "Certificats generes pour: ${SERVER_IP}"
+        echo "Certificats SSL generes avec succes."
 
   # --- Base de Données (Postgres) ---
   db:
