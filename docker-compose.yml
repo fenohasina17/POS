@@ -13,35 +13,35 @@ services:
       - SERVER_IP=${SERVER_IP:-localhost}
     volumes:
       - ssl_certs:/certs
-    entrypoint: >
-      sh -c "
-        set -e;
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
         if [ -f /certs/cert.pem ] && [ -f /certs/key.pem ]; then
-          echo 'Certificats SSL deja presents.';
-          exit 0;
-        fi;
-        echo 'Generation des certificats SSL avec mkcert...';
-        apk add --no-cache ca-certificates;
-        ARCH=$$(uname -m);
-        case $$ARCH in
-          x86_64)  MKCERT_ARCH='linux-amd64' ;;
-          aarch64) MKCERT_ARCH='linux-arm64' ;;
-          armv7l)  MKCERT_ARCH='linux-arm'   ;;
-          *) echo \"Architecture non supportee: $$ARCH\"; exit 1 ;;
-        esac;
-        wget -q https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-$${MKCERT_ARCH} \
-          -O /usr/local/bin/mkcert;
-        chmod +x /usr/local/bin/mkcert;
-        mkdir -p /certs/ca;
-        CAROOT=/certs/ca mkcert -install 2>/dev/null || true;
-        CAROOT=/certs/ca mkcert \
-          -cert-file /certs/cert.pem \
-          -key-file  /certs/key.pem \
-          $${SERVER_IP} localhost 127.0.0.1;
-        cp /certs/ca/rootCA.pem /certs/pos-ca.crt;
-        chmod 644 /certs/cert.pem /certs/key.pem /certs/pos-ca.crt;
-        echo \"Certificats generes pour: $${SERVER_IP}\";
-      "
+          echo "Certificats SSL deja presents."
+          exit 0
+        fi
+        echo "Generation des certificats SSL (openssl)..."
+        apk add --no-cache openssl
+        mkdir -p /certs
+        openssl genrsa -out /certs/ca.key 4096 2>/dev/null
+        openssl req -new -x509 -days 3650 -key /certs/ca.key \
+          -subj "/C=FR/ST=Local/L=Local/O=POS-CA/CN=POS Local CA" \
+          -out /certs/ca.crt
+        openssl genrsa -out /certs/key.pem 2048 2>/dev/null
+        openssl req -new -key /certs/key.pem \
+          -subj "/C=FR/ST=Local/L=Local/O=POS/CN=${SERVER_IP}" \
+          -out /certs/server.csr
+        printf "subjectAltName=IP:%s,IP:127.0.0.1,DNS:localhost" "${SERVER_IP}" > /certs/ext.cnf
+        openssl x509 -req -days 3650 \
+          -in /certs/server.csr \
+          -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial \
+          -extfile /certs/ext.cnf \
+          -out /certs/cert.pem
+        cp /certs/ca.crt /certs/pos-ca.crt
+        chmod 644 /certs/cert.pem /certs/key.pem /certs/pos-ca.crt
+        echo "Certificats generes pour: ${SERVER_IP}"
 
   # --- Base de Données (Postgres) ---
   db:
