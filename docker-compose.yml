@@ -17,20 +17,21 @@ services:
       sh -c "
         set -e;
         if [ -f /certs/cert.pem ] && [ -f /certs/key.pem ]; then
-          echo '✅ Certificats SSL déjà présents — aucune action.';
+          echo 'Certificats SSL deja presents.';
           exit 0;
         fi;
-        echo '🔐 Génération des certificats SSL avec mkcert...';
-        apk add --no-cache curl ca-certificates > /dev/null 2>&1;
+        echo 'Generation des certificats SSL avec mkcert...';
+        apk add --no-cache ca-certificates;
         ARCH=$$(uname -m);
         case $$ARCH in
           x86_64)  MKCERT_ARCH='linux-amd64' ;;
           aarch64) MKCERT_ARCH='linux-arm64' ;;
           armv7l)  MKCERT_ARCH='linux-arm'   ;;
-          *) echo \"Architecture non supportée: $$ARCH\"; exit 1 ;;
+          *) echo \"Architecture non supportee: $$ARCH\"; exit 1 ;;
         esac;
-        curl -fsSL https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-$${MKCERT_ARCH} \
-          -o /usr/local/bin/mkcert && chmod +x /usr/local/bin/mkcert;
+        wget -q https://github.com/FiloSottile/mkcert/releases/download/v1.4.4/mkcert-v1.4.4-$${MKCERT_ARCH} \
+          -O /usr/local/bin/mkcert;
+        chmod +x /usr/local/bin/mkcert;
         mkdir -p /certs/ca;
         CAROOT=/certs/ca mkcert -install 2>/dev/null || true;
         CAROOT=/certs/ca mkcert \
@@ -39,7 +40,7 @@ services:
           $${SERVER_IP} localhost 127.0.0.1;
         cp /certs/ca/rootCA.pem /certs/pos-ca.crt;
         chmod 644 /certs/cert.pem /certs/key.pem /certs/pos-ca.crt;
-        echo \"✅ Certificats générés pour: $${SERVER_IP}\";
+        echo \"Certificats generes pour: $${SERVER_IP}\";
       "
 
   # --- Base de Données (Postgres) ---
