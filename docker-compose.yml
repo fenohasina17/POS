@@ -22,9 +22,9 @@ services:
           echo "Certificats SSL deja presents."
           exit 0
         fi
-        apk add --no-cache openssl iproute2 > /dev/null 2>&1
+        apk add --no-cache openssl > /dev/null 2>&1
         IP="${SERVER_IP}"
-        [ -z "$IP" ] && IP=$(ip route get 1.1.1.1 2>/dev/null | awk '/src/{print $7}' | head -1)
+        [ -z "$IP" ] && IP=$(hostname -i 2>/dev/null | awk '{print $1}')
         [ -z "$IP" ] && IP="localhost"
         echo "Generation des certificats SSL pour: $IP"
         mkdir -p /certs
