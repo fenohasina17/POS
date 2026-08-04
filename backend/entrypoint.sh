@@ -10,6 +10,10 @@ mkdir -p /var/www/bootstrap/cache
 chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache /var/www/vendor 2>/dev/null || true
 chmod -R 775 /var/www/storage /var/www/bootstrap/cache /var/www/vendor 2>/dev/null || true
 
+# Vider le cache config AVANT tout (évite de lire des valeurs figées du build)
+php artisan config:clear 2>/dev/null || true
+php artisan cache:clear 2>/dev/null || true
+
 # Attendre que la base de données soit prête (via PDO)
 echo "En attente de la base de données..."
 until php -r "
@@ -33,8 +37,7 @@ echo "Base de données prête."
 echo "Exécution des migrations..."
 php artisan migrate --force || true
 
-# Vider les caches
-php artisan config:clear 2>/dev/null || true
-php artisan cache:clear 2>/dev/null || true
+# Reconstruire le cache config avec les vraies valeurs runtime
+php artisan config:cache 2>/dev/null || true
 
 exec "$@"
