@@ -5,6 +5,45 @@ x-logging: &default-logging
     max-file: "5"
 
 services:
+  # --- Génération automatique des certificats SSL (mkcert) ---
+  cert-init:
+    image: alpine:3.19
+    restart: "no"
+    environment:
+      - SERVER_IP=${SERVER_IP:-localhost}
+    volumes:
+      - ssl_certs:/certs
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        if [ -f /certs/cert.pem ] && [ -f /certs/key.pem ]; then
+          echo "Certificats SSL deja presents."
+          exit 0
+        fi
+        apk add --no-cache openssl > /dev/null 2>&1
+        IP="${SERVER_IP}"
+        [ -z "$IP" ] && IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+        [ -z "$IP" ] && IP=$(cat /etc/hosts | awk 'NR==1{print $1}')
+        [ -z "$IP" ] && IP="localhost"
+        echo "Generation des certificats SSL pour: $IP"
+        mkdir -p /certs
+        openssl genrsa -out /certs/ca.key 4096 2>/dev/null
+        openssl req -new -x509 -days 3650 -key /certs/ca.key -subj "/C=FR/O=POS-CA/CN=POS Local CA" -out /certs/ca.crt
+        openssl genrsa -out /certs/key.pem 2048 2>/dev/null
+        if [ "$IP" = "localhost" ]; then
+          openssl req -new -key /certs/key.pem -subj "/C=FR/O=POS/CN=localhost" -out /certs/server.csr
+          printf "subjectAltName=DNS:localhost,IP:127.0.0.1" > /certs/ext.cnf
+        else
+          openssl req -new -key /certs/key.pem -subj "/C=FR/O=POS/CN=$IP" -out /certs/server.csr
+          printf "subjectAltName=IP:%s,IP:127.0.0.1,DNS:localhost" "$IP" > /certs/ext.cnf
+        fi
+        openssl x509 -req -days 3650 -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial -extfile /certs/ext.cnf -out /certs/cert.pem
+        cp /certs/ca.crt /certs/pos-ca.crt
+        chmod 644 /certs/cert.pem /certs/key.pem /certs/pos-ca.crt
+        echo "Certificats SSL generes avec succes pour: $IP"
+
   # --- Base de Données (Postgres) ---
   db:
     image: postgres:15
@@ -86,7 +125,10 @@ services:
     ports:
       - "8000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      cert-init:
+        condition: service_completed_successfully
     volumes:
       - storage_data:/var/www/storage
     networks:

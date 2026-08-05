@@ -4,7 +4,6 @@
 # ============================================================
 set -euo pipefail
 
-# ── Couleurs ────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 
@@ -14,23 +13,20 @@ warn() { echo -e "${YELLOW}[!]${NC} $*"; }
 err()  { echo -e "${RED}[✘]${NC} $*" >&2; exit 1; }
 step() { echo -e "\n${BOLD}${CYAN}▶ $*${NC}"; }
 
-# ── Vérifications préalables ────────────────────────────────
 [[ $EUID -ne 0 ]] && err "Ce script doit être exécuté en root (sudo ./install.sh)"
 [[ ! -f /etc/debian_version ]] && err "Ce script est réservé aux systèmes Debian/Ubuntu"
 
 info "Debian détecté : $(cat /etc/debian_version)"
 
-# ── Variables configurables ─────────────────────────────────
 REPO_URL="${REPO_URL:-https://github.com/fenohasina17/POS.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/pos}"
 APP_USER="${APP_USER:-pos}"
 
-# ── Détection IP locale ──────────────────────────────────────
 detect_server_ip() {
-    ip route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1
+    ip route get 1.1.1.1 2>/dev/null \
+      | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1
 }
 
-# ════════════════════════════════════════════════════════════
 echo -e "${BOLD}"
 echo "  ╔══════════════════════════════════════╗"
 echo "  ║    POS — Installation Debian         ║"
@@ -153,17 +149,15 @@ EOF
     log ".env généré (IP: $SERVER_IP)"
 fi
 
-# ── 6. Build et démarrage ─────────────────────────────────────
-step "Build des images Docker (peut prendre 5-10 min)"
+# ── 6. Démarrage ─────────────────────────────────────────────
+# cert-init génère les certs SSL automatiquement au premier démarrage
+step "Build et démarrage (les certificats SSL sont générés automatiquement)"
 cd "$INSTALL_DIR"
 docker compose build --no-cache
-log "Build terminé"
-
-step "Démarrage des services"
 docker compose up -d
 log "Tous les services démarrés"
 
-# ── 7. Attente DB + migrations ────────────────────────────────
+# ── 7. Migrations ────────────────────────────────────────────
 step "Attente de la base de données"
 TRIES=0
 DB_USER=$(grep '^DB_USERNAME=' "$ENV_FILE" | cut -d= -f2)

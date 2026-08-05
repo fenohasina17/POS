@@ -16,6 +16,10 @@
 
 # Docker & OS
 .env
+docker/certs/*.pem
+docker/certs/*.crt
+docker/certs/*.key
+pos-local-ca.crt
 docker-compose.override.yml
 .DS_Store
 Thumbs.db
