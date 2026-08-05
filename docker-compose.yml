@@ -5,6 +5,45 @@ x-logging: &default-logging
     max-file: "5"
 
 services:
+  # --- Génération automatique des certificats SSL (mkcert) ---
+  cert-init:
+    image: alpine:3.19
+    restart: "no"
+    environment:
+      - SERVER_IP=${SERVER_IP:-localhost}
+    volumes:
+      - ssl_certs:/certs
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        if [ -f /certs/cert.pem ] && [ -f /certs/key.pem ]; then
+          echo "Certificats SSL deja presents."
+          exit 0
+        fi
+        apk add --no-cache openssl > /dev/null 2>&1
+        IP="${SERVER_IP}"
+        [ -z "$IP" ] && IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+        [ -z "$IP" ] && IP=$(cat /etc/hosts | awk 'NR==1{print $1}')
+        [ -z "$IP" ] && IP="localhost"
+        echo "Generation des certificats SSL pour: $IP"
+        mkdir -p /certs
+        openssl genrsa -out /certs/ca.key 4096 2>/dev/null
+        openssl req -new -x509 -days 3650 -key /certs/ca.key -subj "/C=FR/O=POS-CA/CN=POS Local CA" -out /certs/ca.crt
+        openssl genrsa -out /certs/key.pem 2048 2>/dev/null
+        if [ "$IP" = "localhost" ]; then
+          openssl req -new -key /certs/key.pem -subj "/C=FR/O=POS/CN=localhost" -out /certs/server.csr
+          printf "subjectAltName=DNS:localhost,IP:127.0.0.1" > /certs/ext.cnf
+        else
+          openssl req -new -key /certs/key.pem -subj "/C=FR/O=POS/CN=$IP" -out /certs/server.csr
+          printf "subjectAltName=IP:%s,IP:127.0.0.1,DNS:localhost" "$IP" > /certs/ext.cnf
+        fi
+        openssl x509 -req -days 3650 -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial -extfile /certs/ext.cnf -out /certs/cert.pem
+        cp /certs/ca.crt /certs/pos-ca.crt
+        chmod 644 /certs/cert.pem /certs/key.pem /certs/pos-ca.crt
+        echo "Certificats SSL generes avec succes pour: $IP"
+
   # --- Base de Données (Postgres) ---
   db:
     image: postgres:15
@@ -20,7 +59,7 @@ services:
     networks:
       - pos_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-giovanni} -d ${DB_DATABASE:-pos_system}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-pos_user} -d ${DB_DATABASE:-pos_system}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -86,15 +125,18 @@ services:
     restart: always
     logging: *default-logging
     ports:
-      - "8000:80"    # HTTP → redirige vers HTTPS
+      - "8000:80"    # HTTP (+ endpoint /ca.crt pour télécharger la CA)
       - "8443:443"   # HTTPS (API)
     environment:
-      - SERVER_IP=${SERVER_IP:-192.168.0.9}
+      - SERVER_IP=${SERVER_IP:-localhost}
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+      cert-init:
+        condition: service_completed_successfully
     volumes:
       - storage_data:/var/www/storage
-      - ssl_nginx_data:/etc/nginx/ssl
+      - ssl_certs:/etc/nginx/ssl:ro
     networks:
       - pos_network
 
@@ -107,21 +149,22 @@ services:
         VITE_API_URL: ${VITE_API_URL}
         VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
         VITE_REVERB_HOST: ${REVERB_HOST}
-
         VITE_REVERB_PORT: ${REVERB_PORT:-8443}
         VITE_REVERB_SCHEME: ${REVERB_SCHEME:-https}
-
     restart: always
     logging: *default-logging
     ports:
-      - "5173:80"    # HTTP → redirige vers HTTPS
+      - "5173:80"
       - "5443:443"   # HTTPS (Frontend)
     environment:
-      - SERVER_IP=${SERVER_IP:-192.168.0.9}
+      - SERVER_IP=${SERVER_IP:-localhost}
     depends_on:
-      - nginx
+      nginx:
+        condition: service_started
+      cert-init:
+        condition: service_completed_successfully
     volumes:
-      - ssl_frontend_data:/etc/nginx/ssl
+      - ssl_certs:/etc/nginx/ssl:ro
     networks:
       - pos_network
 
@@ -193,6 +236,5 @@ volumes:
   jenkins_data:
   storage_data:
   backup_data:
-  ssl_nginx_data:
-  ssl_frontend_data:
+  ssl_certs:
   uptime_kuma_data:
