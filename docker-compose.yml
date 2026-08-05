@@ -112,12 +112,10 @@ services:
       redis:
         condition: service_healthy
     env_file: .env
-    ports:
-      - "8080:8080"
     networks:
       - pos_network
 
-  # --- Serveur Web (Nginx + HTTPS) ---
+  # --- Serveur Web (Nginx HTTP) ---
   nginx:
     build:
       context: ./docker/nginx
@@ -125,10 +123,7 @@ services:
     restart: always
     logging: *default-logging
     ports:
-      - "8000:80"    # HTTP (+ endpoint /ca.crt pour télécharger la CA)
-      - "8443:443"   # HTTPS (API)
-    environment:
-      - SERVER_IP=${SERVER_IP:-localhost}
+      - "8000:80"
     depends_on:
       backend:
         condition: service_started
@@ -136,11 +131,10 @@ services:
         condition: service_completed_successfully
     volumes:
       - storage_data:/var/www/storage
-      - ssl_certs:/etc/nginx/ssl:ro
     networks:
       - pos_network
 
-  # --- Frontend (Vue.js + HTTPS) ---
+  # --- Frontend (Vue.js) ---
   frontend:
     build:
       context: ./frontend
@@ -149,22 +143,14 @@ services:
         VITE_API_URL: ${VITE_API_URL}
         VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
         VITE_REVERB_HOST: ${REVERB_HOST}
-        VITE_REVERB_PORT: ${REVERB_PORT:-8443}
-        VITE_REVERB_SCHEME: ${REVERB_SCHEME:-https}
+        VITE_REVERB_PORT: ${REVERB_PORT:-8000}
+        VITE_REVERB_SCHEME: ${REVERB_SCHEME:-ws}
     restart: always
     logging: *default-logging
     ports:
       - "5173:80"
-      - "5443:443"   # HTTPS (Frontend)
-    environment:
-      - SERVER_IP=${SERVER_IP:-localhost}
     depends_on:
-      nginx:
-        condition: service_started
-      cert-init:
-        condition: service_completed_successfully
-    volumes:
-      - ssl_certs:/etc/nginx/ssl:ro
+      - nginx
     networks:
       - pos_network
 
@@ -183,12 +169,12 @@ services:
       - ./docker/backup/backup.sh:/backup.sh:ro
     entrypoint: >
       sh -c "
-        echo '⏰ Sauvegarde planifiée — toutes les 24h à 02h00';
+        echo 'Sauvegarde planifiée — toutes les 24h à 02h00';
         while true; do
           NEXT=$$(date -d 'tomorrow 02:00' +%s 2>/dev/null || date -v+1d -f '%H:%M' '02:00' +%s 2>/dev/null || echo $$(( $$(date +%s) + 86400 )));
           NOW=$$(date +%s);
           SLEEP=$$((NEXT - NOW));
-          echo \"Prochaine sauvegarde dans $${SLEEP}s ($$(date -d \"@$$NEXT\" 2>/dev/null || date -r $$NEXT))\";
+          echo \"Prochaine sauvegarde dans $${SLEEP}s\";
           sleep $$SLEEP;
           sh /backup.sh;
         done
@@ -236,5 +222,4 @@ volumes:
   jenkins_data:
   storage_data:
   backup_data:
-  ssl_certs:
   uptime_kuma_data:

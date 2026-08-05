@@ -36,7 +36,7 @@ echo -e "${NC}"
 # ── 1. Dépendances système ───────────────────────────────────
 step "Installation des dépendances système"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl gnupg lsb-release git > /dev/null
+apt-get install -y -qq ca-certificates curl gnupg lsb-release git openssl > /dev/null
 log "Dépendances installées"
 
 # ── 2. Docker ────────────────────────────────────────────────
@@ -102,13 +102,12 @@ APP_NAME=POS
 APP_ENV=production
 APP_KEY=${APP_KEY}
 APP_DEBUG=false
-APP_URL=https://${SERVER_IP}:8443
-SERVER_IP=${SERVER_IP}
+APP_URL=http://${SERVER_IP}:8000
 
-FRONTEND_URL=https://${SERVER_IP}:5443
-SANCTUM_STATEFUL_DOMAINS=${SERVER_IP}:5443
+FRONTEND_URL=http://${SERVER_IP}:5173
+SANCTUM_STATEFUL_DOMAINS=${SERVER_IP}:5173
 
-VITE_API_URL=https://${SERVER_IP}:8443
+VITE_API_URL=http://${SERVER_IP}:8000
 
 DB_CONNECTION=pgsql
 DB_HOST=db
@@ -136,13 +135,13 @@ REVERB_APP_ID=${REVERB_APP_ID}
 REVERB_APP_KEY=${REVERB_APP_KEY}
 REVERB_APP_SECRET=${REVERB_APP_SECRET}
 REVERB_HOST=${SERVER_IP}
-REVERB_PORT=8443
-REVERB_SCHEME=https
+REVERB_PORT=8000
+REVERB_SCHEME=ws
 
 VITE_REVERB_APP_KEY=${REVERB_APP_KEY}
 VITE_REVERB_HOST=${SERVER_IP}
-VITE_REVERB_PORT=8443
-VITE_REVERB_SCHEME=https
+VITE_REVERB_PORT=8000
+VITE_REVERB_SCHEME=ws
 EOF
 
     chmod 600 "$ENV_FILE"
@@ -203,22 +202,16 @@ systemctl enable pos.service
 log "Service pos.service activé"
 
 # ── 9. Résumé ────────────────────────────────────────────────
-SERVER_IP=$(grep '^SERVER_IP=' "$ENV_FILE" | cut -d= -f2)
+SERVER_IP=$(grep '^SERVER_IP=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "127.0.0.1")
 
 echo ""
 echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════╗"
 echo -e "║  ✅  Installation terminée avec succès !              ║"
 echo -e "╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║${NC}  Frontend  :  ${BOLD}https://${SERVER_IP}:5443${NC}"
-echo -e "${GREEN}║${NC}  API       :  ${BOLD}https://${SERVER_IP}:8443${NC}"
+echo -e "${GREEN}║${NC}  Frontend  :  ${BOLD}http://${SERVER_IP}:5173${NC}"
+echo -e "${GREEN}║${NC}  API       :  ${BOLD}http://${SERVER_IP}:8000${NC}"
 echo -e "${GREEN}║${NC}  Jenkins   :  ${BOLD}http://${SERVER_IP}:9090${NC}"
 echo -e "${GREEN}║${NC}  Uptime    :  ${BOLD}http://${SERVER_IP}:3001${NC}"
-echo -e "${GREEN}╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${CYAN}║${NC}  ${BOLD}Importer le certificat CA sur chaque poste client :${NC}"
-echo -e "${CYAN}║${NC}"
-echo -e "${CYAN}║${NC}  Ouvrir dans le navigateur : ${BOLD}http://${SERVER_IP}:8000/ca.crt${NC}"
-echo -e "${CYAN}║${NC}  → Télécharger et installer dans les paramètres"
-echo -e "${CYAN}║${NC}    du navigateur (Confidentialité → Certificats)"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Commandes utiles :"
