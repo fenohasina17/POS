@@ -36,7 +36,7 @@ echo -e "${NC}"
 # ── 1. Dépendances système ───────────────────────────────────
 step "Installation des dépendances système"
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl gnupg lsb-release git openssl > /dev/null
+apt-get install -y -qq ca-certificates curl gnupg lsb-release git openssl make > /dev/null
 log "Dépendances installées"
 
 # ── 2. Docker ────────────────────────────────────────────────
