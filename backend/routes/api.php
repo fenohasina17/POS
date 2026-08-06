@@ -55,9 +55,11 @@ Route::get('/health', function (\Illuminate\Http\Request $request) {
     ], $code);
 })->name('health');
 
-// Routes publiques (non authentifiées)
-Route::post('/login', [AuthController::class, 'login'])->name('login');
-Route::post('/register', [AuthController::class, 'register']);
+// Routes publiques (non authentifiées) — throttle strict anti brute-force
+Route::middleware('throttle:auth')->group(function () {
+    Route::post('/login', [AuthController::class, 'login'])->name('login');
+    Route::post('/register', [AuthController::class, 'register']);
+});
 
 // Toutes les routes protégées par Sanctum
 Route::middleware('auth:sanctum')->group(function () {
