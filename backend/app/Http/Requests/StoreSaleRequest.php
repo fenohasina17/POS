@@ -31,7 +31,7 @@ class StoreSaleRequest extends FormRequest
 
             // Montants
             'total_amount' => 'required|numeric|min:0',
-            'discount_percentage' => 'nullable|numùeric|min:0|max:100',
+            'discount_percentage' => 'nullable|numeric|min:0|max:100',
 
             // Traçabilité et Paiement
             'status' => 'nullable|string|in:pending,in_progress,completed,cancelled',
