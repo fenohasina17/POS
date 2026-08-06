@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Hook pre-commit : bloque les commits contenant des fichiers .env ou des secrets
+set -euo pipefail
+
+FORBIDDEN_FILES=(".env" "backend/.env" "frontend/.env" "frontend/.env.local")
+
+for f in "${FORBIDDEN_FILES[@]}"; do
+    if git diff --cached --name-only | grep -qx "$f"; then
+        echo "❌ SÉCURITÉ : '$f' ne doit jamais être commité (credentials en clair)"
+        echo "   Ajoutez ce fichier à .gitignore et retirez-le du staging :"
+        echo "   git rm --cached $f"
+        exit 1
+    fi
+done
+
+# Scan des patterns de secrets dans les diffs stagés
+SECRET_PATTERNS='(DB_PASSWORD|APP_KEY|REVERB_APP_SECRET|REVERB_APP_KEY|SECRET_KEY|API_SECRET)=[^$\{\"\x27\s]'
+if git diff --cached -- '*.env' '*.php' '*.js' '*.ts' '*.json' '*.yaml' '*.yml' 2>/dev/null \
+    | grep -qE "$SECRET_PATTERNS"; then
+    echo "❌ SÉCURITÉ : Des secrets semblent être inclus dans ce commit"
+    echo "   Vérifiez avec : git diff --cached"
+    exit 1
+fi
+
+exit 0
