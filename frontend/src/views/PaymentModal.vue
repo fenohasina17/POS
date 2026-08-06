@@ -158,7 +158,7 @@
                 placeholder="03X XX XXX XX"
                 class="field-input"
                 :class="{
-                  'border-red-500': phoneNumber.replace(/\D/g, '').length >= 3 && !phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032'),
+                  'border-rose-500': phoneNumber.replace(/\D/g, '').length >= 3 && !phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032'),
                   'border-rose-400': phoneNumber.replace(/\D/g, '').length > 0 && phoneNumber.replace(/\D/g, '').length < 10 && phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032'),
                   'border-emerald-500': isPhoneNumberComplete
                 }"

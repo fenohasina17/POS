@@ -3,7 +3,7 @@
     <div class="flex flex-wrap items-center justify-center gap-4 md:gap-6">
       <router-link
         to="/pos"
-        class="inline-flex items-center gap-1 rounded-lg bg-red-500 px-2 py-0.5 font-semibold text-white hover:bg-red-600 text-[10px]"
+        class="inline-flex items-center gap-1 rounded-lg bg-rose-500 px-2 py-0.5 font-semibold text-white hover:bg-rose-600 text-[10px]"
       >
         <font-awesome-icon icon="shopping-cart" />
         <span>POS</span>
@@ -39,7 +39,7 @@
           v-model="selectedPOS"
           @change="onPOSChange"
           required
-          class="rounded-md border border-slate-700 bg-slate-700 px-2 py-1 text-sm text-white outline-none focus:border-red-500"
+          class="rounded-md border border-slate-700 bg-slate-700 px-2 py-1 text-sm text-white outline-none focus:border-rose-500"
         >
           <option :value="null" disabled>Sélectionner un POS</option>
           <option v-for="pos in pointOfSales" :key="pos.id" :value="pos">

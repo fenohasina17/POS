@@ -4,10 +4,10 @@
       <h3>Plan de salle</h3>
       <div class="layout-controls">
         <button @click="toggleViewMode" class="control-btn">
-          <i :class="viewMode === 'grid' ? 'fas fa-th' : 'fas fa-list'"></i>
+          <FontAwesomeIcon :icon="viewMode === 'grid' ? faTableCells : faList" />
         </button>
         <button @click="refreshLayout" class="control-btn">
-          <i class="fas fa-sync-alt"></i>
+          <FontAwesomeIcon :icon="faArrowsRotate" />
         </button>
       </div>
     </div>
@@ -25,7 +25,7 @@
         <div class="table-info">
           <div class="table-number">{{ table.table_number }}</div>
           <div class="table-status">
-            <i :class="getStatusIcon(table.status)"></i>
+            <FontAwesomeIcon :icon="getStatusIcon(table.status)" />
           </div>
         </div>
         <div class="table-tooltip" v-if="hoveredTable === table.id">
@@ -56,12 +56,12 @@
           <div class="table-details">
             <div class="table-name">{{ table.name || 'Sans nom' }}</div>
             <div class="table-capacity">
-              <i class="fas fa-users"></i>
+              <FontAwesomeIcon :icon="faUsers" />
               {{ table.capacity }} personnes
             </div>
           </div>
           <div class="table-status" :class="table.status">
-            <i :class="getStatusIcon(table.status)"></i>
+            <FontAwesomeIcon :icon="getStatusIcon(table.status)" />
             {{ getStatusText(table.status) }}
           </div>
         </div>
@@ -91,8 +91,14 @@
 </template>
 
 <script>
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faTableCells, faList, faArrowsRotate, faUsers, faCheckCircle, faCalendarCheck, faWrench, faQuestionCircle } from '@fortawesome/free-solid-svg-icons'
+library.add(faTableCells, faList, faArrowsRotate, faUsers, faCheckCircle, faCalendarCheck, faWrench, faQuestionCircle)
+
 export default {
   name: 'TableLayout',
+  components: { FontAwesomeIcon },
   props: {
     tables: {
       type: Array,
@@ -139,12 +145,12 @@ export default {
 
     getStatusIcon(status) {
       const icons = {
-        'available': 'fas fa-check-circle',
-        'occupied': 'fas fa-users',
-        'reserved': 'fas fa-calendar-check',
-        'out_of_order': 'fas fa-wrench'
+        'available': faCheckCircle,
+        'occupied': faUsers,
+        'reserved': faCalendarCheck,
+        'out_of_order': faWrench
       }
-      return icons[status] || 'fas fa-question-circle'
+      return icons[status] || faQuestionCircle
     },
 
     getStatusText(status) {

@@ -4,7 +4,7 @@
 
     <div class="mx-auto max-w-2xl bg-white shadow-xl rounded-2xl p-16 print-container" ref="summaryRef">
       <!-- Header Imprimable -->
-      <div class="text-center border-b-2 border-dashed border-slate-300 pb-6 mb-6">
+      <div class="text-center border-b-2 border-dashed border-slate-200 pb-6 mb-6">
         <h1 class="text-2xl font-black text-slate-900 uppercase">Récapitulatif Session</h1>
         <p class="text-sm font-bold text-slate-500 mt-2">{{ sessionLabel }}</p>
       </div>

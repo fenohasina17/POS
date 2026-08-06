@@ -1,6 +1,6 @@
 <template>
   <div class="p-4 md:p-6">
-    <section class="mx-auto w-full max-w-6xl space-y-6 rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-lg backdrop-blur-sm">
+    <section class="mx-auto w-full max-w-6xl space-y-6 rounded-2xl border border-slate-200 bg-white/80 p-6 shadow-lg backdrop-blur-sm">
       <header class="border-b border-slate-100 pb-4">
         <h1 class="text-3xl font-bold text-slate-900">Exporter les ventes</h1>
       </header>
@@ -51,7 +51,7 @@
         </div>
       </div>
 
-      <div v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</div>
+      <div v-if="errorMessage" class="text-rose-500 text-sm">{{ errorMessage }}</div>
 
       <div class="flex justify-center pt-6">
         <button @click="exportSales" :disabled="isExporting" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition">

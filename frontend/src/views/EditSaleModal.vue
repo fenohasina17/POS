@@ -7,7 +7,7 @@
         <h2 class="text-2xl font-bold text-slate-900">
           Modifier Vente #{{ sale?.sale_number || sale?.ticket_number || 'N/A' }}
         </h2>
-        <button @click="close" class="text-3xl text-slate-400 hover:text-red-500">×</button>
+        <button @click="close" class="text-3xl text-slate-400 hover:text-rose-500">×</button>
       </div>
 
       <div class="flex-1 overflow-auto p-6 space-y-6">
@@ -18,7 +18,7 @@
             <!-- Sélecteur de catégorie -->
             <div class="md:col-span-3">
               <label class="block text-sm font-medium text-slate-600 mb-1.5">Catégorie</label>
-              <select v-model="selectedCategoryId" class="w-full rounded-2xl border border-slate-300 py-3 px-4 focus:border-indigo-500">
+              <select v-model="selectedCategoryId" class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-indigo-500">
                 <option :value="null">-- Toutes les catégories --</option>
                 <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                   {{ cat.name }}
@@ -28,7 +28,7 @@
             <!-- Sélecteur de produit (filtré par catégorie) -->
             <div class="md:col-span-5">
               <label class="block text-sm font-medium text-slate-600 mb-1.5">Produit</label>
-              <select v-model="selectedProductId" class="w-full rounded-2xl border border-slate-300 py-3 px-4 focus:border-indigo-500">
+              <select v-model="selectedProductId" class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-indigo-500">
                 <option value="">-- Sélectionner un produit --</option>
                 <option v-for="p in filteredProductsByCategory" :key="p.id" :value="p.id">
                   {{ p.name }} — {{ p.price != null ? formatPrice(p.price) : 'Prix non défini' }}
@@ -41,7 +41,7 @@
                 type="number"
                 v-model.number="newProductQuantity"
                 min="1"
-                class="w-full rounded-2xl border border-slate-300 py-3 px-4 focus:border-indigo-500"
+                class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-indigo-500"
               />
             </div>
             <div class="md:col-span-2">
@@ -79,7 +79,7 @@
                   <td class="p-4 text-center">
                     <button
                       @click="removeLine(index)"
-                      class="text-red-500 hover:text-red-700 text-xl font-bold"
+                      class="text-rose-500 hover:text-rose-700 text-xl font-bold"
                     >
                       ✕
                     </button>

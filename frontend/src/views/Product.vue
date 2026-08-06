@@ -1,7 +1,7 @@
 <template>
   <div class="product-wrapper">
     <div class="product-layout grid gap-3 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
-      <aside class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+      <aside class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-semibold text-slate-800">Catégories</h2>
           <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600">
@@ -36,7 +36,7 @@
         </div>
       </aside>
 
-      <section class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+      <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div class="flex flex-col gap-3 border-b border-slate-100 pb-2">
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div class="relative w-full md:max-w-sm">
@@ -47,7 +47,7 @@
                 v-model.trim="searchQuery"
                 type="text"
                 placeholder="Rechercher un produit..."
-                class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
               />
             </div>
             <div class="flex justify-end gap-2">

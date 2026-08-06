@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="mx-auto max-w-6xl">
-      <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+      <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
           <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">

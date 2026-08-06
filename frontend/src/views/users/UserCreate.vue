@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
@@ -22,7 +22,7 @@
 
     <div
       v-if="errors.general"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
     >
       <div class="flex items-center gap-2">
         <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
@@ -37,7 +37,7 @@
       </button>
     </div>
 
-    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-100 px-6 py-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-slate-800">Informations du compte</h2>
@@ -56,7 +56,7 @@
               type="email"
               required
               placeholder="prenom.nom@entreprise.com"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               :class="{ 'border-rose-300': errors.email }"
             />
             <p v-if="errors.email" class="text-xs font-semibold text-rose-500">{{ errors.email }}</p>
@@ -69,7 +69,7 @@
               type="text"
               required
               placeholder="Jean Dupont"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               :class="{ 'border-rose-300': errors.name }"
             />
             <p v-if="errors.name" class="text-xs font-semibold text-rose-500">{{ errors.name }}</p>
@@ -82,7 +82,7 @@
               type="password"
               required
               placeholder="Minimum 8 caracteres"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               :class="{ 'border-rose-300': errors.password }"
             />
             <p v-if="errors.password" class="text-xs font-semibold text-rose-500">{{ errors.password }}</p>
@@ -95,7 +95,7 @@
               type="password"
               required
               placeholder="Retapez votre mot de passe"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               :class="{ 'border-rose-300': errors.password_confirmation }"
             />
             <p v-if="errors.password_confirmation" class="text-xs font-semibold text-rose-500">
@@ -108,7 +108,7 @@
             <select
               v-model="user.role"
               required
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               :class="{ 'border-rose-300': errors.role }"
             >
               <option value="">Sélectionner un rôle</option>
@@ -143,7 +143,7 @@
                   type="checkbox" 
                   :value="pos.id" 
                   v-model="user.point_of_sale_ids"
-                  class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                  class="rounded border-slate-200 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
                 <span class="text-xs font-bold text-slate-700">{{ pos.name }}</span>
               </label>

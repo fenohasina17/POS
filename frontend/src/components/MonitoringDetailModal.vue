@@ -30,9 +30,9 @@
                 <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Total Ventes</p>
                 <p class="text-lg font-black text-slate-700">{{ kpis?.total_sales || 0 }}</p>
             </div>
-            <div class="bg-red-50 border border-red-100 rounded-2xl p-4 shadow-sm">
-                <p class="text-[10px] font-black uppercase text-red-400 mb-1">Remises & Cadeaux offerts</p>
-                <p class="text-lg font-black text-red-600">{{ formatPrice(kpis?.total_discounts || 0) }}</p>
+            <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm">
+                <p class="text-[10px] font-black uppercase text-rose-400 mb-1">Remises & Cadeaux offerts</p>
+                <p class="text-lg font-black text-rose-600">{{ formatPrice(kpis?.total_discounts || 0) }}</p>
             </div>
         </div>
 
@@ -62,11 +62,11 @@
                 </div>
                 <!-- Flops -->
                 <div>
-                    <h4 class="text-xs font-bold text-red-500 mb-3 flex items-center gap-2">📉 Flops (À retirer ou revoir)</h4>
+                    <h4 class="text-xs font-bold text-rose-500 mb-3 flex items-center gap-2">📉 Flops (À retirer ou revoir)</h4>
                     <div class="space-y-3">
                         <div v-for="prod in flopProducts" :key="prod.name" class="flex justify-between items-center text-sm border-b border-slate-50 pb-1">
                             <span class="font-bold text-slate-700 truncate pr-2">{{ prod.name }}</span>
-                            <span class="font-black text-red-500 shrink-0">{{ prod.total_qty }}x</span>
+                            <span class="font-black text-rose-500 shrink-0">{{ prod.total_qty }}x</span>
                         </div>
                     </div>
                 </div>

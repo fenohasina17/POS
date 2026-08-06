@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
@@ -20,7 +20,7 @@
       </router-link>
     </header>
 
-    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-100 px-6 py-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-slate-800">Permissions disponibles</h2>
@@ -64,7 +64,7 @@
         <article
           v-for="permission in permissions"
           :key="permission.id"
-          class="flex flex-col justify-between rounded-3xl border border-slate-200 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+          class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
         >
           <div>
             <h3 class="text-base font-semibold text-slate-800">{{ permission.name }}</h3>

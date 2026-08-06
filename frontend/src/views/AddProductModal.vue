@@ -34,7 +34,7 @@
                   maxlength="255"
                   required
                   placeholder="Nom du produit"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
                 />
               </div>
               <div class="space-y-2">
@@ -45,7 +45,7 @@
                   maxlength="4"
                   required
                   placeholder="Ex: B001"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
                 />
                 <p class="text-xs text-slate-400">{{ localProduct.ref.length }}/4 caractères</p>
               </div>
@@ -61,7 +61,7 @@
                   step="0.01"
                   required
                   placeholder="0.00"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
                 />
               </div>
               <div class="space-y-2">
@@ -69,7 +69,7 @@
                 <select
                   v-model="localProduct.category_id"
                   required
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
                 >
                   <option :value="null" disabled>Choisir une catégorie</option>
                   <option v-for="category in categories" :key="category.id" :value="category.id">

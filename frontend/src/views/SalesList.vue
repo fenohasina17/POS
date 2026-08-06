@@ -1,6 +1,6 @@
 <template>
   <section class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Rapports</p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
@@ -20,25 +20,25 @@
     </header>
 
     <!-- Filtres (inchangés) -->
-    <div class="bg-white rounded-3xl shadow-sm border border-slate-200 p-4 mb-8">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-8">
       <div class="flex items-center gap-4 overflow-x-auto">
         <div class="flex-1 min-w-0">
           <label class="block text-xs font-medium text-slate-500 mb-1">Rechercher</label>
           <div class="relative">
             <input v-model="searchQuery" type="text" placeholder="N° ticket, client, produit..."
-              class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl focus:border-indigo-500 text-sm" />
+              class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 text-sm" />
             <FontAwesomeIcon :icon="faSearch" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           </div>
         </div>
         <div class="w-44 flex-shrink-0">
           <label class="block text-xs font-medium text-slate-500 mb-1">Point de vente</label>
-          <div class="w-full py-2 px-3 bg-slate-100 border border-slate-300 rounded-xl text-slate-700 text-sm">
+          <div class="w-full py-2 px-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 text-sm">
             {{ activePos?.name || 'Aucun point de vente' }}
           </div>
         </div>
         <div class="w-36 flex-shrink-0">
           <label class="block text-xs font-medium text-slate-500 mb-1">Période</label>
-          <select v-model="periodFilter" @change="applyPeriodFilter" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+          <select v-model="periodFilter" @change="applyPeriodFilter" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
             <option value="">Toutes</option>
             <option value="today">Aujourd’hui</option>
             <option value="thisWeek">Cette semaine</option>
@@ -47,7 +47,7 @@
         </div>
         <div class="w-44 flex-shrink-0">
           <label class="block text-xs font-medium text-slate-500 mb-1">Session</label>
-          <select v-model="sessionFilter" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+          <select v-model="sessionFilter" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
             <option value="">Toutes les sessions</option>
             <option v-for="s in sessions" :key="s.id" :value="s.id">{{ s.cash_register?.name || s.id }} - {{ s.user?.name || '' }}</option>
           </select>
@@ -55,7 +55,7 @@
         <!-- Nouveau filtre : Statut Session -->
         <div class="w-44 flex-shrink-0">
           <label class="block text-xs font-medium text-slate-500 mb-1">Statut Session</label>
-          <select v-model="sessionStatusFilter" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm">
+          <select v-model="sessionStatusFilter" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
             <option value="">Toutes</option>
             <option value="open">Ouvertes</option>
             <option value="closed">Fermées</option>
@@ -64,26 +64,33 @@
         <div class="flex gap-3 flex-shrink-0">
           <div class="w-36">
             <label class="block text-xs font-medium text-slate-500 mb-1">Du</label>
-            <input type="date" v-model="startDate" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm" />
+            <input type="date" v-model="startDate" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
           </div>
           <div class="w-36">
             <label class="block text-xs font-medium text-slate-500 mb-1">Au</label>
-            <input type="date" v-model="endDate" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-sm" />
+            <input type="date" v-model="endDate" class="w-full py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" />
           </div>
         </div>
       </div>
     </div>
 
     <!-- États -->
-    <div v-if="loading" class="text-center py-20">Chargement des ventes...</div>
-    <div v-else-if="loadError" class="bg-red-50 text-red-700 p-8 rounded-3xl text-center">{{ loadError }}</div>
-    <div v-else-if="filteredSales.length === 0" class="bg-white rounded-3xl p-16 text-center text-slate-500">
-      Aucune vente trouvée.
+    <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-4">
+      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
+      <p class="text-sm text-slate-400">Chargement des ventes...</p>
+    </div>
+    <div v-else-if="loadError" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-700">{{ loadError }}</div>
+    <div v-else-if="filteredSales.length === 0" class="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-white p-16 text-center">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+        <FontAwesomeIcon :icon="faReceipt" class="text-xl" />
+      </span>
+      <p class="text-sm font-semibold text-slate-600">Aucune vente trouvée</p>
+      <p class="text-xs text-slate-400">Ajustez les filtres ou sélectionnez une autre période.</p>
     </div>
 
     <!-- Liste des ventes (Groupées par caissier) -->
     <div v-else class="space-y-6">
-      <div v-for="group in salesByCashier" :key="group.id" class="bg-slate-50/50 rounded-3xl border border-slate-200 overflow-hidden">
+      <div v-for="group in salesByCashier" :key="group.id" class="bg-slate-50/50 rounded-2xl border border-slate-200 overflow-hidden">
         <!-- Header du Groupe (Caissier) -->
         <div 
           @click="toggleCashier(group.id)"
@@ -136,7 +143,7 @@
                     <button @click.stop="editSale(sale)" class="p-2 hover:bg-slate-100 rounded-lg transition">
                       <FontAwesomeIcon :icon="faPenToSquare" />
                     </button>
-                    <button @click.stop="deleteSale(sale.id)" class="p-2 text-red-500 hover:bg-red-50 rounded-lg transition">
+                    <button @click.stop="deleteSale(sale.id)" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition">
                       <FontAwesomeIcon :icon="faTrash" />
                     </button>
                     <button @click.stop="toggleSale(sale.id)" class="p-2 hover:bg-slate-100 rounded-lg transition">
