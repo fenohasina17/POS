@@ -803,7 +803,7 @@ const statCards = computed(() => [
     positive: ticketGrowth.value >= 0,
     description: 'Nombre de tickets enregistrés sur les 12 derniers mois.',
     icon: faReceipt,
-    iconBg: 'bg-blue-100 text-blue-600',
+    iconBg: 'bg-indigo-50 text-indigo-600',
   },
   {
     id: 'average-ticket',

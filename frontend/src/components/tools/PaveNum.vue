@@ -1,13 +1,13 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="close">
     <div class="flex w-[300px] flex-col items-center rounded-xl bg-white p-4 shadow-2xl">
-      <div class="mb-4 h-12 w-full select-none rounded-lg border border-gray-300 px-4 py-2 text-right text-xl">{{ displayValue }}</div>
+      <div class="mb-4 h-12 w-full select-none rounded-lg border border-slate-200 px-4 py-2 text-right text-xl">{{ displayValue }}</div>
       <div class="grid w-full grid-cols-3 gap-2">
         <button
           v-for="n in numbers"
           :key="n"
           @click="appendNumber(n)"
-          class="select-none rounded-lg border border-gray-300 bg-white py-2 text-lg hover:bg-gray-100 active:bg-gray-200"
+          class="select-none rounded-lg border border-slate-200 bg-white py-2 text-lg hover:bg-slate-100 active:bg-slate-100"
         >
           {{ n }}
         </button>

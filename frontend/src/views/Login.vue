@@ -18,19 +18,19 @@
             <ul class="space-y-3 text-sm text-white/80">
               <li class="flex items-center gap-3">
                 <span class="flex size-9 items-center justify-center rounded-full bg-white/10">
-                  <i class="fas fa-bolt text-white"></i>
+                  <FontAwesomeIcon :icon="faBolt" class="text-white" />
                 </span>
                 Commandes directes et en salle synchronisées
               </li>
               <li class="flex items-center gap-3">
                 <span class="flex size-9 items-center justify-center rounded-full bg-white/10">
-                  <i class="fas fa-lock text-white"></i>
+                  <FontAwesomeIcon :icon="faLock" class="text-white" />
                 </span>
                 Sessions caisse sécurisées
               </li>
               <li class="flex items-center gap-3">
                 <span class="flex size-9 items-center justify-center rounded-full bg-white/10">
-                  <i class="fas fa-chart-line text-white"></i>
+                  <FontAwesomeIcon :icon="faChartLine" class="text-white" />
                 </span>
                 Indicateurs de performance en temps réel
               </li>
@@ -58,7 +58,7 @@
                 v-model="email"
                 type="email"
                 placeholder="prenom.nom@entreprise.com"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 @focus="showKeyboard('email')"
               />
             </div>
@@ -71,7 +71,7 @@
                 type="password"
                 v-model="password"
                 placeholder="••••••••"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 @focus="showKeyboard('password')"
               />
             </div>
@@ -80,7 +80,7 @@
               type="submit"
               class="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
             >
-              <i class="fas fa-right-to-bracket mr-2"></i>
+              <FontAwesomeIcon :icon="faRightToBracket" class="mr-2" />
               Se connecter
             </button>
 
@@ -120,6 +120,10 @@ import Keyboard from '../components/tools/Keyboard.vue'
 import PosSelectionModal from '../components/PosSelectionModal.vue'
 import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faBolt, faLock, faChartLine, faRightToBracket } from '@fortawesome/free-solid-svg-icons'
+library.add(faBolt, faLock, faChartLine, faRightToBracket)
 
 defineOptions({ name: 'LoginPage' })
 

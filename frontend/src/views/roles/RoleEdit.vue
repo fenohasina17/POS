@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <header
-      class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8"
+      class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8"
     >
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">
@@ -37,7 +37,7 @@
 
     <div
       v-if="loading"
-      class="flex flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500 shadow-sm"
+      class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500 shadow-sm"
     >
       <span
         class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"
@@ -53,7 +53,7 @@
     <div v-else class="space-y-6">
       <div
         v-if="error"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
       >
         <div class="flex items-center gap-2">
           <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
@@ -69,7 +69,7 @@
       </div>
 
       <div v-if="role" class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <section class="space-y-6 rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <section class="space-y-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div class="border-b border-slate-100 px-6 py-4">
             <h2 class="text-base font-semibold text-slate-800">Informations du rôle</h2>
           </div>
@@ -85,7 +85,7 @@
                 <input
                   v-model="role.name"
                   type="text"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pl-9 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:opacity-50"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pl-9 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
                   :disabled="role.name === 'admin'"
                   placeholder="Nom du rôle"
                 />
@@ -150,7 +150,7 @@
           </div>
         </section>
 
-        <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div class="border-b border-slate-100 px-6 py-4">
             <h2 class="text-base font-semibold text-slate-800">Ajouter des permissions</h2>
             <p class="mt-1 text-xs text-slate-400">
@@ -173,7 +173,7 @@
                     v-model="selectedPermissions"
                     type="checkbox"
                     :value="permission.name"
-                    class="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-200"
+                    class="size-4 rounded border-slate-200 text-indigo-600 focus:ring-indigo-200"
                     :disabled="isAssigning"
                   />
                   <span class="truncate">{{ permission.name }}</span>

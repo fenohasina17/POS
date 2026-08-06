@@ -5,7 +5,7 @@
         <div>
           <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Configuration</p>
           <h1 class="mt-2 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-            <i class="fas fa-desktop text-indigo-500"></i>
+            <FontAwesomeIcon :icon="faDesktop" class="text-indigo-500" />
             Associer une caisse à cette machine
           </h1>
           <p class="mt-1 text-sm text-slate-500">
@@ -19,7 +19,7 @@
             class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
             @click="resetForm"
           >
-            <i class="fas fa-rotate"></i>
+            <FontAwesomeIcon :icon="faRotate" />
             Nouvelle caisse
           </button>
           <button
@@ -27,7 +27,7 @@
             class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-rose-200 hover:text-rose-600"
             @click="closeModal"
           >
-            <i class="fas fa-xmark"></i>
+            <FontAwesomeIcon :icon="faXmark" />
             Fermer
           </button>
         </div>
@@ -50,7 +50,7 @@
               class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 transition hover:border-indigo-200 hover:bg-indigo-50"
               @click="refreshMachineName"
             >
-              <i class="fas fa-arrows-rotate"></i>
+              <FontAwesomeIcon :icon="faArrowsRotate" />
               Réessayer
             </button>
           </header>
@@ -62,7 +62,7 @@
                 id="cashregister-name"
                 v-model="formName"
                 type="text"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 placeholder="Ex. POS-CAISSE-01"
                 maxlength="255"
                 required
@@ -75,7 +75,7 @@
               <select
                 id="point-of-sale"
                 v-model="selectedPointOfSaleId"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
                 :disabled="!isAdmin"
                 required
               >
@@ -93,7 +93,7 @@
                 class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
                 :disabled="isSaving || !formValid"
               >
-                <i v-if="isSaving" class="fas fa-spinner fa-spin"></i>
+                <FontAwesomeIcon v-if="isSaving" :icon="faSpinner" class="animate-spin" />
                 <span>{{ isSaving ? 'Enregistrement…' : 'Enregistrer' }}</span>
               </button>
               <p v-if="errorMessage" class="text-sm font-semibold text-rose-500">{{ errorMessage }}</p>
@@ -161,6 +161,10 @@ import axios from 'axios'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 import { useAuth } from '@/composables/useAuth'
 import { storage } from '@/utils/storage'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faDesktop, faRotate, faXmark, faArrowsRotate, faSpinner } from '@fortawesome/free-solid-svg-icons'
+library.add(faDesktop, faRotate, faXmark, faArrowsRotate, faSpinner)
 
 const { isAdmin, pointsOfSale, activePos } = useAuth()
 

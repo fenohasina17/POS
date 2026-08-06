@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Caisse</p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
@@ -33,7 +33,7 @@
     </header>
 
     <!-- Filtre Point de Vente (Admin et Gérant) -->
-    <section v-if="isAdmin || pointsOfSale.length > 1" class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+    <section v-if="isAdmin || pointsOfSale.length > 1" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div class="flex flex-wrap items-center gap-4">
         <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
           <font-awesome-icon icon="fa-solid fa-filter" class="text-indigo-500" />
@@ -61,7 +61,7 @@
     </section>
 
     <!-- Alertes -->
-    <div v-if="errorMessage" class="flex items-center justify-between gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600">
+    <div v-if="errorMessage" class="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600">
       <div class="flex items-center gap-2">
         <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
         <span>{{ errorMessage }}</span>
@@ -69,7 +69,7 @@
       <button @click="errorMessage = ''" class="text-xs font-bold uppercase tracking-widest">Fermer</button>
     </div>
 
-    <div v-if="successMessage" class="flex items-center justify-between gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600">
+    <div v-if="successMessage" class="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600">
       <div class="flex items-center gap-2">
         <font-awesome-icon icon="fa-solid fa-circle-check" />
         <span>{{ successMessage }}</span>
@@ -78,7 +78,7 @@
     </div>
 
     <!-- Formulaire de Création -->
-    <section v-if="showCreateForm" class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <section v-if="showCreateForm" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
         <h2 class="text-base font-bold text-slate-800">Ajouter une caisse</h2>
         <p class="text-xs text-slate-500 font-medium">Configurez une nouvelle unité de vente sur un site.</p>
@@ -130,7 +130,7 @@
     </section>
 
     <!-- Liste des Caisses -->
-    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
       <div class="border-b border-slate-100 bg-slate-50/30 px-6 py-4">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-bold text-slate-800">Unités de vente enregistrées</h2>

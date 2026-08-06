@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <header class="mb-8 flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+    <header class="mb-8 flex flex-wrap items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
       <div>
         <h1 class="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
           <font-awesome-icon icon="fa-solid fa-history" class="text-indigo-600" />
@@ -19,7 +19,7 @@
     </header>
 
     <!-- Filtres -->
-    <section class="mb-8 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex flex-wrap items-center gap-4">
+    <section class="mb-8 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-wrap items-center gap-4">
       <div class="flex items-center gap-3 text-sm font-bold text-slate-600">
         <font-awesome-icon icon="fa-solid fa-filter" class="text-indigo-500" />
         Statut :
@@ -33,7 +33,7 @@
     </section>
 
     <!-- Liste des Sessions -->
-    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
       <div v-if="loading" class="py-20 text-center text-slate-400">
         <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600 mx-auto"></div>
         <p class="mt-4 font-bold uppercase text-xs tracking-widest">Chargement des données...</p>

@@ -10,7 +10,7 @@
       @touchstart.stop.prevent="startDrag"
     >
       <div class="flex items-center">
-        <span class="mr-2 text-gray-400">
+        <span class="mr-2 text-slate-600">
           <i class="fas fa-arrows-alt"></i>
         </span>
         <strong>Clavier Virtuel</strong>
@@ -18,7 +18,7 @@
       <div class="flex gap-2">
         <button
           type="button"
-          class="flex items-center justify-center rounded border border-gray-500 bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
+          class="flex items-center justify-center rounded border border-slate-200 bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
           @click="closeKeyboard"
           title="Fermer le clavier"
         >
@@ -57,7 +57,7 @@
 
     <!-- Dernière ligne -->
     <div class="flex flex-wrap justify-center gap-2">
-      <button class="min-w-[45px] h-[45px] rounded-lg bg-blue-600 px-2 text-lg font-medium text-white transition hover:bg-blue-700" @click.stop="toggleShift">⇧ Shift</button>
+      <button class="min-w-[45px] h-[45px] rounded-lg bg-indigo-600 px-2 text-lg font-medium text-white transition hover:bg-indigo-700" @click.stop="toggleShift">⇧ Shift</button>
       <button class="min-w-[45px] h-[45px] rounded-lg bg-yellow-500 px-2 text-lg font-medium text-black transition hover:bg-yellow-600" @click.stop="backspace">DELL</button>
       <button class="min-w-[100px] h-[45px] flex-grow rounded-lg bg-green-600 px-2 text-lg font-medium text-white transition hover:bg-green-700" @click.stop="pressKey(' ')">Espace</button>
     </div>

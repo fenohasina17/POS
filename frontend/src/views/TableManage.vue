@@ -76,7 +76,7 @@
             v-model="searchQuery"
             type="text"
             placeholder="Rechercher par numéro ou nom..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           />
         </div>
         <div class="flex flex-wrap gap-2">
@@ -212,7 +212,7 @@
                 class="mt-1 w-full rounded-2xl border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2"
                 :class="errors.table_number
                   ? 'border-rose-300 focus:ring-rose-100'
-                  : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'"
+                  : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-200'"
               />
               <p v-if="errors.table_number" class="mt-1 text-xs text-rose-600">{{ errors.table_number }}</p>
             </div>
@@ -224,7 +224,7 @@
                 v-model="form.name"
                 type="text"
                 placeholder="Ex: Table terrasse"
-                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               />
             </div>
 
@@ -240,7 +240,7 @@
                 class="mt-1 w-full rounded-2xl border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2"
                 :class="errors.capacity
                   ? 'border-rose-300 focus:ring-rose-100'
-                  : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'"
+                  : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-200'"
               />
               <p v-if="errors.capacity" class="mt-1 text-xs text-rose-600">{{ errors.capacity }}</p>
             </div>
@@ -251,7 +251,7 @@
                 id="status"
                 v-model="form.status"
                 required
-                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               >
                 <option value="available">Disponible</option>
                 <option value="occupied">Occupée</option>
@@ -268,7 +268,7 @@
               v-model="form.description"
               rows="3"
               placeholder="Description ou notes..."
-              class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             ></textarea>
           </div>
 
@@ -280,14 +280,14 @@
                 type="number"
                 placeholder="Coordonnée X"
                 min="0"
-                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               />
               <input
                 v-model.number="form.location.y"
                 type="number"
                 placeholder="Coordonnée Y"
                 min="0"
-                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               />
             </div>
           </div>

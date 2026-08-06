@@ -1,7 +1,7 @@
 <template>
   <div class="category-wrapper">
     <div class="category-layout grid gap-3 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
-      <aside class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+      <aside class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-semibold text-slate-800">Catégories</h2>
           <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600">
@@ -32,14 +32,14 @@
                 v-model.trim="searchQuery"
                 type="text"
                 placeholder="Rechercher une catégorie..."
-                class="w-full rounded-full border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+                class="w-full rounded-full border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
               />
             </div>
           </div>
         </div>
       </aside>
 
-      <section class="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+      <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
           <h1 class="text-base font-semibold text-slate-800">Gestion des catégories</h1>
           <span class="text-xs font-semibold text-slate-400">{{ filteredCategories.length }} résultat(s)</span>

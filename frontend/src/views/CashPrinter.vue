@@ -397,8 +397,8 @@ const connectButtonDisabled = computed(() => {
 
 const statusBadgeClass = (registerId) => {
   const text = statusBadgeText(registerId)
-  if (text?.includes('Erreur')) return 'bg-red-100 text-red-700'
-  if (text?.includes('Occupée (vous)')) return 'bg-blue-100 text-blue-700'
+  if (text?.includes('Erreur')) return 'bg-rose-100 text-rose-700'
+  if (text?.includes('Occupée (vous)')) return 'bg-indigo-50 text-indigo-700'
   if (text?.includes('Occupée')) return 'bg-amber-100 text-amber-700'
   return 'bg-green-100 text-green-700'
 }

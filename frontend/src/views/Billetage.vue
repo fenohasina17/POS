@@ -3,7 +3,7 @@
     <div class="py-0 px-0">
       <section class="flex w-full flex-col gap-6">
         <!-- En-tête -->
-        <header class="rounded-3xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
+        <header class="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p class="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">Sécurité caisse</p>
@@ -49,7 +49,7 @@
         <!-- Grille principale -->
         <div class="grid gap-6 xl:grid-cols-[1fr_420px_auto]">
           <!-- Récapitulatif -->
-          <section class="min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-md">
+          <section class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-md">
             <div class="mb-3 border-b border-slate-100 pb-3">
               <h2 class="text-lg font-semibold text-slate-900">Produits vendus</h2>
             </div>
@@ -71,7 +71,7 @@
           </section>
 
           <!-- Formulaire Billetage -->
-          <form class="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
+          <form class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
             <div class="space-y-4">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
@@ -93,7 +93,7 @@
                     step="1"
                     :disabled="isSubmitting || isLoading || sessionClosed || hasRecordedBilletage || !canEditBilletage"
                     @focus="activeField = { type: 'denomination', value: denomination.value }"
-                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100 disabled:opacity-60"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 disabled:opacity-60"
                   />
                   <span class="text-right text-sm font-semibold text-slate-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</span>
                 </div>
@@ -153,7 +153,7 @@
 
           <!-- Clavier numérique -->
           <aside class="hidden xl:block">
-            <div class="sticky top-24 space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-md">
+            <div class="sticky top-24 space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-md">
               <NumericKeypad
                 :disabled="isKeypadDisabled"
                 @press="handleKeyPress"

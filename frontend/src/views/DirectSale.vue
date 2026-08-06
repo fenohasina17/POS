@@ -27,7 +27,7 @@
     <div class="direct-sale-layout grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px] p-4 bg-slate-50/50">
       <!-- OVERLAY DE VERROUILLAGE GLOBAL -->
       <div v-if="isSessionBilleted && !isAdmin" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all duration-500">
-        <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-[3rem] shadow-2xl border-4 border-rose-500 scale-110">
+        <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-2xl shadow-2xl border-4 border-rose-500 scale-110">
           <div class="h-24 w-24 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl animate-bounce">
             <FontAwesomeIcon icon="fa-solid fa-lock" class="text-5xl" />
           </div>

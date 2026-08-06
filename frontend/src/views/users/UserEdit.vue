@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
@@ -33,7 +33,7 @@
 
     <div
       v-if="loading"
-      class="flex flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500 shadow-sm"
+      class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500 shadow-sm"
     >
       <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
       <div>
@@ -45,7 +45,7 @@
     <div v-else class="space-y-6">
       <div
         v-if="error"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
       >
         <div class="flex items-center gap-2">
           <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
@@ -62,7 +62,7 @@
 
       <div
         v-if="success"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600"
       >
         <div class="flex items-center gap-2">
           <font-awesome-icon icon="fa-solid fa-circle-check" />
@@ -77,14 +77,14 @@
         </button>
       </div>
 
-      <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="grid gap-6 px-6 py-6 sm:grid-cols-2">
           <div class="space-y-2">
             <label class="text-sm font-medium text-slate-600">Nom d’utilisateur</label>
             <input
               v-model="user.name"
               type="text"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               placeholder="Entrez le nom de l’utilisateur"
               :class="{ 'border-rose-300': errors.name }"
             />
@@ -96,7 +96,7 @@
             <input
               v-model="user.email"
               type="email"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               placeholder="prenom.nom@entreprise.com"
               :class="{ 'border-rose-300': errors.email }"
             />
@@ -108,7 +108,7 @@
             <input
               v-model="user.password"
               type="password"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               placeholder="Laisser vide pour ne pas changer"
               :class="{ 'border-rose-300': errors.password }"
             />
@@ -120,7 +120,7 @@
             <input
               v-model="user.password_confirmation"
               type="password"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               placeholder="Confirmez le mot de passe"
               :class="{ 'border-rose-300': errors.password_confirmation }"
             />
@@ -133,7 +133,7 @@
             <label class="text-sm font-medium text-slate-600">Rôle</label>
             <select
               v-model="user.role"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               :class="{ 'border-rose-300': errors.role }"
             >
               <option value="">Sélectionner un rôle</option>
@@ -164,7 +164,7 @@
                   type="checkbox" 
                   :value="pos.id" 
                   v-model="user.point_of_sale_ids"
-                  class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                  class="rounded border-slate-200 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                 />
                 <span class="text-xs font-bold text-slate-700">{{ pos.name }}</span>
               </label>

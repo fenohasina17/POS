@@ -22,7 +22,7 @@
         <div>
           <label class="mb-2 block text-sm font-semibold text-slate-700">Nom du produit</label>
           <input
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             type="text"
             v-model="localProduct.name"
             maxlength="255"
@@ -34,7 +34,7 @@
         <div>
           <label class="mb-2 block text-sm font-semibold text-slate-700">Référence du produit</label>
           <input
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             type="text"
             v-model="localProduct.ref"
             maxlength="255"
@@ -47,7 +47,7 @@
         <div>
           <label class="mb-2 block text-sm font-semibold text-slate-700">Prix</label>
           <input
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             type="number"
             v-model.number="localProduct.price"
             min="0"
@@ -60,7 +60,7 @@
         <!-- Statut actif -->
         <div>
           <label class="inline-flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <input type="checkbox" v-model="localProduct.status" class="size-4 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-200" />
+            <input type="checkbox" v-model="localProduct.status" class="size-4 rounded border-slate-200 text-indigo-600 focus:ring-2 focus:ring-indigo-200" />
             Actif
           </label>
         </div>
@@ -70,7 +70,7 @@
           <label class="mb-2 block text-sm font-semibold text-slate-700">Catégorie</label>
           <select
             v-model="localProduct.category_id"
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
           >
             <option :value="null" disabled>Choisir une catégorie</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">
@@ -108,7 +108,7 @@
           Enregistrer
         </button>
         <button
-          class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
           @click="closeModal"
           :disabled="isSaving"
         >

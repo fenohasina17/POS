@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
       <div>
         <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
         <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
@@ -23,7 +23,7 @@
       {{ error }}
     </div>
 
-    <div v-if="successMessage" class="rounded-3xl border border-emerald-200 bg-emerald-50 px-6 py-5">
+    <div v-if="successMessage" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-6 py-5">
       <div class="flex items-center gap-3 text-sm font-semibold text-emerald-700">
         <font-awesome-icon icon="fa-solid fa-circle-check" />
         {{ successMessage }}
@@ -46,7 +46,7 @@
       </div>
     </div>
 
-    <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-100 px-6 py-4">
         <h2 class="text-base font-semibold text-slate-800">Informations de la permission</h2>
       </div>
@@ -66,7 +66,7 @@
               class="mt-1.5 w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:outline-none focus:ring-2"
               :class="nameError
                 ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
-                : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-100'"
+                : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-200'"
             />
             <p v-if="nameError" class="mt-1.5 flex items-center gap-1 text-xs text-rose-600">
               <font-awesome-icon icon="fa-solid fa-circle-exclamation" />
