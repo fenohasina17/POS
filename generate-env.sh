@@ -18,6 +18,7 @@ SERVER_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '/src/{print $7}' | head -1)
 # Génération des secrets
 APP_KEY="base64:$(openssl rand -base64 32)"
 DB_PASSWORD=$(openssl rand -hex 16)
+REDIS_PASSWORD=$(openssl rand -hex 16)
 REVERB_APP_ID=$(shuf -i 100000-999999 -n 1)
 REVERB_APP_KEY=$(openssl rand -hex 16)
 REVERB_APP_SECRET=$(openssl rand -hex 16)
@@ -46,7 +47,7 @@ CACHE_STORE=redis
 REDIS_CLIENT=phpredis
 REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=${REDIS_PASSWORD}
 
 SESSION_DRIVER=file
 SESSION_LIFETIME=120

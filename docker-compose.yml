@@ -31,12 +31,24 @@ services:
     image: redis:7-alpine
     restart: always
     logging: *default-logging
+    command: >
+      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+        redis-server --requirepass "$$REDIS_PASSWORD" --bind 0.0.0.0;
+      else
+        redis-server --bind 0.0.0.0;
+      fi'
+    env_file: .env
     volumes:
       - redis_data:/data
     networks:
       - pos_network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: >
+        sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
+          redis-cli -a "$$REDIS_PASSWORD" ping;
+        else
+          redis-cli ping;
+        fi'
       interval: 5s
       timeout: 3s
       retries: 5
@@ -159,14 +171,12 @@ services:
       dockerfile: Dockerfile
     restart: always
     logging: *default-logging
-    privileged: true
-    user: root
     ports:
       - "9090:8080"
       - "50000:50000"
     volumes:
       - jenkins_data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - pos_network
 
