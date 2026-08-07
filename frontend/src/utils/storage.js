@@ -1,29 +1,31 @@
 export const storage = {
   setAuth(token, user, roles = [], permissions = []) {
-    localStorage.setItem('token', token)
-    // On ajoute les rôles et permissions directement dans l'objet user pour simplifier
+    // Le token est stocké dans sessionStorage (scope onglet uniquement, effacé à la fermeture)
+    // → inaccessible depuis d'autres onglets, non persisté entre sessions navigateur
+    sessionStorage.setItem('token', token)
+    // Les données utilisateur (non sensibles) restent dans localStorage pour la persistance
     const userData = { ...user, roles, permissions }
     localStorage.setItem('user', JSON.stringify(userData))
   },
-  
+
   getAuth() {
     try {
-      const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
       const userStr = localStorage.getItem('user')
       const user = userStr && userStr !== 'undefined' ? JSON.parse(userStr) : null
       return { token, user }
     } catch (e) {
-      console.error('Error reading auth from storage:', e)
       return { token: null, user: null }
     }
   },
-  
+
   removeAuth() {
-    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
     localStorage.removeItem('user')
+    // Nettoyage rétrocompat (token stocké dans localStorage avant cette migration)
+    localStorage.removeItem('token')
   },
-  
-  // Alias pour rétrocompatibilité
+
   clearAuth() {
     this.removeAuth()
   },

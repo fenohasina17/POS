@@ -18,7 +18,7 @@ export function useCategories() {
     console.log('loadCategories : démarrage de l\'exécution')
 
     try {
-      const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
       console.log('loadCategories : jeton récupéré :', token ? 'Présent' : 'Absent')
       if (!token) {
         console.log('loadCategories : aucun jeton trouvé, arrêt anticipé')

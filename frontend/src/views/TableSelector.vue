@@ -184,7 +184,7 @@ export default {
     async loadPendingOrders() {
       this.loadingPending = true
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
         const activePosStr = localStorage.getItem('active_pos')
         const activePos = activePosStr ? JSON.parse(activePosStr) : null
         const activePosId = activePos?.id
@@ -211,7 +211,7 @@ export default {
       console.log('TableSelector: Loading tables, forceRefresh:', forceRefresh)
 
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
         if (!token) {
           throw new Error('Token non trouvé. Veuillez vous reconnecter.')
         }

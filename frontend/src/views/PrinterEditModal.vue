@@ -124,7 +124,7 @@ const { printerTypes, fetchPrinterTypes } = usePrinterTypes()
 
 const fetchCashRegisters = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     let url = `${API_BASE_URL}/cash-registers`
 
     // Filter by selected POS if admin has selected one
@@ -183,7 +183,7 @@ const savePrinter = async () => {
   try {
     isSaving.value = true
     saveError.value = ''
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     // Ensure all required fields are included and have correct format
     const printerData = {

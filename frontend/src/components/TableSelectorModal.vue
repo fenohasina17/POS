@@ -142,7 +142,7 @@ export default {
       this.error = null
 
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
         const activePosStr = localStorage.getItem('active_pos')
         const activePos = activePosStr ? JSON.parse(activePosStr) : null
         

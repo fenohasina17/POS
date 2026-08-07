@@ -12,7 +12,7 @@ export function usePrinterTypes() {
 
   const fetchPrinterTypes = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
       const response = await axios.get(`${API_BASE_URL}/printer-types`, {
         headers: {
           Authorization: `Bearer ${token}`,

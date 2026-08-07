@@ -420,7 +420,7 @@ const loadTables = async () => {
       tables.value = []
       return
     }
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const response = await fetch(`${API_BASE_URL}/tables?point_of_sale_id=${posId}`, {
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
     })
@@ -552,7 +552,7 @@ const saveTable = async () => {
   loading.value = true
   errors.value = {}
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const posId = activePos.value?.id
     if (!posId) { alert('Point de vente actif non défini'); return }
 
@@ -606,7 +606,7 @@ const handleStatusChange = (table, event) => {
 const updateTableStatus = async (tableId, status) => {
   loadingTableId.value = tableId
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const response = await fetch(`${API_BASE_URL}/tables/${tableId}/status`, {
       method: 'PATCH',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -636,7 +636,7 @@ const confirmDelete = async () => {
   if (!tableToDelete.value) return
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const response = await fetch(`${API_BASE_URL}/tables/${tableToDelete.value.id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }

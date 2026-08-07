@@ -22,7 +22,7 @@ export const useAuth = () => {
       const response = await axios.post(`${API_BASE_URL}/login`, { email, password })
       const { token, user: userData, permissions = [], roles = [] } = response.data
       
-      localStorage.setItem('token', token)
+      sessionStorage.setItem('token', token)
       localStorage.setItem('user', JSON.stringify(userData))
       localStorage.setItem('user_permissions', JSON.stringify(permissions))
       localStorage.setItem('user_roles', JSON.stringify(roles))
@@ -40,7 +40,7 @@ export const useAuth = () => {
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
     localStorage.removeItem('user')
     localStorage.removeItem('user_permissions')
     localStorage.removeItem('user_roles')
@@ -51,7 +51,7 @@ export const useAuth = () => {
 
   const loadUserData = () => {
     const userData = localStorage.getItem('user')
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     
     if (userData && token) {
       try {

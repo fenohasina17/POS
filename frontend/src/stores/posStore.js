@@ -12,7 +12,7 @@ export const usePosStore = defineStore('pos', {
     async fetchPointOfSales() {
       try {
         this.loading = true
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
         const response = await axios.get(`${API_BASE_URL}/point-of-sales`, {
           headers: { Authorization: `Bearer ${token}` },
         })

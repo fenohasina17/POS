@@ -49,7 +49,7 @@ class TableService {
 
   async addProductsToPendingOrder(saleId, cartItems, tableId) {
     const payload = this.factory.createAddProductsPayload(saleId, cartItems)
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     const response = await apiClient.post(`/sales/${saleId}/add-products`, {
       order_lines: payload.order_lines

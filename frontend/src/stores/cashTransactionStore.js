@@ -13,7 +13,7 @@ export const useCashTransactionStore = defineStore('cashTransaction', {
       this.loading = true
       this.error = null
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
         const response = await axios.get(`${API_URL}/api/cash-transactions`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -27,7 +27,7 @@ export const useCashTransactionStore = defineStore('cashTransaction', {
     },
     async createTransaction(transactionData) {
       try {
-        const token = localStorage.getItem('token')
+        const token = sessionStorage.getItem('token')
         const response = await axios.post(`${API_URL}/api/cash-transactions`, transactionData, {
           headers: { Authorization: `Bearer ${token}` },
         })

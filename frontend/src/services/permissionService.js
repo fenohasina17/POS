@@ -2,7 +2,7 @@ import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 
 const API_URL = `${API_BASE_URL}/permissions`
-const token = localStorage.getItem('token')
+const token = sessionStorage.getItem('token')
 
 export default {
   getAll() {
