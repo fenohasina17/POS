@@ -33,9 +33,9 @@ try {
 done
 echo "Base de données prête."
 
-# Exécuter les migrations (le seed est géré par Jenkins au déploiement)
+# Exécuter les migrations — erreur fatale si ça échoue (schéma incohérent = arrêt propre)
 echo "Exécution des migrations..."
-php artisan migrate --force || true
+php artisan migrate --force
 
 # Reconstruire le cache config avec les vraies valeurs runtime
 php artisan config:cache 2>/dev/null || true

@@ -4,6 +4,23 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "5"
 
+x-backend-base: &backend-base
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  restart: always
+  logging: *default-logging
+  env_file: .env
+  volumes:
+    - storage_data:/var/www/storage
+  networks:
+    - pos_network
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
 services:
   # --- Base de Données (Postgres) ---
   db:
@@ -55,38 +72,28 @@ services:
 
   # --- Backend Laravel (PHP-FPM) ---
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: always
-    logging: *default-logging
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    env_file: .env
-    volumes:
-      - storage_data:/var/www/storage
-    networks:
-      - pos_network
+    <<: *backend-base
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tln | grep -q ':9000' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # --- Serveur WebSocket (Laravel Reverb) ---
   reverb:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: always
-    logging: *default-logging
+    <<: *backend-base
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    env_file: .env
-    networks:
-      - pos_network
+
+  # --- Queue Worker (jobs asynchrones + sync agent) ---
+  worker:
+    <<: *backend-base
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+
+  # --- Scheduler Laravel (tâches planifiées) ---
+  scheduler:
+    <<: *backend-base
+    command: ["php", "artisan", "schedule:work"]
 
   # --- Serveur Web (Nginx HTTP) ---
   nginx:
@@ -98,27 +105,29 @@ services:
     ports:
       - "8000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - storage_data:/var/www/storage
     networks:
       - pos_network
 
   # --- Frontend (Vue.js) ---
+  # Les URLs sont injectées à l'exécution via env-config.js (pas au build)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL}
-        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
-        VITE_REVERB_HOST: ${REVERB_HOST}
-        VITE_REVERB_PORT: ${REVERB_PORT:-8000}
-        VITE_REVERB_SCHEME: ${REVERB_SCHEME:-ws}
     restart: always
     logging: *default-logging
     ports:
       - "5173:80"
+    environment:
+      - API_URL=${VITE_API_URL:-http://localhost:8000}
+      - REVERB_APP_KEY=${REVERB_APP_KEY}
+      - REVERB_HOST=${REVERB_HOST:-localhost}
+      - REVERB_PORT=${REVERB_PORT:-8000}
+      - REVERB_SCHEME=${REVERB_SCHEME:-ws}
     depends_on:
       - nginx
     networks:
@@ -152,7 +161,7 @@ services:
     networks:
       - pos_network
 
-  # --- Monitoring (Uptime Kuma) ---
+  # --- Monitoring local (Uptime Kuma) ---
   uptime-kuma:
     image: louislam/uptime-kuma:1
     pull_policy: if_not_present
@@ -164,22 +173,6 @@ services:
     networks:
       - pos_network
 
-  # --- Jenkins (CI/CD Automation) ---
-  jenkins:
-    build:
-      context: ./docker/jenkins
-      dockerfile: Dockerfile
-    restart: always
-    logging: *default-logging
-    ports:
-      - "9090:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins_data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - pos_network
-
 networks:
   pos_network:
     driver: bridge
@@ -187,7 +180,6 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  jenkins_data:
   storage_data:
   backup_data:
   uptime_kuma_data:
