@@ -1,28 +1,42 @@
-# Laravel
-/backend/vendor/
-/backend/.env
-/backend/storage/*.key
-/backend/public/storage
-/backend/public/hot
-/backend/public/specification.yaml
-/backend/bootstrap/cache/*
-/backend/.phpunit.result.cache
+# Laravel POS
+/pos/backend/vendor/
+/pos/backend/.env
+/pos/backend/storage/*.key
+/pos/backend/public/storage
+/pos/backend/public/hot
+/pos/backend/public/specification.yaml
+/pos/backend/bootstrap/cache/*
+/pos/backend/.phpunit.result.cache
 
-# Vue.js / Frontend
-/frontend/node_modules/
-/frontend/dist/
-/frontend/.env
-/frontend/.env.local
+# Vue.js POS
+/pos/frontend/node_modules/
+/pos/frontend/dist/
+/pos/frontend/.env
+/pos/frontend/.env.local
+
+# Laravel central
+/central/backend/vendor/
+/central/backend/.env
+/central/backend/storage/*.key
+/central/backend/bootstrap/cache/*
+/central/backend/.phpunit.result.cache
+
+# Vue.js central
+/central/frontend/node_modules/
+/central/frontend/dist/
+/central/frontend/.env
+/central/frontend/.env.local
 
 # Docker & OS
-.env
-docker/certs/*.pem
-docker/certs/*.crt
-docker/certs/*.key
+/pos/.env
+/central/.env
+/pos/docker/certs/*.pem
+/pos/docker/certs/*.crt
+/pos/docker/certs/*.key
 pos-local-ca.crt
 docker-compose.override.yml
 .DS_Store
 Thumbs.db
 
-# Kubernetes — secrets gérés via Jenkins Credentials
+# Kubernetes
 k8s/secrets.yaml
