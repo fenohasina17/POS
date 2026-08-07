@@ -44,14 +44,31 @@ Route::get('/health', function (\Illuminate\Http\Request $request) {
     } catch (\Exception $e) {
         $redisStatus = 'error';
     }
+    // Sync status
+    $pendingSync = 0;
+    try {
+        $pendingSync = \App\Models\Sale::whereNull('synced_at')->count()
+            + \App\Models\CashRegisterSession::whereNull('synced_at')->count()
+            + \App\Models\CashTransaction::whereNull('synced_at')->count();
+    } catch (\Exception $e) {}
+
+    $lastSync = null;
+    try {
+        $lastSync = \App\Models\SyncLog::where('status', 'success')->latest('started_at')->value('started_at');
+    } catch (\Exception $e) {}
+
     $status = ($dbStatus === 'ok' && $redisStatus === 'ok') ? 'healthy' : 'degraded';
     $code   = $status === 'healthy' ? 200 : 503;
     return response()->json([
-        'status'    => $status,
-        'db'        => $dbStatus,
-        'redis'     => $redisStatus,
-        'timestamp' => now()->toISOString(),
-        'version'   => config('app.name'),
+        'status'       => $status,
+        'db'           => $dbStatus,
+        'redis'        => $redisStatus,
+        'terminal_id'  => config('sync.terminal_id'),
+        'restaurant_id'=> config('sync.restaurant_id'),
+        'app_version'  => config('app.version', '1.0.0'),
+        'pending_sync' => $pendingSync,
+        'last_sync_at' => $lastSync,
+        'timestamp'    => now()->toISOString(),
     ], $code);
 })->name('health');
 

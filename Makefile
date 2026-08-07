@@ -1,5 +1,5 @@
 .PHONY: \
-  pos-up pos-down pos-restart pos-build pos-logs pos-ps pos-migrate pos-env \
+  pos-up pos-down pos-restart pos-build pos-logs pos-ps pos-migrate pos-env pos-sync \
   central-up central-down central-build central-logs central-migrate \
   setup-hooks
 
@@ -26,6 +26,9 @@ pos-ps:
 
 pos-migrate:
 	docker compose -f pos/docker-compose.yml exec backend php artisan migrate --force
+
+pos-sync:
+	docker compose -f pos/docker-compose.yml exec backend php artisan pos:sync
 
 # ── Serveur central ───────────────────────────────────────────
 central-up:
