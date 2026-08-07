@@ -23,7 +23,6 @@ class AppServiceProvider extends ServiceProvider
         // Binding pour FilePrintConnector (USB)
         $this->app->bind(FilePrintConnector::class, function ($app, $params) {
             $path = $params['path'] ?? '';
-            \Log::info('FilePrintConnector créé avec chemin: ' . $path);
             return new FilePrintConnector($path);
         });
 

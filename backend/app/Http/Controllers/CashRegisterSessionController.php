@@ -208,8 +208,6 @@ class CashRegisterSessionController extends Controller
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
-            \Log::info("DEBUG SHOW: SessionID: $id, ActivePosID: $activePosId, SessionPosID: " . optional($session->cashRegister)->point_of_sale_id);
-
             if (!$isAdmin) {
                 if (!$activePosId) {
                     return response()->json([
@@ -295,8 +293,6 @@ class CashRegisterSessionController extends Controller
             }
        }
 
-        \Log::info("Session Update Request for ID {$id}: ", $request->all());
-
         $validated = $request->validate([
             'actual_cash_amount' => 'nullable|numeric|min:0',
             'expected_cash_amount' => 'nullable|numeric|min:0',
@@ -342,8 +338,6 @@ class CashRegisterSessionController extends Controller
             }
 
             $session->save();
-
-            \Log::info("Session {$id} updated. New actual_cash_amount: " . $session->actual_cash_amount);
 
             return response()->json($session);
         }

@@ -188,9 +188,7 @@ class PricingController extends Controller
      */
     public function update($id, Request $request)
     {
-        \Log::info("PricingController@update started for ID: $id");
         try {
-            // Récupérer l'utilisateur connecté
             $user = auth()->user();
             if (!$user) {
                 return response()->json(['error' => 'Utilisateur non authentifié.'], 401);
@@ -199,8 +197,6 @@ class PricingController extends Controller
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
-            \Log::info("DEBUG - isAdmin: " . ($isAdmin ? 'yes' : 'no') . ", activePosId: " . ($activePosId ?? 'NULL'));
-
             if (!$isAdmin && !$activePosId) {
                 return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
             }
@@ -208,48 +204,35 @@ class PricingController extends Controller
                 return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
             }
 
-            // Validate the incoming data
-            \Log::info("Validating request data...");
             $validated = $request->validate([
                 'price' => 'required|numeric',
                 'product_id' => 'sometimes|required|exists:products,id',
                 'point_of_sale_id' => 'sometimes|required|exists:point_of_sales,id',
             ]);
-            \Log::info("Validation successful.");
-            // Determine the actual POS ID for the query
+
             $targetPosIdForQuery = null;
             if ($isAdmin) {
                 $targetPosIdForQuery = $validated['point_of_sale_id'] ?? $activePosId;
-                if (!$targetPosIdForQuery) { // Admin must specify POS or have an active one
+                if (!$targetPosIdForQuery) {
                      return response()->json(['message' => 'Un point de vente doit être spécifié ou actif pour un administrateur.'], 422);
                 }
-
             } else {
                 $targetPosIdForQuery = $activePosId;
             }
 
-
-            // Rechercher l'enregistrement de pricing correspondant au product_id ($id) et au point_of_sale_id de l'utilisateur
-            // Here $id is the pricing ID, not product ID
-            \Log::info("Searching for pricing ID: $id");
             $pricing = Pricing::where('id', $id)
                 ->when(!$isAdmin, fn($query) => $query->where('point_of_sale_id', $targetPosIdForQuery))
                 ->first();
 
             if (!$pricing) {
-                \Log::info("Pricing not found.");
                 return response()->json(['error' => 'Pricing introuvable ou accès refusé.'], 404);
             }
 
-            // Met à jour l'enregistrement de pricing avec la nouvelle valeur de "price"
-
-            \Log::info("Updating pricing ID: $id");
             $pricing->update([
                 'price' => $validated['price'],
                 'product_id' => $validated['product_id'] ?? $pricing->product_id,
                 'point_of_sale_id' => $validated['point_of_sale_id'] ?? $pricing->point_of_sale_id,
             ]);
-            \Log::info("Pricing updated successfully.");
 
 
             return response()->json($pricing, 200);
