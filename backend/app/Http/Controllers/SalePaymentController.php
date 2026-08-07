@@ -86,15 +86,6 @@ class SalePaymentController extends Controller
                 'change_amount' => 'nullable|numeric|min:0',
             ]);
 
-            // ✅ Vérifier si un discount est présent et le logger
-            $hasDiscount = collect($validated['payments'])->contains(fn($p) => isset($p['discount_percentage']));
-            if ($hasDiscount) {
-                Log::info('Discount appliqué lors du paiement', [
-                    'sale_id' => $saleId,
-                    'payments' => $validated['payments']
-                ]);
-            }
-
             // Appel au service (qui a déjà été modifié pour gérer discount_percentage)
             $result = $this->service->addPayments(
                 $sale,
