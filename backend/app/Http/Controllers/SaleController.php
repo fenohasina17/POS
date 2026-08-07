@@ -150,6 +150,15 @@ class SaleController extends Controller
                 return response()->json(['message' => 'Vous n\'avez pas la permission de voir les ventes.'], 403);
             }
 
+            $request->validate([
+                'cash_register_session_id' => 'nullable|integer|min:1',
+                'user_id'                  => 'nullable|integer|min:1',
+                'point_of_sale_id'         => 'nullable|integer|min:1',
+                'status'                   => 'nullable|in:pending,in_progress,completed,cancelled',
+                'date_from'                => 'nullable|date_format:Y-m-d',
+                'date_to'                  => 'nullable|date_format:Y-m-d|after_or_equal:date_from',
+            ]);
+
             $sessionId = $request->query('cash_register_session_id');
             $userId = $request->query('user_id');
 
@@ -237,12 +246,7 @@ class SaleController extends Controller
             // ========== RESTRICTIONS ==========
             // ... (rest of filtering logic) ...
             
-            \Log::info("DEBUG SalesQuery: " . $sales->toSql());
-            \Log::info("DEBUG Bindings: " . json_encode($sales->getBindings()));
-
             $sales = $sales->orderByDesc('created_at')->get();
-            
-            \Log::info("DEBUG Final Sales Count: " . $sales->count());
 
             return response()->json($sales);
 
@@ -958,7 +962,6 @@ class SaleController extends Controller
                 'locked_at' => now()
             ]);
             
-            \Log::info("🔔 Dispatching TableLockUpdated for Table: {$table->id} by Session: {$session->id}");
             event(new TableLockUpdated($table->id, $session->id));
 
             return response()->json($sale, 201);

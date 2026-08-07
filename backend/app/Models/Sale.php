@@ -123,8 +123,13 @@ class Sale extends Model
     {
         $total = $this->orderlines()->sum('total');
 
-        $this->total_amount = $total;
-        $this->final_amount = $total * (1 - ($this->discount_percentage ?? 0) / 100);
+        $discount = (float) ($this->discount_percentage ?? 0);
+        if ($discount < 0 || $discount > 100) {
+            throw new \InvalidArgumentException("Pourcentage de remise invalide : {$discount}");
+        }
+
+        $this->total_amount = round($total, 2);
+        $this->final_amount = round($total * (1 - $discount / 100), 2);
         $this->save();
     }
 
