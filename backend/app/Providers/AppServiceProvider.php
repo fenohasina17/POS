@@ -9,7 +9,9 @@ use Spatie\Permission\Models\Role;
 use Mike42\Escpos\PrintConnectors\FilePrintConnector;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\PrintConnectors\CupsPrintConnector;
+use App\Observers\CashTransactionObserver;
 use App\Observers\SaleObserver;
+use App\Models\CashTransaction;
 use App\Models\Sale;
 class AppServiceProvider extends ServiceProvider
 {
@@ -67,6 +69,7 @@ class AppServiceProvider extends ServiceProvider
             return $size <= ($parameters[0] * 1024);
         });
         Sale::observe(SaleObserver::class);
+        CashTransaction::observe(CashTransactionObserver::class);
     }
   
 }
