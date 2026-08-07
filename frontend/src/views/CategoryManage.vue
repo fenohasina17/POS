@@ -185,7 +185,7 @@ const fetchCategories = async () => {
     const posId = activePos.value?.id
     if (!posId) throw new Error('Point de vente non configuré')
     
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const response = await axios.get(`${API_BASE_URL}/categories`, {
       params: {
         'with_products': 1,
@@ -253,7 +253,7 @@ const closeCreateModal = () => {
  */
 const handleAdded = async (newCategory) => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const response = await axios.post(`${API_BASE_URL}/categories`, newCategory, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -296,7 +296,7 @@ const closeEditModal = () => {
  */
 const handleUpdated = async (updatedCategory) => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     await axios.put(`${API_BASE_URL}/categories/${updatedCategory.id}`, updatedCategory, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -338,7 +338,7 @@ const deleteCategory = async () => {
   if (!categoryToDelete.value) return
   isDeleting.value = true
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     await axios.delete(`${API_BASE_URL}/categories/${categoryToDelete.value.id}`, {
       headers: { Authorization: `Bearer ${token}` }
     })

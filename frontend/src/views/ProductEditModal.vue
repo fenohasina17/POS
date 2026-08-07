@@ -153,7 +153,7 @@ const { activePos } = auth
 
 const fetchCategories = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const pointOfSaleId = activePos.value?.id
 
     console.log('🔍 pointOfSaleId utilisé:', pointOfSaleId)
@@ -245,7 +245,7 @@ const saveProduct = async () => {
   try {
     isSaving.value = true
     saveError.value = ''
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     
     // Payload unique pour la mise à jour atomique
     const payload = {

@@ -240,7 +240,7 @@ onMounted(async () => {
 
 const fetchUserProfile = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
 
     const response = await axios.get(`${API_BASE_URL}/me`, {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }

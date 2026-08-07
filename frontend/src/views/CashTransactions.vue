@@ -124,7 +124,7 @@ const form = reactive({
 const apiBase = `${API_BASE_URL}/cash-transactions`
 
 const getHeaders = () => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 

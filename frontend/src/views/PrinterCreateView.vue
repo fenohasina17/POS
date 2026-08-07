@@ -225,7 +225,7 @@ const refreshMachineName = () => { applyDetectedName() }
 
 const fetchCashRegisters = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const response = await axios.get(`${API_BASE_URL}/cash-registers`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -248,7 +248,7 @@ const savePrinter = async () => {
   try {
     isSaving.value = true
     saveError.value = ''
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const payload = { ...printer, name: printer.name.trim(), connection_type: 'cups', ip_address: null, port: null }
     const { data } = await axios.post(`${API_BASE_URL}/printers`, payload, { headers: { Authorization: `Bearer ${token}` } })
     const created = data?.data || data

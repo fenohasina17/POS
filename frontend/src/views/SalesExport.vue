@@ -89,7 +89,7 @@ const inputType = computed(() => {
 
 const fetchData = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const [posRes, prodRes] = await Promise.all([
       axios.get(`${API_BASE_URL}/point-of-sales`, { headers: { Authorization: `Bearer ${token}` } }),
       axios.get(`${API_BASE_URL}/products`, { headers: { Authorization: `Bearer ${token}` } })
@@ -104,7 +104,7 @@ const exportSales = async () => {
   errorMessage.value = ''
 
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const params = {
         pointOfSaleId: filters.value.pointOfSaleId,
         productId: filters.value.productId

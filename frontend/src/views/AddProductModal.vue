@@ -184,7 +184,7 @@ const saveError = ref('')
 // Récupération des catégories avec gestion de la réponse
 const fetchCategories = async () => {
   try {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const posId = activePos.value?.id;
     if (!token || !posId) {
       console.warn('Missing token or POS ID');
@@ -276,7 +276,7 @@ const addProduct = async () => {
   saveError.value = ''
   isSaving.value = true
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const payload = {
         name: localProduct.name,
         ref: localProduct.ref,

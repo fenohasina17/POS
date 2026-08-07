@@ -657,7 +657,7 @@ const holdOrder = async () => {
   if (!cart.value.length || !selectedTable.value) return
 
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const user = JSON.parse(localStorage.getItem('user'))
 
     if (!user || !token) {
@@ -728,7 +728,7 @@ const confirmAddToPending = async () => {
 
   isProcessing.value = true
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const saleId = currentPendingOrder.value.id
 
     const orderLines = cart.value.map((i) => ({

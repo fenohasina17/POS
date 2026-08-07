@@ -227,7 +227,7 @@ const productToDelete = ref(null)
 const isDeleting = ref(false)
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   if (!token) throw new Error('Token manquant')
   return { Authorization: `Bearer ${token}`, Accept: 'application/json' }
 }

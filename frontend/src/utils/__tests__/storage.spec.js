@@ -26,7 +26,7 @@ describe('storage', () => {
     })
 
     it('returns null user when stored value is the literal string "undefined"', () => {
-      localStorage.setItem('token', 'abc123')
+      sessionStorage.setItem('token', 'abc123')
       localStorage.setItem('user', 'undefined')
 
       expect(storage.getAuth()).toEqual({ token: 'abc123', user: null })

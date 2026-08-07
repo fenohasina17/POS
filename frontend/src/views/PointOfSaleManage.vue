@@ -163,7 +163,7 @@ const getAvailableUsersForPos = (pos) => {
 const fetchPointsOfSale = async () => {
   loading.value = true
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const response = await axios.get(`${API_BASE_URL}/point-of-sales`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -177,7 +177,7 @@ const fetchPointsOfSale = async () => {
 
 const fetchAllUsers = async () => {
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     const response = await axios.get(`${API_BASE_URL}/users`, {
       headers: { Authorization: `Bearer ${token}` }
     })
@@ -189,7 +189,7 @@ const fetchAllUsers = async () => {
 
 const submitForm = async (name) => {
   if (typeof name === 'string') form.value.name = name
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   try {
     if (showEditForm.value) {
       await axios.put(`${API_BASE_URL}/point-of-sales/${form.value.id}`, { name: form.value.name }, { headers: { Authorization: `Bearer ${token}` } })
@@ -211,7 +211,7 @@ const editPointOfSale = (pos) => {
 const deletePointOfSale = async (id) => {
   if (!confirm('Voulez-vous vraiment supprimer ce point de vente ?')) return
   try {
-    const token = localStorage.getItem('token')
+    const token = sessionStorage.getItem('token')
     await axios.delete(`${API_BASE_URL}/point-of-sales/${id}`, { headers: { Authorization: `Bearer ${token}` } })
     await fetchPointsOfSale()
   } catch (err) {
@@ -221,7 +221,7 @@ const deletePointOfSale = async (id) => {
 
 const deleteUserFromPos = async (userId, pointOfSaleId) => {
   if (!confirm('Détacher cet utilisateur ?')) return
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   try {
     await axios.delete(`${API_BASE_URL}/point-of-sales/${pointOfSaleId}/users/${userId}`, { headers: { Authorization: `Bearer ${token}` } })
     await Promise.all([fetchPointsOfSale(), fetchAllUsers()])
@@ -232,7 +232,7 @@ const deleteUserFromPos = async (userId, pointOfSaleId) => {
 
 const attachUserToPos = async (userId, pointOfSaleId) => {
   if (!userId) return
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   try {
     await axios.post(`${API_BASE_URL}/point-of-sales/${pointOfSaleId}/users/${userId}`, {}, { headers: { Authorization: `Bearer ${token}` } })
     await Promise.all([fetchPointsOfSale(), fetchAllUsers()])

@@ -4,7 +4,7 @@ import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 
 export function useSale() {
-  const token = localStorage.getItem('token')
+  const token = sessionStorage.getItem('token')
   const isCreatingSale = ref(false)
   const localSaleId = ref(null)
   
@@ -65,7 +65,7 @@ export function useSale() {
     
     const response = await axios.post(`${API_BASE_URL}/sales/${saleId}/payments`, payload, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
+        Authorization: `Bearer ${sessionStorage.getItem('token')}`,
         'Content-Type': 'application/json'
       }
     })
