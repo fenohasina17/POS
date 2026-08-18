@@ -8,3 +8,8 @@ Schedule::call(function () {
         ->where('status', 'online')
         ->update(['status' => 'offline']);
 })->everyMinute();
+
+// Vérifie les alertes (offline, backlog) toutes les 2 minutes
+Schedule::call(function () {
+    app(\App\Services\AlertService::class)->checkAll();
+})->everyTwoMinutes();

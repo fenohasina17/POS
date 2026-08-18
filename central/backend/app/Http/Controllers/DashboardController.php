@@ -19,8 +19,10 @@ class DashboardController extends Controller
     public function index(Request $request): JsonResponse
     {
         $restaurantId = $request->restaurant_id;
-        $today        = now()->startOfDay();
-        $yesterday    = now()->subDay()->startOfDay();
+        $dateFrom     = $request->filled('date_from') ? \Carbon\Carbon::parse($request->date_from)->startOfDay() : now()->startOfDay();
+        $dateTo       = $request->filled('date_to')   ? \Carbon\Carbon::parse($request->date_to)->endOfDay()     : now()->endOfDay();
+        $prevFrom     = $dateFrom->copy()->subDay();
+        $prevTo       = $dateTo->copy()->subDay();
 
         // Statut des terminaux
         $terminals     = Terminal::when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))->get();
@@ -28,37 +30,36 @@ class DashboardController extends Controller
         $offlineCount  = $terminals->count() - $onlineCount;
         $pendingTotal  = $terminals->sum('pending_sync_count');
 
-        // Ventes du jour
+        // Ventes sur la période sélectionnée
         $salesQuery = RemoteSale::where('status', 'completed')
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId));
 
-        $revenueToday     = (clone $salesQuery)->where('remote_created_at', '>=', $today)->sum('final_amount');
-        $salesCountToday  = (clone $salesQuery)->where('remote_created_at', '>=', $today)->count();
-        $revenueYesterday = (clone $salesQuery)
-            ->whereBetween('remote_created_at', [$yesterday, $today])
-            ->sum('final_amount');
+        $revenueToday     = (clone $salesQuery)->whereBetween('remote_created_at', [$dateFrom, $dateTo])->sum('final_amount');
+        $salesCountToday  = (clone $salesQuery)->whereBetween('remote_created_at', [$dateFrom, $dateTo])->count();
+        $revenuePrev      = (clone $salesQuery)->whereBetween('remote_created_at', [$prevFrom, $prevTo])->sum('final_amount');
 
-        // Ventes par restaurant (top 10)
+        // Ventes par restaurant sur la période
         $salesByRestaurant = RemoteSale::select('restaurant_id',
                 DB::raw('COUNT(*) as sales_count'),
                 DB::raw('SUM(final_amount) as revenue')
             )
             ->where('status', 'completed')
-            ->where('remote_created_at', '>=', $today)
+            ->whereBetween('remote_created_at', [$dateFrom, $dateTo])
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
             ->groupBy('restaurant_id')
             ->orderByDesc('revenue')
             ->limit(10)
             ->get();
 
-        // Ventes des 7 derniers jours (courbe)
+        // Courbe : nb de jours entre dateFrom et dateTo (max 90)
+        $chartDays = min(90, $dateFrom->diffInDays($dateTo) + 1);
         $salesByDay = RemoteSale::select(
                 DB::raw("DATE(remote_created_at) as date"),
                 DB::raw('COUNT(*) as sales_count'),
                 DB::raw('SUM(final_amount) as revenue')
             )
             ->where('status', 'completed')
-            ->where('remote_created_at', '>=', now()->subDays(7))
+            ->where('remote_created_at', '>=', now()->subDays($chartDays))
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
             ->groupBy('date')
             ->orderBy('date')
@@ -74,10 +75,15 @@ class DashboardController extends Controller
             'sales_today' => [
                 'count'             => $salesCountToday,
                 'revenue'           => round($revenueToday, 2),
-                'revenue_yesterday' => round($revenueYesterday, 2),
-                'evolution_pct'     => $revenueYesterday > 0
-                    ? round((($revenueToday - $revenueYesterday) / $revenueYesterday) * 100, 1)
+                'revenue_yesterday' => round($revenuePrev, 2),
+                'evolution_pct'     => $revenuePrev > 0
+                    ? round((($revenueToday - $revenuePrev) / $revenuePrev) * 100, 1)
                     : null,
+            ],
+            'filters' => [
+                'date_from'     => $dateFrom->toDateString(),
+                'date_to'       => $dateTo->toDateString(),
+                'restaurant_id' => $restaurantId,
             ],
             'by_restaurant' => $salesByRestaurant,
             'sales_7_days'  => $salesByDay,

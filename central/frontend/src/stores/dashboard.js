@@ -7,13 +7,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const loading = ref(false)
   const error   = ref(null)
 
-  async function fetch(restaurantId = null) {
+  async function fetch(params = {}) {
     loading.value = true
     error.value   = null
     try {
-      const params = restaurantId ? { restaurant_id: restaurantId } : {}
-      const res    = await api.get('/dashboard', { params })
-      data.value   = res.data
+      const res  = await api.get('/dashboard', { params })
+      data.value = res.data
     } catch (e) {
       error.value = e.response?.data?.message ?? 'Erreur lors du chargement du dashboard'
     } finally {
