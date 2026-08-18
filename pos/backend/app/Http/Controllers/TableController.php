@@ -86,7 +86,6 @@ class TableController extends Controller
                         'status' => 'available'
                     ]);
                     event(new TableLockUpdated($staleTable->id, null));
-                    \Log::info("⏲️ Auto-Unlock: Table {$staleTable->table_number} libérée pour inactivité.");
                 }
             }
             // ----------------------------------------
@@ -99,11 +98,6 @@ class TableController extends Controller
             }
 
             $tables = $query->orderBy('table_number')->get();
-
-            // Debug: Log the first table's attributes
-            if ($tables->isNotEmpty()) {
-                \Log::info("DEBUG: Table 1 attributes: " . json_encode($tables->first()->toArray()));
-            }
 
             return response()->json($tables);
         } catch (\Exception $e) {

@@ -63,27 +63,9 @@ class CashTransactionController extends Controller
 
 public function destroy(CashTransaction $cashTransaction)
 {
-    try {
-        // Debug
-        \Log::info('=== DESTROY DEBUG ===');
-        \Log::info('Transaction ID: ' . $cashTransaction->id);
-        \Log::info('Session ID: ' . $cashTransaction->session_id);
-        
-        // Vérifier l'autorisation
-        $this->authorize('delete', $cashTransaction);
-        \Log::info('Authorization passed');
-        
-        // Appeler le service
-        $this->transactionService->deleteTransaction($cashTransaction);
-        \Log::info('Transaction deleted successfully');
-        
-        return response()->noContent();
-        dd($this->transactionService->deleteTransaction($cashTransaction) );
-        
-    } catch (\Exception $e) {
-        \Log::error('Delete error: ' . $e->getMessage());
-        throw $e;
-    }
+    $this->authorize('delete', $cashTransaction);
+    $this->transactionService->deleteTransaction($cashTransaction);
+    return response()->noContent();
 }
     /**
      * Détails d'une transaction.

@@ -83,7 +83,7 @@ log "Dépôt prêt"
 
 # ── 5. Configuration .env ─────────────────────────────────────
 step "Configuration de l'environnement"
-ENV_FILE="$INSTALL_DIR/.env"
+ENV_FILE="$INSTALL_DIR/pos/.env"
 
 if [[ -f "$ENV_FILE" ]]; then
     warn ".env existant détecté — conservé (pas d'écrasement)"
@@ -152,7 +152,7 @@ fi
 # ── 6. Démarrage ─────────────────────────────────────────────
 # cert-init génère les certs SSL automatiquement au premier démarrage
 step "Build et démarrage (les certificats SSL sont générés automatiquement)"
-cd "$INSTALL_DIR"
+cd "$INSTALL_DIR/pos"
 docker compose build --no-cache
 docker compose up -d
 log "Tous les services démarrés"
@@ -187,7 +187,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=${INSTALL_DIR}
+WorkingDirectory=${INSTALL_DIR}/pos
 ExecStart=/usr/bin/docker compose up -d --remove-orphans
 ExecStop=/usr/bin/docker compose down
 TimeoutStartSec=300
@@ -215,6 +215,6 @@ echo -e "${GREEN}║${NC}  Uptime    :  ${BOLD}http://${SERVER_IP}:3001${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Commandes utiles :"
-echo -e "  ${CYAN}cd ${INSTALL_DIR} && docker compose logs -f${NC}"
+echo -e "  ${CYAN}cd ${INSTALL_DIR}/pos && docker compose logs -f${NC}"
 echo -e "  ${CYAN}systemctl status pos${NC}"
 echo ""
