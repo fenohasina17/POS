@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\DashboardController;
@@ -23,6 +24,14 @@ Route::get('/health', function () {
         'timestamp' => now()->toISOString(),
     ], $status === 'healthy' ? 200 : 503);
 })->name('health');
+
+// ── Authentification dashboard ────────────────────────────────────────────────
+Route::post('/auth/login', [AuthController::class, 'login']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me',      [AuthController::class, 'me']);
+});
 
 // ── Endpoints appelés par les terminaux POS ───────────────────────────────────
 // Authentifiés par la clé API partagée (CENTRAL_API_KEY)

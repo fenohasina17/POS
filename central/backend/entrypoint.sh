@@ -32,6 +32,9 @@ echo "Base de données prête."
 echo "Exécution des migrations..."
 php artisan migrate --force
 
+echo "Création de l'utilisateur admin..."
+php artisan db:seed --class=AdminSeeder --force
+
 php artisan config:cache 2>/dev/null || true
 
 exec "$@"
