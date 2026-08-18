@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\DashboardController;
@@ -51,7 +52,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/terminals/{terminal}/rotate-key',   [TerminalController::class, 'rotateKey']);
     Route::delete('/terminals/{terminal}',            [TerminalController::class, 'destroy']);
 
-    Route::get('/alerts',              [AlertController::class, 'index']);
-    Route::get('/alerts/counts',       [AlertController::class, 'counts']);
+    Route::get('/alerts',                  [AlertController::class, 'index']);
+    Route::get('/alerts/counts',           [AlertController::class, 'counts']);
     Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
+
+    Route::get('/export/sales', [ExportController::class, 'sales']);
 });
