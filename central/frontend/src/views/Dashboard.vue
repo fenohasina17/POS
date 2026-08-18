@@ -18,6 +18,10 @@
           class="text-xs text-gray-500 hover:text-gray-300 transition-colors">
           Réinitialiser
         </button>
+        <ExportButton
+          :date-from="filters.date_from"
+          :date-to="filters.date_to"
+          :restaurant-id="filters.restaurant_id" />
       </div>
     </div>
 
@@ -99,6 +103,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { useDashboardStore } from '@/stores/dashboard'
 import StatCard from '@/components/StatCard.vue'
 import AlertBanner from '@/components/AlertBanner.vue'
+import ExportButton from '@/components/ExportButton.vue'
 import echo from '@/utils/echo'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler)
