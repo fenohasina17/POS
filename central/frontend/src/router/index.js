@@ -1,15 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import Dashboard     from '@/views/Dashboard.vue'
-import Terminals     from '@/views/Terminals.vue'
+import Dashboard      from '@/views/Dashboard.vue'
+import Terminals      from '@/views/Terminals.vue'
 import TerminalDetail from '@/views/TerminalDetail.vue'
-import Login         from '@/views/Login.vue'
+import TerminalManage from '@/views/TerminalManage.vue'
+import Login          from '@/views/Login.vue'
 
 const routes = [
   { path: '/login', component: Login, name: 'login', meta: { public: true } },
-  { path: '/',                  component: Dashboard,      name: 'dashboard',       meta: { requiresAuth: true } },
-  { path: '/terminals',         component: Terminals,      name: 'terminals',       meta: { requiresAuth: true } },
-  { path: '/terminals/:id',     component: TerminalDetail, name: 'terminal-detail', meta: { requiresAuth: true } },
+  { path: '/',                    component: Dashboard,      name: 'dashboard',        meta: { requiresAuth: true } },
+  { path: '/terminals',           component: Terminals,      name: 'terminals',        meta: { requiresAuth: true } },
+  { path: '/terminals/:id',       component: TerminalDetail, name: 'terminal-detail',  meta: { requiresAuth: true } },
+  { path: '/terminals-manage',    component: TerminalManage, name: 'terminal-manage',  meta: { requiresAuth: true } },
 ]
 
 const router = createRouter({

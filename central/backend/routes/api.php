@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TerminalController;
@@ -44,6 +45,13 @@ Route::middleware(ValidateCentralApiKey::class)->group(function () {
 // Authentifiés par token Sanctum (utilisateurs du siège)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard',            [DashboardController::class, 'index']);
-    Route::get('/terminals',            [TerminalController::class, 'index']);
-    Route::get('/terminals/{terminal}', [TerminalController::class, 'show']);
+    Route::get('/terminals',                          [TerminalController::class, 'index']);
+    Route::post('/terminals',                         [TerminalController::class, 'store']);
+    Route::get('/terminals/{terminal}',               [TerminalController::class, 'show']);
+    Route::post('/terminals/{terminal}/rotate-key',   [TerminalController::class, 'rotateKey']);
+    Route::delete('/terminals/{terminal}',            [TerminalController::class, 'destroy']);
+
+    Route::get('/alerts',              [AlertController::class, 'index']);
+    Route::get('/alerts/counts',       [AlertController::class, 'counts']);
+    Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
 });

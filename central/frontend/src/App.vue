@@ -10,6 +10,22 @@
       <div class="flex items-center gap-6 text-sm">
         <router-link to="/" class="text-gray-400 hover:text-white transition-colors">Dashboard</router-link>
         <router-link to="/terminals" class="text-gray-400 hover:text-white transition-colors">Terminaux</router-link>
+        <router-link to="/terminals-manage" class="text-gray-400 hover:text-white transition-colors">Gestion</router-link>
+
+        <!-- Badge alertes -->
+        <router-link to="/" class="relative text-gray-400 hover:text-white transition-colors"
+          title="Alertes actives">
+          <span>Alertes</span>
+          <span v-if="alerts.counts.critical > 0"
+            class="absolute -top-1.5 -right-3 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+            {{ alerts.counts.critical }}
+          </span>
+          <span v-else-if="alerts.counts.warning > 0"
+            class="absolute -top-1.5 -right-3 bg-yellow-500 text-gray-900 text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+            {{ alerts.counts.warning }}
+          </span>
+        </router-link>
+
         <span class="text-gray-600">{{ currentTime }}</span>
         <div class="flex items-center gap-3 border-l border-gray-700 pl-4">
           <span class="text-gray-500 text-xs">{{ auth.user?.name }}</span>
@@ -31,23 +47,31 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAlertsStore } from '@/stores/alerts'
 
-const auth    = useAuthStore()
-const router  = useRouter()
+const auth   = useAuthStore()
+const alerts = useAlertsStore()
+const router = useRouter()
 
 const currentTime = ref('')
-let timer
+let timer, alertTimer
 
 onMounted(async () => {
   const update = () => { currentTime.value = new Date().toLocaleTimeString('fr-FR') }
   update()
   timer = setInterval(update, 1000)
 
-  // Vérifie que le token stocké est encore valide
-  if (auth.isAuthenticated) await auth.fetchMe()
+  if (auth.isAuthenticated) {
+    await auth.fetchMe()
+    alerts.fetchCounts()
+    alertTimer = setInterval(() => alerts.fetchCounts(), 60_000)
+  }
 })
 
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => {
+  clearInterval(timer)
+  clearInterval(alertTimer)
+})
 
 async function handleLogout() {
   await auth.logout()
