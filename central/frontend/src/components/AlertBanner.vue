@@ -1,19 +1,26 @@
 <template>
-  <div v-if="store.list.length" class="space-y-2 mb-6">
-    <div v-for="alert in store.list" :key="alert.id"
-      :class="alert.severity === 'critical'
-        ? 'bg-red-900/30 border-red-700 text-red-300'
-        : 'bg-yellow-900/30 border-yellow-700 text-yellow-300'"
-      class="border rounded-xl px-4 py-3 flex items-center justify-between text-sm">
-      <div class="flex items-center gap-3">
-        <span>{{ alert.severity === 'critical' ? '🔴' : '🟡' }}</span>
-        <span>{{ alert.message }}</span>
-        <span class="text-xs opacity-60">{{ formatRelative(alert.created_at) }}</span>
+  <div v-if="alerts.list.length" class="space-y-2">
+    <div
+      v-for="alert in alerts.list"
+      :key="alert.id"
+      :class="[
+        'flex items-start gap-3 rounded-2xl border px-5 py-3',
+        alert.level === 'critical'
+          ? 'border-rose-200 bg-rose-50'
+          : 'border-amber-200 bg-amber-50',
+      ]"
+    >
+      <svg class="h-5 w-5 shrink-0 mt-0.5" :class="alert.level === 'critical' ? 'text-rose-500' : 'text-amber-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div class="flex-1">
+        <p class="text-sm font-semibold" :class="alert.level === 'critical' ? 'text-rose-800' : 'text-amber-800'">
+          {{ alert.message }}
+        </p>
+        <p v-if="alert.terminal_id" class="text-xs mt-0.5" :class="alert.level === 'critical' ? 'text-rose-500' : 'text-amber-500'">
+          Terminal : {{ alert.terminal_id }}
+        </p>
       </div>
-      <button @click="store.resolve(alert.id)"
-        class="text-xs opacity-60 hover:opacity-100 transition-opacity ml-4 shrink-0">
-        Résoudre ✕
-      </button>
     </div>
   </div>
 </template>
@@ -22,14 +29,6 @@
 import { onMounted } from 'vue'
 import { useAlertsStore } from '@/stores/alerts'
 
-const store = useAlertsStore()
-onMounted(() => store.fetchActive())
-
-function formatRelative(val) {
-  if (!val) return ''
-  const diff = Math.floor((Date.now() - new Date(val)) / 1000)
-  if (diff < 60)   return `il y a ${diff}s`
-  if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`
-  return `il y a ${Math.floor(diff / 3600)}h`
-}
+const alerts = useAlertsStore()
+onMounted(() => alerts.fetchActive())
 </script>

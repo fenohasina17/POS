@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import MainLayout     from '@/layouts/MainLayout.vue'
 import Dashboard      from '@/views/Dashboard.vue'
 import Terminals      from '@/views/Terminals.vue'
 import TerminalDetail from '@/views/TerminalDetail.vue'
@@ -8,10 +9,17 @@ import Login          from '@/views/Login.vue'
 
 const routes = [
   { path: '/login', component: Login, name: 'login', meta: { public: true } },
-  { path: '/',                    component: Dashboard,      name: 'dashboard',        meta: { requiresAuth: true } },
-  { path: '/terminals',           component: Terminals,      name: 'terminals',        meta: { requiresAuth: true } },
-  { path: '/terminals/:id',       component: TerminalDetail, name: 'terminal-detail',  meta: { requiresAuth: true } },
-  { path: '/terminals-manage',    component: TerminalManage, name: 'terminal-manage',  meta: { requiresAuth: true } },
+  {
+    path: '/',
+    component: MainLayout,
+    meta: { requiresAuth: true },
+    children: [
+      { path: '',                   component: Dashboard,      name: 'dashboard'       },
+      { path: 'terminals',          component: Terminals,      name: 'terminals'       },
+      { path: 'terminals/:id',      component: TerminalDetail, name: 'terminal-detail' },
+      { path: 'terminals-manage',   component: TerminalManage, name: 'terminal-manage' },
+    ],
+  },
 ]
 
 const router = createRouter({
@@ -21,12 +29,8 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.isAuthenticated) {
-    return { name: 'login' }
-  }
-  if (to.name === 'login' && auth.isAuthenticated) {
-    return { name: 'dashboard' }
-  }
+  if (to.meta.requiresAuth && !auth.isAuthenticated) return { name: 'login' }
+  if (to.name === 'login' && auth.isAuthenticated)   return { name: 'dashboard' }
 })
 
 export default router
