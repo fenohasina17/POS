@@ -15,7 +15,8 @@ use Illuminate\Support\Carbon;
 class SyncService
 {
     // Nombre maximum d'enregistrements envoyés par batch
-    private const BATCH_SIZE = 100;
+    // Volontairement petit pour éviter les timeouts et passer dans n'importe quelle connexion
+    private const BATCH_SIZE = 50;
 
     private string $centralUrl;
     private string $terminalId;
@@ -96,8 +97,8 @@ class SyncService
                 ];
 
                 $response = Http::withToken($this->apiKey)
-                    ->timeout(15)
-                    ->retry(3, 500, throw: false)
+                    ->timeout(30)
+                    ->retry(3, 1000, throw: false)
                     ->post("{$this->centralUrl}/api/sync/receive", $payload);
 
                 if ($response->successful()) {
@@ -110,6 +111,10 @@ class SyncService
                         'status' => $response->status(),
                         'body'   => $response->body(),
                     ]);
+                    // Arrêter ce chunk si le serveur est indisponible (503, réseau)
+                    if ($response->status() >= 500 || $response->status() === 0) {
+                        return false; // stoppe le chunk() Laravel
+                    }
                 }
             });
 

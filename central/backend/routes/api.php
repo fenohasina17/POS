@@ -40,8 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
 // ── Endpoints appelés par les terminaux POS ───────────────────────────────────
 // Authentifiés par la clé API partagée (CENTRAL_API_KEY)
 Route::middleware(ValidateCentralApiKey::class)->group(function () {
-    Route::post('/sync/receive',   [SyncController::class, 'receive']);
-    Route::post('/sync/heartbeat', [SyncController::class, 'heartbeat']);
+    Route::post('/sync/receive',          [SyncController::class, 'receive']);
+    Route::post('/sync/heartbeat',        [SyncController::class, 'heartbeat']);
+    Route::post('/sync/import-historical',[SyncController::class, 'importHistorical']);
 });
 
 // ── Endpoints pour le dashboard siège ────────────────────────────────────────

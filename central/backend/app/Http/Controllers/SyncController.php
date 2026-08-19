@@ -159,6 +159,73 @@ class SyncController extends Controller
     }
 
     /**
+     * Import historique complet depuis un terminal (même éteint via export manuel).
+     * Accepte plusieurs ressources en une seule requête.
+     * POST /api/sync/import-historical
+     *
+     * Body: {
+     *   terminal_id, restaurant_id,
+     *   resources: { sales: [...], cash_register_sessions: [...], order_lines: [...], sale_payments: [...] }
+     * }
+     */
+    public function importHistorical(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'terminal_id'   => 'required|string|max:100',
+            'restaurant_id' => 'required|string|max:100',
+            'resources'     => 'required|array',
+        ]);
+
+        $terminalId   = $validated['terminal_id'];
+        $restaurantId = $validated['restaurant_id'];
+        $resources    = $validated['resources'];
+
+        $totalInserted = 0;
+        $totalSkipped  = 0;
+        $errors        = [];
+
+        foreach ($resources as $resource => $records) {
+            if (!isset(self::RESOURCE_MAP[$resource])) {
+                $errors[] = "Ressource inconnue: {$resource}";
+                continue;
+            }
+            if (!is_array($records) || empty($records)) continue;
+
+            $config = self::RESOURCE_MAP[$resource];
+            $model  = $config['model'];
+            $fields = $config['fields'];
+
+            // Traitement par chunks de 500 pour éviter les timeouts mémoire
+            foreach (array_chunk($records, 500) as $chunk) {
+                DB::transaction(function () use ($model, $fields, $chunk, $terminalId, $restaurantId, &$totalInserted, &$totalSkipped) {
+                    foreach ($chunk as $record) {
+                        $row = [
+                            'terminal_id'   => $terminalId,
+                            'restaurant_id' => $restaurantId,
+                            'received_at'   => now(),
+                        ];
+                        foreach ($fields as $sourceKey => $destKey) {
+                            $row[$destKey] = $record[$sourceKey] ?? null;
+                        }
+                        $model::insertOrIgnore([$row]) ? $totalInserted++ : $totalSkipped++;
+                    }
+                });
+            }
+        }
+
+        Terminal::updateOrCreate(
+            ['terminal_id' => $terminalId],
+            ['restaurant_id' => $restaurantId, 'last_sync_at' => now()]
+        );
+
+        return response()->json([
+            'inserted' => $totalInserted,
+            'skipped'  => $totalSkipped,
+            'errors'   => $errors,
+        ]);
+    }
+
+    /**
      * Reçoit le heartbeat d'un terminal.
      * POST /api/sync/heartbeat
      */
