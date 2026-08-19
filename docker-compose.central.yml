@@ -1,0 +1,152 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-central-base: &central-base
+  build:
+    context: ./central/backend
+    dockerfile: Dockerfile
+  restart: always
+  logging: *default-logging
+  env_file: central/.env
+  volumes:
+    - central_storage:/var/www/storage
+  networks:
+    - central_network
+  depends_on:
+    central_db:
+      condition: service_healthy
+    central_redis:
+      condition: service_healthy
+
+services:
+  # --- Base de données centrale ---
+  central_db:
+    image: postgres:15
+    restart: always
+    logging: *default-logging
+    env_file: central/.env
+    environment:
+      - POSTGRES_DB=${CENTRAL_DB_DATABASE:-pos_central}
+      - POSTGRES_USER=${CENTRAL_DB_USERNAME:-central}
+      - POSTGRES_PASSWORD=${CENTRAL_DB_PASSWORD}
+    volumes:
+      - central_postgres_data:/var/lib/postgresql/data
+    networks:
+      - central_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${CENTRAL_DB_USERNAME:-central}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # --- Redis central ---
+  central_redis:
+    image: redis:7-alpine
+    restart: always
+    logging: *default-logging
+    volumes:
+      - central_redis_data:/data
+    networks:
+      - central_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # --- Backend Laravel Central ---
+  central_backend:
+    <<: *central-base
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tln | grep -q ':9000' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # --- Queue Worker Central ---
+  central_worker:
+    <<: *central-base
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
+
+  # --- Scheduler Central ---
+  central_scheduler:
+    <<: *central-base
+    command: ["php", "artisan", "schedule:work"]
+
+  # --- Nginx Central ---
+  central_nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    restart: always
+    logging: *default-logging
+    ports:
+      - "9000:80"
+    depends_on:
+      central_backend:
+        condition: service_healthy
+    volumes:
+      - central_storage:/var/www/storage
+    networks:
+      - central_network
+
+  # --- Dashboard Frontend Central ---
+  central_frontend:
+    build:
+      context: ./central/frontend
+      dockerfile: Dockerfile
+    restart: always
+    logging: *default-logging
+    ports:
+      - "9001:80"
+    environment:
+      - API_URL=http://localhost:9000
+    depends_on:
+      - central_nginx
+    networks:
+      - central_network
+
+  # --- Reverb WebSocket Central (push temps réel vers dashboard) ---
+  central_reverb:
+    <<: *central-base
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+
+  # --- Backup base centrale ---
+  central_backup:
+    image: postgres:15
+    restart: always
+    depends_on:
+      central_db:
+        condition: service_healthy
+    env_file: central/.env
+    environment:
+      - DB_HOST=central_db
+    volumes:
+      - central_backup_data:/backups
+      - ./docker/backup/backup.sh:/backup.sh:ro
+    entrypoint: >
+      sh -c "
+        while true; do
+          NEXT=$$(date -d 'tomorrow 02:00' +%s 2>/dev/null || echo $$(( $$(date +%s) + 86400 )));
+          NOW=$$(date +%s);
+          sleep $$((NEXT - NOW));
+          sh /backup.sh;
+        done
+      "
+    networks:
+      - central_network
+
+networks:
+  central_network:
+    driver: bridge
+
+volumes:
+  central_postgres_data:
+  central_redis_data:
+  central_storage:
+  central_backup_data:

@@ -330,6 +330,7 @@ import { useTerminalsStore } from '@/stores/terminals'
 import AlertBanner from '@/components/AlertBanner.vue'
 import ExportButton from '@/components/ExportButton.vue'
 import echo from '@/utils/echo'
+import { fmt, fmtShort } from '@/utils/formatters'
 
 const store     = useDashboardStore()
 const termStore = useTerminalsStore()
@@ -377,12 +378,6 @@ const terminalShare    = revenue => `${Math.round((revenue / totalByTerminal.val
 const terminalSharePct = revenue => Math.round((revenue / totalByTerminal.value) * 100)
 
 // ── Formatage ───────────────────────────────────────────────────────────────
-const fmt      = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v ?? 0)
-const fmtShort = v => {
-  if (!v) return '0€'
-  if (v >= 1000) return `${Math.round(v / 1000)}k€`
-  return `${Math.round(v)}€`
-}
 const fmtDay   = d => {
   const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
   const date = new Date(d + 'T12:00:00')

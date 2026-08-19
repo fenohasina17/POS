@@ -14,7 +14,7 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 COPY composer.json composer.lock ./
-RUN composer install --no-interaction --no-scripts --optimize-autoloader
+RUN composer install --no-interaction --no-scripts --optimize-autoloader --no-dev
 
 COPY . /var/www
 RUN cp .env.example .env

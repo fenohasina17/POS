@@ -104,6 +104,7 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { useTerminalsStore } from '@/stores/terminals'
+import { fmt } from '@/utils/formatters'
 
 const termStore = useTerminalsStore()
 const terminals = computed(() => termStore.list)
@@ -116,7 +117,6 @@ const lastPage = ref(1)
 const total    = ref(0)
 const filters  = ref({ terminal_id: '', date_from: today, date_to: today })
 
-const fmt     = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v ?? 0)
 const fmtDate = v => v ? new Date(v).toLocaleString('fr-FR') : '—'
 
 async function load(p = 1) {
