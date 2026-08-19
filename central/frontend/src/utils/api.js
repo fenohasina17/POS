@@ -15,4 +15,19 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Redirige vers /login si le token est expiré ou invalide
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      sessionStorage.removeItem('central_token')
+      sessionStorage.removeItem('central_user')
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export default api
