@@ -50,7 +50,7 @@ class SyncService
         $totalFailed = 0;
 
         try {
-            $totalSent += $this->syncModel(Sale::with(['orderLines', 'salePayments']), 'sales');
+            $totalSent += $this->syncModel(Sale::query(), 'sales');
             $totalSent += $this->syncModel(CashRegisterSession::query(), 'cash_register_sessions');
             $totalSent += $this->syncModel(CashTransaction::query(), 'cash_transactions');
             $totalSent += $this->syncModel(OrderLine::query(), 'order_lines');

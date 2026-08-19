@@ -35,6 +35,11 @@
           required
           class="flex-1 min-w-48 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
         />
+        <input
+          v-model="newTerminal.region"
+          placeholder="Région (ex: Île-de-France)"
+          class="flex-1 min-w-48 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-900 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+        />
         <button
           type="submit"
           :disabled="creating"
@@ -75,6 +80,7 @@
             <tr class="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400">
               <th class="px-5 py-3 text-left">Terminal</th>
               <th class="px-5 py-3 text-left">Restaurant</th>
+              <th class="px-5 py-3 text-left">Région</th>
               <th class="px-5 py-3 text-left">Statut</th>
               <th class="px-5 py-3 text-left">Dernier heartbeat</th>
               <th class="px-5 py-3 text-right">Actions</th>
@@ -88,6 +94,7 @@
             >
               <td class="px-5 py-3 font-mono font-semibold text-slate-800">{{ t.terminal_id }}</td>
               <td class="px-5 py-3 text-slate-500">{{ t.restaurant_id }}</td>
+              <td class="px-5 py-3 text-slate-500">{{ t.region || '—' }}</td>
               <td class="px-5 py-3">
                 <span
                   :class="t.status === 'online' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'"
@@ -110,7 +117,7 @@
               </td>
             </tr>
             <tr v-if="!terminals.length">
-              <td colspan="5" class="px-5 py-12 text-center text-sm text-slate-400">Aucun terminal enregistré.</td>
+              <td colspan="6" class="px-5 py-12 text-center text-sm text-slate-400">Aucun terminal enregistré.</td>
             </tr>
           </tbody>
         </table>
@@ -144,7 +151,7 @@ const creating     = ref(false)
 const generatedKey = ref('')
 const rotatedKey   = ref('')
 const copied       = ref(false)
-const newTerminal  = ref({ terminal_id: '', restaurant_id: '' })
+const newTerminal  = ref({ terminal_id: '', restaurant_id: '', region: '' })
 
 onMounted(fetchTerminals)
 
@@ -159,7 +166,7 @@ async function createTerminal() {
     const res = await api.post('/terminals', newTerminal.value)
     generatedKey.value = res.data.api_key
     terminals.value.push(res.data)
-    newTerminal.value = { terminal_id: '', restaurant_id: '' }
+    newTerminal.value = { terminal_id: '', restaurant_id: '', region: '' }
     showForm.value = false
   } catch (e) {
     alert(e.response?.data?.message ?? 'Erreur lors de la création.')

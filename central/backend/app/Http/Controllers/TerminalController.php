@@ -62,6 +62,7 @@ class TerminalController extends Controller
         $data = $request->validate([
             'terminal_id'   => 'required|string|unique:terminals,terminal_id',
             'restaurant_id' => 'required|string',
+            'region'        => 'nullable|string|max:100',
         ]);
 
         $apiKey = Str::random(48);
@@ -69,6 +70,7 @@ class TerminalController extends Controller
         $terminal = Terminal::create([
             'terminal_id'   => $data['terminal_id'],
             'restaurant_id' => $data['restaurant_id'],
+            'region'        => $data['region'] ?? null,
             'api_key_hash'  => hash('sha256', $apiKey),
             'status'        => 'offline',
         ]);
@@ -113,6 +115,7 @@ class TerminalController extends Controller
         return [
             'terminal_id'        => $terminal->terminal_id,
             'restaurant_id'      => $terminal->restaurant_id,
+            'region'             => $terminal->region,
             'app_version'        => $terminal->app_version,
             'status'             => $terminal->computed_status,
             'ip_address'         => $terminal->ip_address,

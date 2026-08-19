@@ -12,6 +12,7 @@ use App\Events\TerminalDataReceived;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
 
 class SyncController extends Controller
@@ -144,8 +145,12 @@ class SyncController extends Controller
             ]
         );
 
-        // Broadcast WebSocket vers le dashboard
-        event(new TerminalDataReceived($terminalId, $restaurantId, $resource, $inserted));
+        // Broadcast WebSocket vers le dashboard (non bloquant — sync ne doit jamais échouer à cause du broadcast)
+        try {
+            event(new TerminalDataReceived($terminalId, $restaurantId, $resource, $inserted));
+        } catch (\Throwable $e) {
+            Log::warning('SyncController: broadcast échoué (non fatal)', ['error' => $e->getMessage()]);
+        }
 
         return response()->json([
             'inserted' => $inserted,
@@ -183,13 +188,17 @@ class SyncController extends Controller
             ]
         );
 
-        // Broadcast mise à jour terminal vers le dashboard
-        event(new TerminalDataReceived(
-            $terminal->terminal_id,
-            $terminal->restaurant_id,
-            'heartbeat',
-            0
-        ));
+        // Broadcast mise à jour terminal vers le dashboard (non bloquant)
+        try {
+            event(new TerminalDataReceived(
+                $terminal->terminal_id,
+                $terminal->restaurant_id,
+                'heartbeat',
+                0
+            ));
+        } catch (\Throwable $e) {
+            Log::warning('SyncController: heartbeat broadcast échoué (non fatal)', ['error' => $e->getMessage()]);
+        }
 
         return response()->json(['status' => 'ok']);
     }

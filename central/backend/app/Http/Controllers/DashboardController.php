@@ -17,22 +17,31 @@ class DashboardController extends Controller
     {
         $restaurantId = $request->restaurant_id;
         $terminalId   = $request->terminal_id;
+        $region       = $request->region;
         $dateFrom     = $request->filled('date_from') ? Carbon::parse($request->date_from)->startOfDay() : now()->startOfDay();
         $dateTo       = $request->filled('date_to')   ? Carbon::parse($request->date_to)->endOfDay()     : now()->endOfDay();
         $prevFrom     = $dateFrom->copy()->subDay();
         $prevTo       = $dateTo->copy()->subDay();
 
+        $hasFilter    = $restaurantId || $terminalId || $region;
+
         // ── Terminaux ───────────────────────────────────────────────────────
         $terminals    = Terminal::when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
                                 ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+                                ->when($region,       fn($q) => $q->where('region',        $region))
                                 ->get();
         $onlineCount  = $terminals->filter->is_online->count();
         $pendingTotal = $terminals->sum('pending_sync_count');
 
         // ── Ventes de base ───────────────────────────────────────────────────
+        $terminalIds = $region
+            ? Terminal::where('region', $region)->pluck('terminal_id')->toArray()
+            : null;
+
         $base = RemoteSale::where('status', 'completed')
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
-            ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId));
+            ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+            ->when($terminalIds,  fn($q) => $q->whereIn('terminal_id', $terminalIds));
 
         $revenueToday    = (clone $base)->whereBetween('remote_created_at', [$dateFrom, $dateTo])->sum('final_amount');
         $salesCountToday = (clone $base)->whereBetween('remote_created_at', [$dateFrom, $dateTo])->count();
@@ -49,10 +58,58 @@ class DashboardController extends Controller
             ->whereBetween('remote_created_at', [$dateFrom, $dateTo])
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
             ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+            ->when($terminalIds,  fn($q) => $q->whereIn('terminal_id', $terminalIds))
             ->groupBy('restaurant_id')
             ->orderByDesc('revenue')
             ->limit(10)
             ->get();
+
+        // ── CA par région ────────────────────────────────────────────────────
+        $byRegion = Terminal::select('terminals.region',
+                DB::raw('COUNT(DISTINCT terminals.terminal_id) as terminal_count'),
+                DB::raw('COALESCE(SUM(rs.final_amount),0) as revenue'),
+                DB::raw('COUNT(rs.id) as sales_count')
+            )
+            ->leftJoin('remote_sales as rs', function ($join) use ($dateFrom, $dateTo) {
+                $join->on('rs.terminal_id', '=', 'terminals.terminal_id')
+                     ->where('rs.status', 'completed')
+                     ->whereBetween('rs.remote_created_at', [$dateFrom, $dateTo]);
+            })
+            ->whereNotNull('terminals.region')
+            ->groupBy('terminals.region')
+            ->orderByDesc('revenue')
+            ->get();
+
+        // ── CA par terminal (point de vente) ─────────────────────────────────
+        $byTerminal = RemoteSale::select('terminal_id',
+                DB::raw('COUNT(*) as sales_count'),
+                DB::raw('SUM(final_amount) as revenue')
+            )
+            ->where('status', 'completed')
+            ->whereBetween('remote_created_at', [$dateFrom, $dateTo])
+            ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
+            ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+            ->when($terminalIds,  fn($q) => $q->whereIn('terminal_id', $terminalIds))
+            ->groupBy('terminal_id')
+            ->orderByDesc('revenue')
+            ->limit(20)
+            ->get();
+
+        // ── Métriques globales (sans aucun filtre) ───────────────────────────
+        $globalMetrics = null;
+        if ($hasFilter) {
+            $globalToday    = RemoteSale::where('status', 'completed')->whereBetween('remote_created_at', [$dateFrom, $dateTo]);
+            $globalRevenue  = (clone $globalToday)->sum('final_amount');
+            $globalCount    = (clone $globalToday)->count();
+            $globalTerminals = Terminal::all();
+            $globalMetrics  = [
+                'revenue'      => round($globalRevenue, 2),
+                'sales_count'  => $globalCount,
+                'avg_ticket'   => $globalCount > 0 ? round($globalRevenue / $globalCount, 2) : 0,
+                'terminals_online' => $globalTerminals->filter->is_online->count(),
+                'terminals_total'  => $globalTerminals->count(),
+            ];
+        }
 
         // ── Courbe 7 jours (ou période) ─────────────────────────────────────
         $chartDays  = min(90, $dateFrom->diffInDays($dateTo) + 1);
@@ -65,6 +122,7 @@ class DashboardController extends Controller
             ->where('remote_created_at', '>=', now()->subDays($chartDays))
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
             ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+            ->when($terminalIds,  fn($q) => $q->whereIn('terminal_id', $terminalIds))
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -79,6 +137,7 @@ class DashboardController extends Controller
             ->where('remote_created_at', '>=', now()->subMonths(12)->startOfMonth())
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
             ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+            ->when($terminalIds,  fn($q) => $q->whereIn('terminal_id', $terminalIds))
             ->groupBy('month')
             ->orderBy('month')
             ->get();
@@ -94,6 +153,7 @@ class DashboardController extends Controller
             ->where('remote_created_at', '>=', now()->subDays(7)->startOfDay())
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
             ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+            ->when($terminalIds,  fn($q) => $q->whereIn('terminal_id', $terminalIds))
             ->groupBy('day', 'hour')
             ->orderBy('day')
             ->orderBy('hour')
@@ -133,6 +193,7 @@ class DashboardController extends Controller
             ->whereNotNull('product_name')
             ->when($restaurantId, fn($q) => $q->where('restaurant_id', $restaurantId))
             ->when($terminalId,   fn($q) => $q->where('terminal_id',   $terminalId))
+            ->when($terminalIds,  fn($q) => $q->whereIn('terminal_id', $terminalIds))
             ->where('remote_created_at', '>=', $dateFrom)
             ->where('remote_created_at', '<=', $dateTo)
             ->groupBy('product_name')
@@ -162,8 +223,12 @@ class DashboardController extends Controller
                 'date_to'       => $dateTo->toDateString(),
                 'restaurant_id' => $restaurantId,
                 'terminal_id'   => $terminalId,
+                'region'        => $region,
             ],
+            'global_metrics' => $globalMetrics,
             'by_restaurant'  => $byRestaurant,
+            'by_region'      => $byRegion,
+            'by_terminal'    => $byTerminal,
             'sales_7_days'   => $salesByDay,
             'monthly_sales'  => $monthlySales,
             'heatmap'        => $heatmap,

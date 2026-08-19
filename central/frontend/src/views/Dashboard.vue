@@ -11,21 +11,23 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
+        <!-- Filtre région -->
+        <select
+          v-model="filters.region"
+          @change="onRegionChange"
+          class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
+        >
+          <option value="">Toutes les régions</option>
+          <option v-for="r in regions" :key="r" :value="r">{{ r }}</option>
+        </select>
+        <!-- Filtre point de vente -->
         <select
           v-model="filters.terminal_id"
           @change="applyFilters"
           class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
         >
-          <option value="">Tous les terminaux</option>
-          <option v-for="t in terminals" :key="t.terminal_id" :value="t.terminal_id">{{ t.terminal_id }}</option>
-        </select>
-        <select
-          v-model="filters.restaurant_id"
-          @change="applyFilters"
-          class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-100"
-        >
-          <option value="">Tous les restaurants</option>
-          <option v-for="r in restaurants" :key="r" :value="r">{{ r }}</option>
+          <option value="">Tous les points de vente</option>
+          <option v-for="t in filteredTerminals" :key="t.terminal_id" :value="t.terminal_id">{{ t.terminal_id }}</option>
         </select>
         <input type="date" v-model="filters.date_from" @change="applyFilters"
           class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300" />
@@ -33,6 +35,29 @@
           class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300" />
         <button @click="resetFilters" class="text-xs text-slate-400 hover:text-slate-600 transition-colors">Réinitialiser</button>
         <ExportButton :date-from="filters.date_from" :date-to="filters.date_to" :restaurant-id="filters.restaurant_id" />
+      </div>
+    </div>
+
+    <!-- ── Métriques globales (toujours affichées si filtre actif) ──────── -->
+    <div v-if="store.data?.global_metrics" class="rounded-2xl border border-indigo-100 bg-indigo-50 px-6 py-4">
+      <p class="mb-3 text-[10px] font-black uppercase tracking-widest text-indigo-500">Vue globale — tous terminaux confondus</p>
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div>
+          <p class="text-[10px] text-indigo-400 font-semibold uppercase">CA total</p>
+          <p class="text-xl font-bold text-indigo-700">{{ fmt(store.data.global_metrics.revenue) }}</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-indigo-400 font-semibold uppercase">Nb ventes</p>
+          <p class="text-xl font-bold text-indigo-700">{{ store.data.global_metrics.sales_count.toLocaleString('fr-FR') }}</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-indigo-400 font-semibold uppercase">Ticket moyen</p>
+          <p class="text-xl font-bold text-indigo-700">{{ fmt(store.data.global_metrics.avg_ticket) }}</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-indigo-400 font-semibold uppercase">Terminaux actifs</p>
+          <p class="text-xl font-bold text-indigo-700">{{ store.data.global_metrics.terminals_online }} / {{ store.data.global_metrics.terminals_total }}</p>
+        </div>
       </div>
     </div>
 
@@ -208,27 +233,87 @@
       </article>
     </section>
 
-    <!-- ── CA par restaurant ─────────────────────────────────────────────── -->
-    <article v-if="store.data" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <p class="mb-1 text-xs font-semibold uppercase tracking-[0.15em] text-indigo-500">Répartition</p>
-      <p class="mb-4 text-base font-semibold text-slate-900">CA par restaurant</p>
+    <!-- ── Répartition par région + par terminal ────────────────────────── -->
+    <section v-if="store.data" class="grid gap-6 xl:grid-cols-2">
+
+      <!-- CA par région -->
+      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.15em] text-indigo-500">Répartition</p>
+        <p class="mb-4 text-base font-semibold text-slate-900">CA par région</p>
+        <div v-if="store.data.by_region?.length" class="space-y-2">
+          <div v-for="r in store.data.by_region" :key="r.region"
+            class="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-2.5 cursor-pointer hover:border-indigo-200 hover:bg-indigo-50/40 transition"
+            @click="selectRegion(r.region)">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-slate-800 truncate">{{ r.region }}</p>
+              <p class="text-[10px] text-slate-400">{{ r.terminal_count }} terminal{{ r.terminal_count > 1 ? 'aux' : '' }} · {{ r.sales_count }} ventes</p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-bold text-indigo-600">{{ fmt(r.revenue) }}</p>
+              <p class="text-[9px] text-slate-400">Cliquer pour filtrer</p>
+            </div>
+          </div>
+        </div>
+        <div v-else class="flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-400">
+          Aucune région configurée.
+        </div>
+      </article>
+
+      <!-- CA par restaurant -->
+      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <p class="mb-1 text-xs font-semibold uppercase tracking-[0.15em] text-indigo-500">Répartition</p>
+        <p class="mb-4 text-base font-semibold text-slate-900">CA par restaurant</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                <th class="pb-2 text-left">Restaurant</th>
+                <th class="pb-2 text-right">Ventes</th>
+                <th class="pb-2 text-right">CA</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in store.data.by_restaurant" :key="r.restaurant_id" class="border-b border-slate-50">
+                <td class="py-2.5 font-medium text-slate-800">{{ r.restaurant_id }}</td>
+                <td class="py-2.5 text-right text-slate-500">{{ r.sales_count }}</td>
+                <td class="py-2.5 text-right font-mono font-semibold text-indigo-600">{{ fmt(r.revenue) }}</td>
+              </tr>
+              <tr v-if="!store.data.by_restaurant?.length">
+                <td colspan="3" class="py-8 text-center text-sm text-slate-400">Aucune vente sur la période.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- ── CA par point de vente (terminal) ─────────────────────────────── -->
+    <article v-if="store.data?.by_terminal?.length" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <p class="mb-1 text-xs font-semibold uppercase tracking-[0.15em] text-indigo-500">Détail</p>
+      <p class="mb-4 text-base font-semibold text-slate-900">CA par point de vente</p>
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400">
-              <th class="pb-2 text-left">Restaurant</th>
+              <th class="pb-2 text-left">Terminal</th>
               <th class="pb-2 text-right">Ventes</th>
               <th class="pb-2 text-right">CA</th>
+              <th class="pb-2 text-right">Part</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in store.data.by_restaurant" :key="r.restaurant_id" class="border-b border-slate-50">
-              <td class="py-2.5 font-medium text-slate-800">{{ r.restaurant_id }}</td>
-              <td class="py-2.5 text-right text-slate-500">{{ r.sales_count }}</td>
-              <td class="py-2.5 text-right font-mono font-semibold text-indigo-600">{{ fmt(r.revenue) }}</td>
-            </tr>
-            <tr v-if="!store.data.by_restaurant?.length">
-              <td colspan="3" class="py-8 text-center text-sm text-slate-400">Aucune vente sur la période.</td>
+            <tr v-for="t in store.data.by_terminal" :key="t.terminal_id" class="border-b border-slate-50 hover:bg-slate-50/60">
+              <td class="py-2.5 font-mono font-semibold text-slate-800">{{ t.terminal_id }}</td>
+              <td class="py-2.5 text-right text-slate-500">{{ t.sales_count }}</td>
+              <td class="py-2.5 text-right font-semibold text-indigo-600">{{ fmt(t.revenue) }}</td>
+              <td class="py-2.5 text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <div class="w-16 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div class="h-full rounded-full bg-indigo-500" :style="{ width: terminalShare(t.revenue) }"></div>
+                  </div>
+                  <span class="text-[10px] text-slate-400 w-8 text-right">{{ terminalSharePct(t.revenue) }}%</span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -251,23 +336,45 @@ const termStore = useTerminalsStore()
 
 const today   = new Date().toISOString().slice(0, 10)
 const topMode = ref('revenue')
-const filters = ref({ terminal_id: '', restaurant_id: '', date_from: today, date_to: today })
+const filters = ref({ terminal_id: '', restaurant_id: '', region: '', date_from: today, date_to: today })
 
-const terminals   = computed(() => termStore.list)
-const restaurants = computed(() => [...new Set((store.data?.by_restaurant ?? []).map(r => r.restaurant_id))])
+const terminals        = computed(() => termStore.list)
+const regions          = computed(() => [...new Set(termStore.list.map(t => t.region).filter(Boolean))].sort())
+const filteredTerminals = computed(() => {
+  if (!filters.value.region) return terminals.value
+  return terminals.value.filter(t => t.region === filters.value.region)
+})
 
 function applyFilters() {
   store.fetch({
     terminal_id:   filters.value.terminal_id   || undefined,
     restaurant_id: filters.value.restaurant_id || undefined,
+    region:        filters.value.region        || undefined,
     date_from:     filters.value.date_from      || undefined,
     date_to:       filters.value.date_to        || undefined,
   })
 }
+function onRegionChange() {
+  // Reset terminal filter when changing region
+  filters.value.terminal_id = ''
+  applyFilters()
+}
+function selectRegion(region) {
+  filters.value.region = region
+  filters.value.terminal_id = ''
+  applyFilters()
+}
 function resetFilters() {
-  filters.value = { terminal_id: '', restaurant_id: '', date_from: today, date_to: today }
+  filters.value = { terminal_id: '', restaurant_id: '', region: '', date_from: today, date_to: today }
   store.fetch()
 }
+
+// ── Part terminal dans le total ──────────────────────────────────────────────
+const totalByTerminal = computed(() =>
+  (store.data?.by_terminal ?? []).reduce((acc, t) => acc + Number(t.revenue), 0) || 1
+)
+const terminalShare    = revenue => `${Math.round((revenue / totalByTerminal.value) * 100)}%`
+const terminalSharePct = revenue => Math.round((revenue / totalByTerminal.value) * 100)
 
 // ── Formatage ───────────────────────────────────────────────────────────────
 const fmt      = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v ?? 0)
