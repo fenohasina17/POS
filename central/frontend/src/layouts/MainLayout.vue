@@ -27,29 +27,31 @@
         </div>
 
         <!-- Navigation -->
-        <nav class="mt-8 flex-1 px-3" :class="sidebarCollapsed ? 'lg:px-1' : ''">
-          <p v-if="!sidebarCollapsed" class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Menu</p>
-          <ul class="space-y-1">
-            <li v-for="item in navItems" :key="item.name">
-              <button
-                type="button"
-                :class="[
-                  'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition',
-                  isActive(item) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100',
-                  sidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2' : '',
-                ]"
-                @click="navigate(item.route)"
-              >
-                <span
-                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                  :class="isActive(item) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
+        <nav class="mt-8 flex-1 px-3 space-y-5" :class="sidebarCollapsed ? 'lg:px-1' : ''">
+          <div v-for="section in navSections" :key="section.title">
+            <p v-if="!sidebarCollapsed" class="mb-2 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">{{ section.title }}</p>
+            <ul class="space-y-1">
+              <li v-for="item in section.items" :key="item.route">
+                <button
+                  type="button"
+                  :class="[
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition',
+                    isActive(item) ? 'bg-indigo-50 text-indigo-600' : 'text-slate-600 hover:bg-slate-100',
+                    sidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2' : '',
+                  ]"
+                  @click="navigate(item.route)"
                 >
-                  <component :is="item.icon" class="h-4 w-4" />
-                </span>
-                <span v-if="!sidebarCollapsed" class="flex-1 text-left text-xs">{{ item.label }}</span>
-              </button>
-            </li>
-          </ul>
+                  <span
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                    :class="isActive(item) ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-500'"
+                  >
+                    <component :is="item.icon" class="h-4 w-4" />
+                  </span>
+                  <span v-if="!sidebarCollapsed" class="flex-1 text-left text-xs">{{ item.label }}</span>
+                </button>
+              </li>
+            </ul>
+          </div>
         </nav>
       </div>
     </aside>
@@ -162,21 +164,31 @@ const initials = computed(() => {
 })
 
 // Icônes SVG inline comme composants fonctionnels
-const IconGauge = {
-  template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>`
-}
-const IconServer = {
-  template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>`
-}
-const IconCog = {
-  template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`
-}
+const IconGauge   = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>` }
+const IconServer  = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/></svg>` }
+const IconReceipt = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 000 4h6a2 2 0 000-4M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>` }
+const IconSession = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>` }
+const IconCog     = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` }
 
-const navItems = [
-  { label: 'Vue d\'ensemble', route: 'dashboard',       icon: IconGauge  },
-  { label: 'Terminaux',       route: 'terminals',        icon: IconServer },
-  { label: 'Gestion',         route: 'terminal-manage', icon: IconCog    },
+const navSections = [
+  {
+    title: 'Menu',
+    items: [
+      { label: 'Vue d\'ensemble', route: 'dashboard',  icon: IconGauge   },
+      { label: 'Terminaux',       route: 'terminals',   icon: IconServer  },
+      { label: 'Ventes',          route: 'sales',       icon: IconReceipt },
+      { label: 'Sessions',        route: 'sessions',    icon: IconSession },
+    ],
+  },
+  {
+    title: 'Outils',
+    items: [
+      { label: 'Gestion', route: 'terminal-manage', icon: IconCog },
+    ],
+  },
 ]
+// Compatibilité avec isActive
+const navItems = navSections.flatMap(s => s.items)
 
 const isActive = (item) => route.name === item.route
 
