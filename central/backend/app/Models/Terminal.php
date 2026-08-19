@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 class Terminal extends Model
 {
     protected $fillable = [
-        'terminal_id', 'restaurant_id', 'app_version', 'status',
+        'terminal_id', 'restaurant_id', 'region', 'app_version', 'status',
         'ip_address', 'pending_sync_count', 'last_heartbeat_at', 'last_sync_at',
     ];
 
