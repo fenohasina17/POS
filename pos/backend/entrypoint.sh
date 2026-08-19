@@ -40,4 +40,25 @@ php artisan migrate --force
 # Reconstruire le cache config avec les vraies valeurs runtime
 php artisan config:cache 2>/dev/null || true
 
-exec "$@"
+# ── Sync de démarrage ────────────────────────────────────────────────────────
+# Si le central est configuré, essayer d'envoyer les données en attente au démarrage
+# (couvre le cas : machine éteinte sans avoir fini de syncer)
+if [ -n "$CENTRAL_SERVER_URL" ]; then
+    echo "Sync de démarrage (données en attente depuis dernier arrêt)..."
+    php artisan pos:sync 2>/dev/null || echo "Sync de démarrage ignorée (central pas encore disponible)"
+fi
+
+# ── Handler de shutdown propre ───────────────────────────────────────────────
+# Intercepte SIGTERM (docker stop) et SIGINT pour syncer avant de quitter
+_shutdown() {
+    echo ""
+    echo "Signal d'arrêt reçu — sync d'urgence avant extinction..."
+    php artisan pos:sync-shutdown 2>/dev/null || true
+    echo "Arrêt propre terminé."
+    kill "$MAIN_PID" 2>/dev/null || true
+}
+trap '_shutdown' TERM INT
+
+exec "$@" &
+MAIN_PID=$!
+wait $MAIN_PID
