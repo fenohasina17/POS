@@ -42,7 +42,7 @@ FROM php:8.4-fpm-bookworm
 WORKDIR /var/www
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+    curl iproute2 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -sSfL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions \
