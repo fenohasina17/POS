@@ -69,13 +69,15 @@ class SyncController extends Controller
         'order_lines' => [
             'model'  => RemoteOrderLine::class,
             'fields' => [
-                'id'         => 'remote_id',
-                'sale_id'    => 'sale_id_remote',
-                'product_id' => 'product_id_remote',
-                'quantity'   => 'quantity',
-                'price'      => 'unit_price',
-                'total'      => 'total',
-                'created_at' => 'remote_created_at',
+                'id'            => 'remote_id',
+                'sale_id'       => 'sale_id_remote',
+                'product_id'    => 'product_id_remote',
+                'product_name'  => 'product_name',
+                'category_name' => 'category_name',
+                'quantity'      => 'quantity',
+                'price'         => 'unit_price',
+                'total'         => 'total',
+                'created_at'    => 'remote_created_at',
             ],
         ],
         'sale_payments' => [
@@ -129,8 +131,17 @@ class SyncController extends Controller
                     $row[$destKey] = $record[$sourceKey] ?? null;
                 }
 
-                // insertOrIgnore garantit l'idempotence via la contrainte unique (terminal_id, remote_id)
-                $affected = $model::insertOrIgnore([$row]);
+                // order_lines : upsert pour renseigner product_name/category_name sur lignes existantes
+                // Autres ressources : insertOrIgnore (immuables après sync)
+                if ($model === RemoteOrderLine::class) {
+                    $affected = $model::upsert(
+                        [$row],
+                        ['terminal_id', 'remote_id'],
+                        ['product_name', 'category_name']
+                    );
+                } else {
+                    $affected = $model::insertOrIgnore([$row]);
+                }
                 $affected ? $inserted++ : $skipped++;
             }
         });
