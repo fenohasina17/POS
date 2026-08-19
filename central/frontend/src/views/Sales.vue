@@ -138,6 +138,7 @@
 import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { useTerminalsStore } from '@/stores/terminals'
+import { fmt } from '@/utils/formatters'
 
 const termStore = useTerminalsStore()
 const terminals = computed(() => termStore.list)
@@ -154,7 +155,6 @@ const selected     = ref(null)
 const lines        = ref([])
 const linesLoading = ref(false)
 
-const fmt     = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v ?? 0)
 const fmtDate = v => v ? new Date(v).toLocaleString('fr-FR') : '—'
 
 const saleInfos = computed(() => selected.value ? [
