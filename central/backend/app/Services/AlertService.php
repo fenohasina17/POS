@@ -3,14 +3,17 @@
 namespace App\Services;
 
 use App\Models\Alert;
+use App\Models\RemoteCashRegisterSession;
+use App\Models\RemoteSale;
 use App\Models\Terminal;
 
 class AlertService
 {
-    // Seuils configurables
-    const OFFLINE_MINUTES  = 5;   // terminal offline si pas de heartbeat depuis 5 min
-    const BACKLOG_WARNING  = 500;
-    const BACKLOG_CRITICAL = 2000;
+    const OFFLINE_MINUTES      = 5;
+    const BACKLOG_WARNING      = 500;
+    const BACKLOG_CRITICAL     = 2000;
+    const DISCREPANCY_CRITICAL = 50000; // Ar
+    const CANCELLED_SPIKE      = 3;     // nb annulations / heure
 
     public function checkAll(): void
     {
@@ -18,6 +21,8 @@ class AlertService
             $this->checkOffline($terminal);
             $this->checkSyncBacklog($terminal);
         }
+        $this->checkCashDiscrepancy();
+        $this->checkCancelledSaleSpike();
     }
 
     private function checkOffline(Terminal $terminal): void
@@ -77,5 +82,65 @@ class AlertService
         } else {
             Alert::create($data);
         }
+    }
+
+    // Écart de caisse lors de la clôture d'une session (dernières 24h)
+    private function checkCashDiscrepancy(): void
+    {
+        RemoteCashRegisterSession::where('has_discrepancy', true)
+            ->whereNotNull('remote_closed_at')
+            ->where('remote_closed_at', '>=', now()->subHours(24))
+            ->each(function (RemoteCashRegisterSession $session) {
+                $diff = abs(
+                    floatval($session->actual_cash_amount) - floatval($session->expected_cash_amount)
+                );
+                $severity = $diff >= self::DISCREPANCY_CRITICAL ? 'critical' : 'warning';
+                $amount   = number_format($diff, 0, ',', ' ');
+
+                Alert::updateOrCreate(
+                    [
+                        'terminal_id' => $session->terminal_id,
+                        'type'        => 'cash_discrepancy',
+                        'resolved_at' => null,
+                        // clé pour éviter doublon sur même session
+                    ],
+                    [
+                        'restaurant_id' => $session->restaurant_id,
+                        'severity'      => $severity,
+                        'message'       => "Écart de caisse de {$amount} Ar sur {$session->terminal_id}.",
+                        'context'       => [
+                            'session_id' => $session->remote_id,
+                            'expected'   => $session->expected_cash_amount,
+                            'actual'     => $session->actual_cash_amount,
+                            'diff'       => $diff,
+                        ],
+                    ]
+                );
+            });
+    }
+
+    // Pic de ventes annulées (≥3 dans la dernière heure sur un même terminal)
+    private function checkCancelledSaleSpike(): void
+    {
+        RemoteSale::where('status', 'cancelled')
+            ->where('remote_created_at', '>=', now()->subHour())
+            ->selectRaw('terminal_id, restaurant_id, COUNT(*) as nb')
+            ->groupBy('terminal_id', 'restaurant_id')
+            ->having('nb', '>=', self::CANCELLED_SPIKE)
+            ->each(function ($group) {
+                Alert::updateOrCreate(
+                    [
+                        'terminal_id' => $group->terminal_id,
+                        'type'        => 'cancelled_sales_spike',
+                        'resolved_at' => null,
+                    ],
+                    [
+                        'restaurant_id' => $group->restaurant_id,
+                        'severity'      => 'warning',
+                        'message'       => "{$group->nb} ventes annulées sur {$group->terminal_id} dans la dernière heure.",
+                        'context'       => ['count' => $group->nb, 'window_minutes' => 60],
+                    ]
+                );
+            });
     }
 }
