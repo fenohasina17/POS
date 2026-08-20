@@ -48,6 +48,11 @@
                     <component :is="item.icon" class="h-4 w-4" />
                   </span>
                   <span v-if="!sidebarCollapsed" class="flex-1 text-left text-xs">{{ item.label }}</span>
+                  <span v-if="item.badge && !sidebarCollapsed"
+                    class="rounded-full px-1.5 py-0.5 text-[8px] font-black"
+                    :class="alerts.counts.critical > 0 ? 'bg-red-500 text-white' : 'bg-amber-400 text-white'">
+                    {{ item.badge }}
+                  </span>
                 </button>
               </li>
             </ul>
@@ -87,7 +92,7 @@
             <!-- Alertes badge -->
             <button
               v-if="alerts.counts.critical > 0 || alerts.counts.warning > 0"
-              @click="navigate('dashboard')"
+              @click="navigate('alerts')"
               class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-indigo-200 hover:text-indigo-600 transition"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,6 +175,7 @@ const IconReceipt = { template: `<svg fill="none" stroke="currentColor" viewBox=
 const IconSession = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>` }
 const IconCog     = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>` }
 const IconChart   = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>` }
+const IconBell    = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>` }
 const IconUsers   = { template: `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>` }
 
 const navSections = computed(() => {
@@ -183,6 +189,7 @@ const navSections = computed(() => {
         { label: 'Ventes',          route: 'sales',             icon: IconReceipt },
         { label: 'Sessions',        route: 'sessions',          icon: IconSession },
         { label: 'Produits',        route: 'product-report',    icon: IconChart   },
+        { label: 'Alertes',         route: 'alerts',            icon: IconBell, badge: alerts.counts.total || null },
       ],
     },
     {
