@@ -8,6 +8,7 @@ import TerminalManage from '@/views/TerminalManage.vue'
 import Sales          from '@/views/Sales.vue'
 import Sessions       from '@/views/Sessions.vue'
 import ProductReport  from '@/views/ProductReport.vue'
+import SellerReport  from '@/views/SellerReport.vue'
 import Users          from '@/views/Users.vue'
 import Login          from '@/views/Login.vue'
 
@@ -25,6 +26,7 @@ const routes = [
       { path: 'sales',              component: Sales,          name: 'sales'           },
       { path: 'sessions',           component: Sessions,       name: 'sessions'        },
       { path: 'products',           component: ProductReport,  name: 'product-report'  },
+      { path: 'sellers',            component: SellerReport,   name: 'seller-report'   },
       { path: 'users',              component: Users,          name: 'users'           },
     ],
   },

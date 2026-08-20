@@ -18,6 +18,11 @@
           class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300" />
         <input type="date" v-model="filters.date_to" @change="load(1)"
           class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300" />
+        <select v-model="filters.seller_name" @change="load(1)"
+          class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300">
+          <option value="">Tous les vendeurs</option>
+          <option v-for="s in sellers" :key="s" :value="s">{{ s }}</option>
+        </select>
         <button @click="resetFilters" class="text-xs text-slate-400 hover:text-slate-600 transition">Réinitialiser</button>
       </div>
     </div>
@@ -159,7 +164,8 @@ const loading = ref(false)
 const page    = ref(1)
 const lastPage = ref(1)
 const total   = ref(0)
-const filters = ref({ terminal_id: '', date_from: today, date_to: today })
+const filters = ref({ terminal_id: '', date_from: today, date_to: today, seller_name: '' })
+const sellers = ref([])
 
 const selected     = ref(null)
 const lines        = ref([])
@@ -190,6 +196,7 @@ async function load(p = 1) {
         terminal_id:   filters.value.terminal_id   || undefined,
         date_from:     filters.value.date_from      || undefined,
         date_to:       filters.value.date_to        || undefined,
+        seller_name:   filters.value.seller_name    || undefined,
       },
     })
     sales.value    = res.data.data
@@ -201,7 +208,7 @@ async function load(p = 1) {
 }
 
 function resetFilters() {
-  filters.value = { terminal_id: '', date_from: today, date_to: today }
+  filters.value = { terminal_id: '', date_from: today, date_to: today, seller_name: '' }
   load(1)
 }
 
@@ -219,8 +226,14 @@ async function openDetail(sale) {
   }
 }
 
+async function loadSellers() {
+  const res = await api.get('/sellers/report', { params: { date_from: '2020-01-01', date_to: today } })
+  sellers.value = (res.data.sellers ?? []).map(s => s.seller_name).filter(Boolean)
+}
+
 onMounted(() => {
   termStore.fetchAll()
+  loadSellers()
   load(1)
 })
 </script>
