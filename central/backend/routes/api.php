@@ -5,6 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\SalesController;
+use App\Http\Controllers\UserController;
+use App\Http\Middleware\RequireAdmin;
 use App\Http\Controllers\SessionsController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TerminalController;
@@ -66,4 +68,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales/{id}/lines',     [SalesController::class,        'lines']);
     Route::get('/sessions',             [SessionsController::class,     'index']);
     Route::get('/products/report',      [ProductReportController::class,'index']);
+
+    // Gestion utilisateurs — admin uniquement
+    Route::middleware(RequireAdmin::class)->group(function () {
+        Route::get('/users',            [UserController::class, 'index']);
+        Route::post('/users',           [UserController::class, 'store']);
+        Route::put('/users/{user}',     [UserController::class, 'update']);
+        Route::delete('/users/{user}',  [UserController::class, 'destroy']);
+    });
 });
