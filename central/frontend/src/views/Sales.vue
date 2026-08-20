@@ -30,7 +30,8 @@
             <tr class="border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400">
               <th class="px-5 py-3 text-left">N° Ticket</th>
               <th class="px-5 py-3 text-left">Terminal</th>
-              <th class="px-5 py-3 text-left">Restaurant</th>
+              <th class="px-5 py-3 text-left">Point de vente</th>
+              <th class="px-5 py-3 text-left">Vendeur</th>
               <th class="px-5 py-3 text-left">Statut</th>
               <th class="px-5 py-3 text-right">Montant</th>
               <th class="px-5 py-3 text-right">Date</th>
@@ -39,7 +40,7 @@
           </thead>
           <tbody>
             <tr v-if="loading">
-              <td colspan="7" class="py-12 text-center text-sm text-slate-400">Chargement…</td>
+              <td colspan="9" class="py-12 text-center text-sm text-slate-400">Chargement…</td>
             </tr>
             <template v-else>
               <tr
@@ -50,7 +51,16 @@
               >
                 <td class="px-5 py-3 font-mono font-semibold text-slate-800">{{ s.ticket_number ?? s.sale_number ?? `#${s.remote_id}` }}</td>
                 <td class="px-5 py-3 text-slate-500 text-xs">{{ s.terminal_id }}</td>
-                <td class="px-5 py-3 text-slate-500 text-xs">{{ s.restaurant_id }}</td>
+                <td class="px-5 py-3 text-slate-600 text-xs font-medium">{{ s.point_of_sale_name ?? s.restaurant_id }}</td>
+                <td class="px-5 py-3 text-xs">
+                  <span v-if="s.seller_name" class="inline-flex items-center gap-1">
+                    <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[8px] font-black text-indigo-700">
+                      {{ s.seller_name.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase() }}
+                    </span>
+                    <span class="text-slate-600">{{ s.seller_name }}</span>
+                  </span>
+                  <span v-else class="text-slate-300">—</span>
+                </td>
                 <td class="px-5 py-3">
                   <span :class="s.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'"
                     class="rounded-full px-2 py-0.5 text-[9px] font-black uppercase">{{ s.status }}</span>
@@ -64,7 +74,7 @@
                 </td>
               </tr>
               <tr v-if="!sales.length">
-                <td colspan="7" class="py-12 text-center text-sm text-slate-400">Aucune vente trouvée.</td>
+                <td colspan="9" class="py-12 text-center text-sm text-slate-400">Aucune vente trouvée.</td>
               </tr>
             </template>
           </tbody>
@@ -158,9 +168,10 @@ const linesLoading = ref(false)
 const fmtDate = v => v ? new Date(v).toLocaleString('fr-FR') : '—'
 
 const saleInfos = computed(() => selected.value ? [
-  { label: 'Terminal',    value: selected.value.terminal_id },
-  { label: 'Restaurant',  value: selected.value.restaurant_id },
-  { label: 'Statut',      value: selected.value.status },
+  { label: 'Terminal',        value: selected.value.terminal_id },
+  { label: 'Point de vente', value: selected.value.point_of_sale_name ?? selected.value.restaurant_id },
+  { label: 'Vendeur',        value: selected.value.seller_name ?? '—' },
+  { label: 'Statut',         value: selected.value.status },
   { label: 'Montant',     value: fmt(selected.value.final_amount), class: 'text-indigo-600' },
   { label: 'Reçu',        value: fmt(selected.value.amount_received) },
   { label: 'Rendu',       value: fmt(selected.value.change_amount) },
