@@ -3,6 +3,7 @@
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\SessionsController;
 use App\Http\Controllers\SyncController;
@@ -61,7 +62,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/export/sales', [ExportController::class, 'sales']);
 
-    Route::get('/sales',                [SalesController::class,  'index']);
-    Route::get('/sales/{id}/lines',     [SalesController::class,  'lines']);
-    Route::get('/sessions',             [SessionsController::class, 'index']);
+    Route::get('/sales',                [SalesController::class,        'index']);
+    Route::get('/sales/{id}/lines',     [SalesController::class,        'lines']);
+    Route::get('/sessions',             [SessionsController::class,     'index']);
+    Route::get('/products/report',      [ProductReportController::class,'index']);
 });

@@ -54,7 +54,7 @@ class SyncService
             $totalSent += $this->syncModel(Sale::query(), 'sales');
             $totalSent += $this->syncModel(CashRegisterSession::query(), 'cash_register_sessions');
             $totalSent += $this->syncModel(CashTransaction::query(), 'cash_transactions');
-            $totalSent += $this->syncModel(OrderLine::query(), 'order_lines');
+            $totalSent += $this->syncOrderLines();
             $totalSent += $this->syncModel(SalePayment::query(), 'sale_payments');
 
             $log->update([
@@ -76,6 +76,56 @@ class SyncService
         }
 
         return $totalSent;
+    }
+
+    /**
+     * Synchronise les order_lines en enrichissant chaque ligne avec product_name et category_name.
+     * Dénormalisation intentionnelle : le Central n'a pas accès au catalogue POS.
+     */
+    private function syncOrderLines(): int
+    {
+        $sent = 0;
+
+        OrderLine::with(['product.category'])
+            ->whereNull('synced_at')
+            ->orderBy('id')
+            ->chunk(self::BATCH_SIZE, function ($records) use (&$sent) {
+                $rows = $records->map(function ($line) {
+                    $arr = $line->toArray();
+                    $arr['product_name']   = $line->product?->name;
+                    $arr['category_name']  = $line->product?->category?->name;
+                    return $arr;
+                })->all();
+
+                $payload = [
+                    'terminal_id'   => $this->terminalId,
+                    'restaurant_id' => $this->restaurantId,
+                    'resource'      => 'order_lines',
+                    'records'       => $rows,
+                    'sent_at'       => now()->toIso8601String(),
+                ];
+
+                $response = Http::withToken($this->apiKey)
+                    ->timeout(30)
+                    ->retry(3, 1000, throw: false)
+                    ->post("{$this->centralUrl}/api/sync/receive", $payload);
+
+                if ($response->successful()) {
+                    $ids = $records->pluck('id')->all();
+                    OrderLine::whereIn('id', $ids)->update(['synced_at' => now()]);
+                    $sent += count($ids);
+                } else {
+                    Log::warning('SyncService: échec batch order_lines', [
+                        'status' => $response->status(),
+                        'body'   => $response->body(),
+                    ]);
+                    if ($response->status() >= 500 || $response->status() === 0) {
+                        return false;
+                    }
+                }
+            });
+
+        return $sent;
     }
 
     /**
