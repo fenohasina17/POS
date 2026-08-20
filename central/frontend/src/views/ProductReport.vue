@@ -188,13 +188,14 @@ const filters = ref({
 })
 
 const regions = computed(() => {
-  const r = new Set(terminalsStore.terminals.map(t => t.region).filter(Boolean))
+  const r = new Set((terminalsStore.list ?? []).map(t => t.region).filter(Boolean))
   return [...r].sort()
 })
 
 const filteredTerminals = computed(() => {
-  if (!filters.value.region) return terminalsStore.terminals
-  return terminalsStore.terminals.filter(t => t.region === filters.value.region)
+  const all = terminalsStore.list ?? []
+  if (!filters.value.region) return all
+  return all.filter(t => t.region === filters.value.region)
 })
 
 const totalRevenue = computed(() => data.value?.totals?.total_revenue ?? 0)
@@ -244,7 +245,7 @@ async function load() {
 }
 
 onMounted(async () => {
-  await terminalsStore.fetch()
+  await terminalsStore.fetchAll()
   load()
 })
 </script>
