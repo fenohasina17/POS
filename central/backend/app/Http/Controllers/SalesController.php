@@ -17,6 +17,7 @@ class SalesController extends Controller
             ->when($request->date_from,     fn($q) => $q->where('remote_created_at', '>=', $request->date_from . ' 00:00:00'))
             ->when($request->date_to,       fn($q) => $q->where('remote_created_at', '<=', $request->date_to   . ' 23:59:59'))
             ->when($request->status,        fn($q) => $q->where('status', $request->status))
+            ->when($request->seller_name,   fn($q) => $q->where('seller_name', $request->seller_name))
             ->orderByDesc('remote_created_at');
 
         $paginated = $query->paginate($request->get('per_page', 50));
