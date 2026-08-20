@@ -32,7 +32,9 @@ class SyncController extends Controller
                 'amount_received'      => 'amount_received',
                 'change_amount'        => 'change_amount',
                 'user_id'              => 'user_id_remote',
+                'seller_name'          => 'seller_name',
                 'point_of_sale_id'     => 'point_of_sale_id_remote',
+                'point_of_sale_name'   => 'point_of_sale_name',
                 'cash_register_session_id' => 'session_id_remote',
                 'table_id'             => 'table_id_remote',
                 'created_at'           => 'remote_created_at',
@@ -131,13 +133,18 @@ class SyncController extends Controller
                     $row[$destKey] = $record[$sourceKey] ?? null;
                 }
 
-                // order_lines : upsert pour renseigner product_name/category_name sur lignes existantes
-                // Autres ressources : insertOrIgnore (immuables après sync)
+                // Upsert pour enrichir les noms dénormalisés sur les lignes existantes
                 if ($model === RemoteOrderLine::class) {
                     $affected = $model::upsert(
                         [$row],
                         ['terminal_id', 'remote_id'],
                         ['product_name', 'category_name']
+                    );
+                } elseif ($model === RemoteSale::class) {
+                    $affected = $model::upsert(
+                        [$row],
+                        ['terminal_id', 'remote_id'],
+                        ['seller_name', 'point_of_sale_name']
                     );
                 } else {
                     $affected = $model::insertOrIgnore([$row]);

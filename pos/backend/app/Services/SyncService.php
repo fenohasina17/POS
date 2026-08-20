@@ -51,7 +51,7 @@ class SyncService
         $totalFailed = 0;
 
         try {
-            $totalSent += $this->syncModel(Sale::query(), 'sales');
+            $totalSent += $this->syncSales();
             $totalSent += $this->syncModel(CashRegisterSession::query(), 'cash_register_sessions');
             $totalSent += $this->syncModel(CashTransaction::query(), 'cash_transactions');
             $totalSent += $this->syncOrderLines();
@@ -76,6 +76,55 @@ class SyncService
         }
 
         return $totalSent;
+    }
+
+    /**
+     * Synchronise les ventes en dénormalisant seller_name et point_of_sale_name.
+     */
+    private function syncSales(): int
+    {
+        $sent = 0;
+
+        Sale::with(['user:id,name', 'pointOfSale:id,name'])
+            ->whereNull('synced_at')
+            ->orderBy('id')
+            ->chunk(self::BATCH_SIZE, function ($records) use (&$sent) {
+                $rows = $records->map(function ($sale) {
+                    $arr = $sale->toArray();
+                    $arr['seller_name']       = $sale->user?->name;
+                    $arr['point_of_sale_name'] = $sale->pointOfSale?->name;
+                    return $arr;
+                })->all();
+
+                $payload = [
+                    'terminal_id'   => $this->terminalId,
+                    'restaurant_id' => $this->restaurantId,
+                    'resource'      => 'sales',
+                    'records'       => $rows,
+                    'sent_at'       => now()->toIso8601String(),
+                ];
+
+                $response = Http::withToken($this->apiKey)
+                    ->timeout(30)
+                    ->retry(3, 1000, throw: false)
+                    ->post("{$this->centralUrl}/api/sync/receive", $payload);
+
+                if ($response->successful()) {
+                    $ids = $records->pluck('id')->all();
+                    Sale::whereIn('id', $ids)->update(['synced_at' => now()]);
+                    $sent += count($ids);
+                } else {
+                    Log::warning('SyncService: échec batch sales', [
+                        'status' => $response->status(),
+                        'body'   => $response->body(),
+                    ]);
+                    if ($response->status() >= 500 || $response->status() === 0) {
+                        return false;
+                    }
+                }
+            });
+
+        return $sent;
     }
 
     /**
