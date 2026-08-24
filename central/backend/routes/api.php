@@ -63,7 +63,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/alerts/counts',           [AlertController::class, 'counts']);
     Route::post('/alerts/{alert}/resolve', [AlertController::class, 'resolve']);
 
-    Route::get('/export/sales', [ExportController::class, 'sales']);
+    Route::get('/export/sales',    [ExportController::class, 'sales']);
+    Route::get('/export/sellers',  [ExportController::class, 'sellers']);
+    Route::get('/export/products', [ExportController::class, 'products']);
 
     Route::get('/sales',                [SalesController::class,        'index']);
     Route::get('/sales/{id}/lines',     [SalesController::class,        'lines']);

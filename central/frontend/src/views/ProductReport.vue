@@ -27,6 +27,11 @@
         <button @click="load" :disabled="loading" class="rounded-lg bg-indigo-600 px-4 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition">
           {{ loading ? 'Chargement…' : 'Actualiser' }}
         </button>
+        <ExportButton
+          endpoint="/export/products"
+          :filename="`produits_${filters.date_from}_${filters.date_to}`"
+          :params="{ date_from: filters.date_from, date_to: filters.date_to, terminal_id: filters.terminal_id || undefined }"
+        />
       </div>
     </div>
 
@@ -169,6 +174,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { useTerminalsStore } from '@/stores/terminals'
 import { fmt, fmtShort } from '@/utils/formatters'
+import ExportButton from '@/components/ExportButton.vue'
 
 const terminalsStore = useTerminalsStore()
 

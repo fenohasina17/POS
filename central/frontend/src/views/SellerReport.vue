@@ -19,6 +19,11 @@
         <input type="date" v-model="filters.date_to" @change="load"
           class="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-indigo-300" />
         <button @click="resetFilters" class="text-xs text-slate-400 hover:text-slate-600 transition">Réinitialiser</button>
+        <ExportButton
+          endpoint="/export/sellers"
+          :filename="`vendeurs_${filters.date_from}_${filters.date_to}`"
+          :params="{ date_from: filters.date_from, date_to: filters.date_to, terminal_id: filters.terminal_id || undefined }"
+        />
       </div>
     </div>
 
@@ -184,6 +189,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { useTerminalsStore } from '@/stores/terminals'
 import { fmt, fmtShort } from '@/utils/formatters'
+import ExportButton from '@/components/ExportButton.vue'
 
 const termStore = useTerminalsStore()
 
