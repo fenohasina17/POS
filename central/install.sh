@@ -21,6 +21,13 @@ REPO_URL="${REPO_URL:-https://github.com/fenohasina17/POS.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/pos-central}"
 APP_USER="${APP_USER:-central}"
 
+# Le dépôt est chown vers $APP_USER après le clone (plus bas), donc root
+# (qui exécute tout ce script) n'en est plus "propriétaire" aux yeux de git
+# dès le 2e passage — refusé par sécurité (CVE-2022-24765) sans cette
+# exception explicite.
+git config --global --get-all safe.directory 2>/dev/null | grep -qx "$INSTALL_DIR" \
+    || git config --global --add safe.directory "$INSTALL_DIR"
+
 # Domaine public pour le certificat SSL. Si non fourni, on dérive un domaine
 # gratuit via sslip.io (DNS "magique" : <ip-avec-tirets>.sslip.io résout
 # automatiquement vers cette IP — permet un vrai certificat Let's Encrypt
