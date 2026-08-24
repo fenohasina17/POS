@@ -202,6 +202,12 @@ else
     EMAIL_ARGS=(--register-unsafely-without-email)
     [[ -n "$CERTBOT_EMAIL" ]] && EMAIL_ARGS=(--email "$CERTBOT_EMAIL")
 
+    # certbot valide que le premier mot d'un --pre-hook/--post-hook soit un
+    # exécutable réel du PATH — "cd" est un builtin shell, pas un binaire,
+    # donc la validation échoue si on l'utilise en tête de commande. On passe
+    # par "docker compose --project-directory" pour éviter cd entièrement.
+    COMPOSE_CMD="docker compose -f ${INSTALL_DIR}/central/docker-compose.yml --project-directory ${INSTALL_DIR}/central"
+
     # --standalone : certbot ouvre temporairement le port 80 lui-même.
     # Rien ne l'occupe encore à ce stade (les conteneurs ne sont pas démarrés).
     # Les hooks stop/start (tolérants via || true) servent aussi aux
@@ -210,8 +216,8 @@ else
     certbot certonly --standalone \
         --non-interactive --agree-tos "${EMAIL_ARGS[@]}" \
         -d "${DOMAIN}" \
-        --pre-hook  "cd ${INSTALL_DIR}/central && docker compose stop central_nginx || true" \
-        --post-hook "cd ${INSTALL_DIR}/central && docker compose start central_nginx || true"
+        --pre-hook  "${COMPOSE_CMD} stop central_nginx || true" \
+        --post-hook "${COMPOSE_CMD} start central_nginx || true"
     log "Certificat obtenu pour ${DOMAIN}"
 fi
 
