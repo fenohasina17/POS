@@ -24,6 +24,11 @@
           <option v-for="s in sellers" :key="s" :value="s">{{ s }}</option>
         </select>
         <button @click="resetFilters" class="text-xs text-slate-400 hover:text-slate-600 transition">Réinitialiser</button>
+        <ExportButton
+          endpoint="/export/sales"
+          :filename="`ventes_${filters.date_from}_${filters.date_to}`"
+          :params="{ date_from: filters.date_from, date_to: filters.date_to, terminal_id: filters.terminal_id || undefined, seller_name: filters.seller_name || undefined }"
+        />
       </div>
     </div>
 
@@ -154,6 +159,7 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/utils/api'
 import { useTerminalsStore } from '@/stores/terminals'
 import { fmt } from '@/utils/formatters'
+import ExportButton from '@/components/ExportButton.vue'
 
 const termStore = useTerminalsStore()
 const terminals = computed(() => termStore.list)
