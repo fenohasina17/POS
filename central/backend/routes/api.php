@@ -4,6 +4,7 @@ use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\ProductReportController;
+use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\SellerReportController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\UserController;
@@ -71,6 +72,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales/{id}/lines',     [SalesController::class,        'lines']);
     Route::get('/sessions',             [SessionsController::class,     'index']);
     Route::get('/products/report',      [ProductReportController::class,'index']);
+    Route::get('/restaurants',          [RestaurantController::class,   'index']);
     Route::get('/sellers/report',       [SellerReportController::class, 'index']);
 
     // Gestion utilisateurs — admin uniquement

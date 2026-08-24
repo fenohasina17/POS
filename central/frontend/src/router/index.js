@@ -10,6 +10,7 @@ import Sessions       from '@/views/Sessions.vue'
 import ProductReport  from '@/views/ProductReport.vue'
 import SellerReport   from '@/views/SellerReport.vue'
 import Alerts         from '@/views/Alerts.vue'
+import Restaurants    from '@/views/Restaurants.vue'
 import Users          from '@/views/Users.vue'
 import Login          from '@/views/Login.vue'
 
@@ -29,6 +30,7 @@ const routes = [
       { path: 'products',           component: ProductReport,  name: 'product-report'  },
       { path: 'sellers',            component: SellerReport,   name: 'seller-report'   },
       { path: 'alerts',             component: Alerts,         name: 'alerts'          },
+      { path: 'restaurants',        component: Restaurants,    name: 'restaurants'     },
       { path: 'users',              component: Users,          name: 'users'           },
     ],
   },
