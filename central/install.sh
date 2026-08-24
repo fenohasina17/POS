@@ -21,6 +21,13 @@ REPO_URL="${REPO_URL:-https://github.com/fenohasina17/POS.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/pos-central}"
 APP_USER="${APP_USER:-central}"
 
+# Domaine public pour le certificat SSL. Si non fourni, on dérive un domaine
+# gratuit via sslip.io (DNS "magique" : <ip-avec-tirets>.sslip.io résout
+# automatiquement vers cette IP — permet un vrai certificat Let's Encrypt
+# sans nom de domaine acheté). Fournir DOMAIN=votre-domaine.com pour l'utiliser.
+DOMAIN="${DOMAIN:-}"
+CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
+
 detect_server_ip() {
     ip route get 1.1.1.1 2>/dev/null \
       | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1
@@ -31,6 +38,12 @@ echo "  ╔═══════════════════════
 echo "  ║   POS Central — Installation serveur    ║"
 echo "  ╚══════════════════════════════════════════╝"
 echo -e "${NC}"
+
+SERVER_IP=$(detect_server_ip)
+[[ -z "$SERVER_IP" ]] && SERVER_IP="127.0.0.1"
+DOMAIN="${DOMAIN:-$(echo "$SERVER_IP" | tr '.' '-').sslip.io}"
+info "IP détectée   : ${SERVER_IP}"
+info "Domaine cible : ${DOMAIN}"
 
 # ── 1. Dépendances système ────────────────────────────────────
 step "Installation des dépendances système"
@@ -56,6 +69,18 @@ else
 fi
 ! docker compose version &>/dev/null && apt-get install -y -qq docker-compose-plugin > /dev/null
 log "docker compose : $(docker compose version --short)"
+
+# ── 2bis. Pare-feu (ufw) ────────────────────────────────────────
+step "Configuration du pare-feu"
+if command -v ufw &>/dev/null; then
+    ufw allow 22/tcp  > /dev/null
+    ufw allow 80/tcp  > /dev/null
+    ufw allow 443/tcp > /dev/null
+    ufw --force enable > /dev/null
+    log "ufw activé (22, 80, 443 autorisés — reste bloqué par défaut)"
+else
+    warn "ufw non disponible — pare-feu à configurer manuellement"
+fi
 
 # ── 3. Utilisateur applicatif ─────────────────────────────────
 step "Création de l'utilisateur applicatif '$APP_USER'"
@@ -85,9 +110,6 @@ ENV_FILE="$INSTALL_DIR/central/.env"
 if [[ -f "$ENV_FILE" ]]; then
     warn ".env existant détecté — conservé (pas d'écrasement)"
 else
-    SERVER_IP=$(detect_server_ip)
-    [[ -z "$SERVER_IP" ]] && SERVER_IP="127.0.0.1"
-
     APP_KEY="base64:$(openssl rand -base64 32)"
     DB_PASSWORD=$(openssl rand -hex 16)
     REDIS_PASSWORD=$(openssl rand -hex 16)
@@ -102,11 +124,11 @@ APP_NAME="POS Central"
 APP_ENV=production
 APP_KEY=${APP_KEY}
 APP_DEBUG=false
-APP_URL=http://${SERVER_IP}:9000
+APP_URL=https://${DOMAIN}
 APP_VERSION=1.0.0
 
-FRONTEND_URL=http://${SERVER_IP}:9001
-SANCTUM_STATEFUL_DOMAINS=${SERVER_IP}:9001
+FRONTEND_URL=https://${DOMAIN}
+SANCTUM_STATEFUL_DOMAINS=${DOMAIN}
 SANCTUM_TOKEN_EXPIRATION=480
 
 LOG_CHANNEL=daily
@@ -133,9 +155,14 @@ BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=${REVERB_APP_ID}
 REVERB_APP_KEY=${REVERB_APP_KEY}
 REVERB_APP_SECRET=${REVERB_APP_SECRET}
-REVERB_HOST=${SERVER_IP}
+# Connexion interne (backend/worker → reverb) — jamais via nginx/TLS
+REVERB_HOST=central_reverb
 REVERB_PORT=8080
-REVERB_SCHEME=ws
+REVERB_SCHEME=http
+# Connexion navigateur (dashboard → reverb via le proxy nginx /app/)
+VITE_REVERB_HOST=${DOMAIN}
+VITE_REVERB_PORT=443
+VITE_REVERB_SCHEME=https
 
 CENTRAL_API_KEY=${CENTRAL_API_KEY}
 
@@ -145,19 +172,54 @@ EOF
 
     chmod 600 "$ENV_FILE"
     chown "$APP_USER:$APP_USER" "$ENV_FILE"
-    log ".env généré (IP: $SERVER_IP)"
+    log ".env généré (domaine: $DOMAIN)"
 
     # Afficher les infos critiques
     echo ""
     echo -e "${BOLD}${YELLOW}  ┌─ INFORMATIONS IMPORTANTES ─────────────────────────┐${NC}"
+    echo -e "${YELLOW}  │${NC}  CENTRAL_SERVER_URL=${BOLD}https://${DOMAIN}${NC}"
     echo -e "${YELLOW}  │${NC}  CENTRAL_API_KEY=${BOLD}${CENTRAL_API_KEY}${NC}"
-    echo -e "${YELLOW}  │${NC}  → À configurer dans le .env de chaque caisse POS"
+    echo -e "${YELLOW}  │${NC}  → Ces deux valeurs sont à passer à pos/install.sh sur"
+    echo -e "${YELLOW}  │${NC}    chaque caisse POS (CENTRAL_SERVER_URL + CENTRAL_API_KEY)"
     echo -e "${YELLOW}  │${NC}"
     echo -e "${YELLOW}  │${NC}  ADMIN_EMAIL   = admin@central.local"
     echo -e "${YELLOW}  │${NC}  ADMIN_PASSWORD= ${BOLD}${ADMIN_PASSWORD}${NC}"
     echo -e "${BOLD}${YELLOW}  └────────────────────────────────────────────────────┘${NC}"
     echo ""
 fi
+
+# ── 5bis. Certificat SSL (Let's Encrypt) ────────────────────────
+step "Certificat SSL pour ${DOMAIN}"
+if ! command -v certbot &>/dev/null; then
+    apt-get install -y -qq certbot > /dev/null
+    log "certbot installé"
+fi
+
+CERT_PATH="/etc/letsencrypt/live/${DOMAIN}/fullchain.pem"
+if [[ -f "$CERT_PATH" ]]; then
+    info "Certificat déjà présent pour ${DOMAIN} — conservé"
+else
+    EMAIL_ARGS=(--register-unsafely-without-email)
+    [[ -n "$CERTBOT_EMAIL" ]] && EMAIL_ARGS=(--email "$CERTBOT_EMAIL")
+
+    # --standalone : certbot ouvre temporairement le port 80 lui-même.
+    # Rien ne l'occupe encore à ce stade (les conteneurs ne sont pas démarrés).
+    # Les hooks stop/start (tolérants via || true) servent aussi aux
+    # renouvellements automatiques futurs via le certbot.timer déjà installé
+    # par le paquet Ubuntu/Debian.
+    certbot certonly --standalone \
+        --non-interactive --agree-tos "${EMAIL_ARGS[@]}" \
+        -d "${DOMAIN}" \
+        --pre-hook  "cd ${INSTALL_DIR}/central && docker compose stop central_nginx || true" \
+        --post-hook "cd ${INSTALL_DIR}/central && docker compose start central_nginx || true"
+    log "Certificat obtenu pour ${DOMAIN}"
+fi
+
+# Rendu du nginx.conf de production à partir du template (ne touche jamais
+# le nginx.conf du dépôt source — seulement la copie clonée localement)
+sed "s/__DOMAIN__/${DOMAIN}/g" "${INSTALL_DIR}/central/nginx.https.conf.template" \
+    > "${INSTALL_DIR}/central/nginx.conf"
+log "nginx.conf (production, TLS) généré pour ${DOMAIN}"
 
 # ── 6. Build et démarrage ─────────────────────────────────────
 step "Build et démarrage des services"
@@ -207,15 +269,11 @@ systemctl enable pos-central.service
 log "Service pos-central.service activé"
 
 # ── 9. Résumé ─────────────────────────────────────────────────
-SERVER_IP=$(detect_server_ip)
-
 echo ""
 echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════╗"
 echo -e "║  ✅  Installation terminée avec succès !              ║"
 echo -e "╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║${NC}  Dashboard  :  ${BOLD}http://${SERVER_IP}:9001${NC}"
-echo -e "${GREEN}║${NC}  API        :  ${BOLD}http://${SERVER_IP}:9000${NC}"
-echo -e "${GREEN}║${NC}  WebSocket  :  ${BOLD}ws://${SERVER_IP}:8080${NC}"
+echo -e "${GREEN}║${NC}  Dashboard + API :  ${BOLD}https://${DOMAIN}${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Commandes utiles :"

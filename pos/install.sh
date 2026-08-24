@@ -22,6 +22,21 @@ REPO_URL="${REPO_URL:-https://github.com/fenohasina17/POS.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/pos}"
 APP_USER="${APP_USER:-pos}"
 
+# Synchronisation vers le serveur central (laisser CENTRAL_SERVER_URL vide
+# pour un POS 100% autonome, sans supervision). Valeurs affichées à la fin
+# de central/install.sh — à passer ici en variables d'environnement :
+#   CENTRAL_SERVER_URL=https://<domaine> CENTRAL_API_KEY=<clé> \
+#   RESTAURANT_ID=restaurant-1 TERMINAL_ID=pos-1 sudo -E ./install.sh
+CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-}"
+CENTRAL_API_KEY="${CENTRAL_API_KEY:-}"
+TERMINAL_ID="${TERMINAL_ID:-pos-$(hostname)}"
+RESTAURANT_ID="${RESTAURANT_ID:-restaurant-1}"
+
+if [[ -z "$CENTRAL_SERVER_URL" ]]; then
+    warn "CENTRAL_SERVER_URL non défini — ce POS tournera en mode autonome (pas de supervision centrale)"
+    warn "Pour activer la sync, relancez avec CENTRAL_SERVER_URL=https://... CENTRAL_API_KEY=... ./install.sh"
+fi
+
 detect_server_ip() {
     ip route get 1.1.1.1 2>/dev/null \
       | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1
@@ -93,6 +108,7 @@ else
 
     APP_KEY="base64:$(openssl rand -base64 32)"
     DB_PASSWORD=$(openssl rand -hex 16)
+    REDIS_PASSWORD=$(openssl rand -hex 16)
     REVERB_APP_ID=$(shuf -i 100000-999999 -n 1)
     REVERB_APP_KEY=$(openssl rand -hex 16)
     REVERB_APP_SECRET=$(openssl rand -hex 16)
@@ -106,6 +122,7 @@ APP_URL=http://${SERVER_IP}:8000
 
 FRONTEND_URL=http://${SERVER_IP}:5173
 SANCTUM_STATEFUL_DOMAINS=${SERVER_IP}:5173
+SANCTUM_TOKEN_EXPIRATION=480
 
 VITE_API_URL=http://${SERVER_IP}:8000
 
@@ -120,7 +137,7 @@ CACHE_STORE=redis
 REDIS_CLIENT=phpredis
 REDIS_HOST=redis
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=${REDIS_PASSWORD}
 
 SESSION_DRIVER=file
 SESSION_LIFETIME=120
@@ -142,6 +159,12 @@ VITE_REVERB_APP_KEY=${REVERB_APP_KEY}
 VITE_REVERB_HOST=${SERVER_IP}
 VITE_REVERB_PORT=8000
 VITE_REVERB_SCHEME=ws
+
+# Synchronisation vers le serveur central (vide = POS autonome)
+CENTRAL_SERVER_URL=${CENTRAL_SERVER_URL}
+CENTRAL_API_KEY=${CENTRAL_API_KEY}
+TERMINAL_ID=${TERMINAL_ID}
+RESTAURANT_ID=${RESTAURANT_ID}
 EOF
 
     chmod 600 "$ENV_FILE"
@@ -202,7 +225,8 @@ systemctl enable pos.service
 log "Service pos.service activé"
 
 # ── 9. Résumé ────────────────────────────────────────────────
-SERVER_IP=$(grep '^SERVER_IP=' "$ENV_FILE" 2>/dev/null | cut -d= -f2 || echo "127.0.0.1")
+SERVER_IP=$(detect_server_ip)
+[[ -z "$SERVER_IP" ]] && SERVER_IP="127.0.0.1"
 
 echo ""
 echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════╗"
@@ -212,6 +236,12 @@ echo -e "${GREEN}║${NC}  Frontend  :  ${BOLD}http://${SERVER_IP}:5173${NC}"
 echo -e "${GREEN}║${NC}  API       :  ${BOLD}http://${SERVER_IP}:8000${NC}"
 echo -e "${GREEN}║${NC}  Jenkins   :  ${BOLD}http://${SERVER_IP}:9090${NC}"
 echo -e "${GREEN}║${NC}  Uptime    :  ${BOLD}http://${SERVER_IP}:3001${NC}"
+echo -e "╠══════════════════════════════════════════════════════╣${NC}"
+if [[ -n "$CENTRAL_SERVER_URL" ]]; then
+    echo -e "${GREEN}║${NC}  Sync Central : ${BOLD}activée${NC} → ${CENTRAL_SERVER_URL} (${TERMINAL_ID})"
+else
+    echo -e "${GREEN}║${NC}  Sync Central : ${YELLOW}désactivée${NC} (mode autonome)"
+fi
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Commandes utiles :"

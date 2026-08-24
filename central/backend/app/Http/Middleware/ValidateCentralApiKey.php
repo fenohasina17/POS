@@ -18,7 +18,7 @@ class ValidateCentralApiKey
 
         $provided = $request->bearerToken();
 
-        if ($provided !== $expected) {
+        if (! $provided || ! hash_equals($expected, $provided)) {
             return response()->json(['message' => 'Clé API invalide.'], 401);
         }
 

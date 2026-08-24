@@ -1,0 +1,21 @@
+# Surcharge pour le développement local uniquement.
+# Restaure les ports publiés individuellement (pas de TLS en local, chaque
+# service reste joignable directement comme avant le reverse-proxy TLS de
+# production). Ne s'applique JAMAIS automatiquement — nécessite -f explicite
+# (contrairement à docker-compose.override.yml), pour qu'un `install.sh` en
+# production ne le charge jamais par accident.
+#
+# Usage : docker compose -f central/docker-compose.yml -f central/docker-compose.dev.yml up -d
+# (ou via `make central-up`, qui inclut déjà les deux fichiers)
+services:
+  central_nginx:
+    ports:
+      - "9000:80"
+
+  central_frontend:
+    ports:
+      - "9001:80"
+
+  central_reverb:
+    ports:
+      - "8080:8080"
