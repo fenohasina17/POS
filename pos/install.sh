@@ -22,6 +22,13 @@ REPO_URL="${REPO_URL:-https://github.com/fenohasina17/POS.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/pos}"
 APP_USER="${APP_USER:-pos}"
 
+# Le dépôt est chown vers $APP_USER après le clone (plus bas), donc root
+# (qui exécute tout ce script) n'en est plus "propriétaire" aux yeux de git
+# dès le 2e passage — refusé par sécurité (CVE-2022-24765) sans cette
+# exception explicite.
+git config --global --get-all safe.directory 2>/dev/null | grep -qx "$INSTALL_DIR" \
+    || git config --global --add safe.directory "$INSTALL_DIR"
+
 # Synchronisation vers le serveur central (laisser CENTRAL_SERVER_URL vide
 # pour un POS 100% autonome, sans supervision). Valeurs affichées à la fin
 # de central/install.sh — à passer ici en variables d'environnement :
