@@ -25,12 +25,18 @@ APP_USER="${APP_USER:-central}"
 # gratuit via sslip.io (DNS "magique" : <ip-avec-tirets>.sslip.io résout
 # automatiquement vers cette IP — permet un vrai certificat Let's Encrypt
 # sans nom de domaine acheté). Fournir DOMAIN=votre-domaine.com pour l'utiliser.
+[[ -n "${DOMAIN:-}" ]] && DOMAIN_PROVIDED=1 || DOMAIN_PROVIDED=0
 DOMAIN="${DOMAIN:-}"
 CERTBOT_EMAIL="${CERTBOT_EMAIL:-}"
 
 detect_server_ip() {
-    ip route get 1.1.1.1 2>/dev/null \
-      | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1
+    # IP publique réelle en priorité — indispensable derrière un NAT/routeur,
+    # où "ip route get" ne renvoie que l'IP LAN locale (ex: 192.168.x.x),
+    # injoignable depuis Internet pour le challenge ACME et la sync POS.
+    curl -4 -fsSL --max-time 5 https://ifconfig.me 2>/dev/null \
+      || curl -4 -fsSL --max-time 5 https://icanhazip.com 2>/dev/null \
+      || ip route get 1.1.1.1 2>/dev/null \
+           | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1
 }
 
 echo -e "${BOLD}"
@@ -44,6 +50,19 @@ SERVER_IP=$(detect_server_ip)
 DOMAIN="${DOMAIN:-$(echo "$SERVER_IP" | tr '.' '-').sslip.io}"
 info "IP détectée   : ${SERVER_IP}"
 info "Domaine cible : ${DOMAIN}"
+
+# Garde-fou : si l'IP détectée est privée (RFC 1918) et qu'aucun DOMAIN n'a
+# été fourni explicitement, le certificat Let's Encrypt échouera à coup sûr
+# (Internet ne peut pas joindre une IP privée pour le challenge ACME).
+# Pattern en variable : "[[ =~ ]]" avec un \. inline se fait dépouiller de
+# son échappement par bash, un "." non échappé matche n'importe quel
+# caractère en regex — passer par une variable évite ce piège classique.
+PRIVATE_IP_PATTERN='^(10\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.168\.)'
+if [[ "$DOMAIN_PROVIDED" -eq 0 ]] && [[ "$SERVER_IP" =~ $PRIVATE_IP_PATTERN ]]; then
+    warn "L'IP détectée (${SERVER_IP}) est une IP privée (RFC 1918)."
+    warn "Si ce serveur est derrière un routeur/NAT, le certificat SSL va échouer."
+    warn "Relancez avec DOMAIN=<votre-domaine-ou-ip-publique>.sslip.io ou vérifiez la connectivité Internet sortante."
+fi
 
 # ── 1. Dépendances système ────────────────────────────────────
 step "Installation des dépendances système"
