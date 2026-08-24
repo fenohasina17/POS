@@ -30,21 +30,23 @@ pos-migrate:
 pos-sync:
 	docker compose -f pos/docker-compose.yml exec backend php artisan pos:sync
 
-# ── Serveur central ───────────────────────────────────────────
+# ── Serveur central (dev local — ports publiés individuellement, pas de TLS) ──
+CENTRAL_COMPOSE := -f central/docker-compose.yml -f central/docker-compose.dev.yml
+
 central-up:
-	docker compose -f central/docker-compose.yml up -d
+	docker compose $(CENTRAL_COMPOSE) up -d
 
 central-down:
-	docker compose -f central/docker-compose.yml down
+	docker compose $(CENTRAL_COMPOSE) down
 
 central-build:
-	docker compose -f central/docker-compose.yml build --no-cache
+	docker compose $(CENTRAL_COMPOSE) build --no-cache
 
 central-logs:
-	docker compose -f central/docker-compose.yml logs -f
+	docker compose $(CENTRAL_COMPOSE) logs -f
 
 central-migrate:
-	docker compose -f central/docker-compose.yml exec central_backend php artisan migrate --force
+	docker compose $(CENTRAL_COMPOSE) exec central_backend php artisan migrate --force
 
 # ── Git hooks ─────────────────────────────────────────────────
 setup-hooks:
