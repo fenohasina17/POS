@@ -22,20 +22,20 @@ REPO_URL="${REPO_URL:-https://github.com/fenohasina17/POS.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/pos}"
 APP_USER="${APP_USER:-pos}"
 
-# Synchronisation vers le serveur central (laisser CENTRAL_SERVER_URL vide
-# pour un POS 100% autonome, sans supervision). Valeurs affichées à la fin
-# de central/install.sh — à passer ici en variables d'environnement :
-#   CENTRAL_SERVER_URL=https://<domaine> CENTRAL_API_KEY=<clé> \
-#   RESTAURANT_ID=restaurant-1 TERMINAL_ID=pos-1 sudo -E ./install.sh
-CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-}"
-CENTRAL_API_KEY="${CENTRAL_API_KEY:-}"
-TERMINAL_ID="${TERMINAL_ID:-pos-$(hostname)}"
-RESTAURANT_ID="${RESTAURANT_ID:-restaurant-1}"
+# Le dépôt est chown vers $APP_USER après le clone (plus bas), donc root
+# (qui exécute tout ce script) n'en est plus "propriétaire" aux yeux de git
+# dès le 2e passage — refusé par sécurité (CVE-2022-24765) sans cette
+# exception explicite.
+git config --global --get-all safe.directory 2>/dev/null | grep -qx "$INSTALL_DIR" \
+    || git config --global --add safe.directory "$INSTALL_DIR"
 
-if [[ -z "$CENTRAL_SERVER_URL" ]]; then
-    warn "CENTRAL_SERVER_URL non défini — ce POS tournera en mode autonome (pas de supervision centrale)"
-    warn "Pour activer la sync, relancez avec CENTRAL_SERVER_URL=https://... CENTRAL_API_KEY=... ./install.sh"
-fi
+# Serveur central : une seule instance pour toute la chaîne, fixe — inutile
+# de la retaper à chaque caisse. Surchargeable via CENTRAL_SERVER_URL si un
+# jour plusieurs instances Central existent.
+CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-https://b9l1jctg-rjzjkvgqgpc.dynamic-m.com}"
+CENTRAL_API_KEY="${CENTRAL_API_KEY:-}"
+RESTAURANT_ID="${RESTAURANT_ID:-}"
+TERMINAL_ID="${TERMINAL_ID:-}"
 
 detect_server_ip() {
     ip route get 1.1.1.1 2>/dev/null \
@@ -47,6 +47,37 @@ echo "  ╔═══════════════════════
 echo "  ║    POS — Installation Debian         ║"
 echo "  ╚══════════════════════════════════════╝"
 echo -e "${NC}"
+
+# ── Identité de ce terminal ────────────────────────────────────
+# Seuls le code du point de vente et le n° de caisse changent d'une machine
+# à l'autre — tout le reste (serveur central, dépendances, build) est
+# automatique. Si ces valeurs sont déjà passées en variables d'environnement
+# (déploiement scripté), aucune question n'est posée.
+if [[ -t 0 ]]; then
+    if [[ -z "$RESTAURANT_ID" ]]; then
+        echo ""
+        while [[ -z "$RESTAURANT_ID" ]]; do
+            read -rp "Code du point de vente (ex: 101) : " RESTAURANT_ID
+        done
+    fi
+    if [[ -z "$TERMINAL_ID" ]]; then
+        read -rp "Numéro de cette caisse dans ce point de vente [1] : " TERM_NUM
+        TERMINAL_ID="pos-${RESTAURANT_ID}-${TERM_NUM:-1}"
+    fi
+    if [[ -z "$CENTRAL_API_KEY" ]]; then
+        read -rsp "Clé API du serveur central (Entrée = mode autonome, sans supervision) : " CENTRAL_API_KEY
+        echo ""
+    fi
+else
+    # Mode non-interactif (CI, provisioning scripté) : valeurs par défaut
+    # si non fournies, pas de blocage sur une question sans réponse possible.
+    RESTAURANT_ID="${RESTAURANT_ID:-restaurant-1}"
+    TERMINAL_ID="${TERMINAL_ID:-pos-$(hostname)}"
+fi
+
+if [[ -z "$CENTRAL_API_KEY" ]]; then
+    warn "Aucune clé API — ce POS tournera en mode autonome (pas de supervision centrale)"
+fi
 
 # ── 1. Dépendances système ───────────────────────────────────
 step "Installation des dépendances système"
@@ -237,8 +268,9 @@ echo -e "${GREEN}║${NC}  API       :  ${BOLD}http://${SERVER_IP}:8000${NC}"
 echo -e "${GREEN}║${NC}  Jenkins   :  ${BOLD}http://${SERVER_IP}:9090${NC}"
 echo -e "${GREEN}║${NC}  Uptime    :  ${BOLD}http://${SERVER_IP}:3001${NC}"
 echo -e "╠══════════════════════════════════════════════════════╣${NC}"
-if [[ -n "$CENTRAL_SERVER_URL" ]]; then
-    echo -e "${GREEN}║${NC}  Sync Central : ${BOLD}activée${NC} → ${CENTRAL_SERVER_URL} (${TERMINAL_ID})"
+if [[ -n "$CENTRAL_API_KEY" ]]; then
+    echo -e "${GREEN}║${NC}  Sync Central : ${BOLD}activée${NC} → ${CENTRAL_SERVER_URL}"
+    echo -e "${GREEN}║${NC}  Point de vente : ${BOLD}${RESTAURANT_ID}${NC} · Terminal : ${BOLD}${TERMINAL_ID}${NC}"
 else
     echo -e "${GREEN}║${NC}  Sync Central : ${YELLOW}désactivée${NC} (mode autonome)"
 fi
