@@ -31,11 +31,14 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 2. Création de base : Admin
+        // Mot de passe en clair : le modèle User caste 'password' en 'hashed',
+        // qui le hache automatiquement à l'assignation. Passer bcrypt('password')
+        // ici le hacherait une seconde fois et rendrait la connexion impossible.
         $admin = User::firstOrCreate(
-            ['email' => 'admin@igp.com'],
+            ['email' => 'admin@igp.group'],
             [
                 'name' => 'Administrateur',
-                'password' => bcrypt('password'),
+                'password' => '@dminInfoiGP',
             ]
         );
         $admin->assignRole('admin');

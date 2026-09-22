@@ -230,6 +230,13 @@ else
     log "Base de données prête"
     docker compose exec -T backend php artisan migrate --force
     log "Migrations exécutées"
+
+    # Rôles, point de vente local (nommé d'après RESTAURANT_ID) et compte
+    # admin de démarrage — idempotent, sûr à rejouer si l'install.sh est
+    # relancé. Permet une connexion immédiate sur l'interface de la caisse
+    # sans étape manuelle (tinker) après l'installation.
+    docker compose exec -T backend php artisan pos:bootstrap-admin "$RESTAURANT_ID"
+    log "Compte admin prêt (admin@igp.group — mot de passe par défaut, à changer après connexion)"
 fi
 
 # ── 8. Systemd service ───────────────────────────────────────
@@ -277,6 +284,9 @@ if [[ -n "$CENTRAL_API_KEY" ]]; then
 else
     echo -e "${GREEN}║${NC}  Sync Central : ${YELLOW}désactivée${NC} (mode autonome)"
 fi
+echo -e "╠══════════════════════════════════════════════════════╣${NC}"
+echo -e "${GREEN}║${NC}  Connexion   :  ${BOLD}admin@igp.group / @dminInfoiGP${NC}"
+echo -e "${GREEN}║${NC}                 ${YELLOW}(à changer dès la première connexion)${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Commandes utiles :"
