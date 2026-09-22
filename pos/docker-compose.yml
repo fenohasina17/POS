@@ -81,18 +81,47 @@ services:
       start_period: 30s
 
   # --- Serveur WebSocket (Laravel Reverb) ---
+  # depends_on backend (pas seulement db/redis) : entrypoint.sh lance
+  # "php artisan migrate --force" au démarrage de CHAQUE conteneur basé sur
+  # backend-base. Sans cette dépendance, reverb/worker/scheduler démarrent
+  # en parallèle de backend et migrent tous en même temps sur une base
+  # neuve — collision garantie (ex: "relation already exists" sur la
+  # première migration créée en double). En attendant que backend soit
+  # "healthy" (donc déjà migré), leur propre migrate ne trouve plus rien
+  # à appliquer et se termine sans rien faire.
   reverb:
     <<: *backend-base
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
 
   # --- Queue Worker (jobs asynchrones + sync agent) ---
   worker:
     <<: *backend-base
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
 
   # --- Scheduler Laravel (tâches planifiées) ---
   scheduler:
     <<: *backend-base
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     command: ["php", "artisan", "schedule:work"]
 
   # --- Serveur Web (Nginx HTTP) ---

@@ -81,13 +81,34 @@ services:
       start_period: 30s
 
   # --- Queue Worker Central ---
+  # depends_on central_backend (pas seulement db/redis) : entrypoint.sh
+  # lance "php artisan migrate --force" au démarrage de CHAQUE conteneur
+  # basé sur central-base. Sans cette dépendance, worker/scheduler/reverb
+  # démarrent en parallèle de backend et migrent tous en même temps sur
+  # une base neuve — collision garantie. En attendant que central_backend
+  # soit "healthy" (donc déjà migré), leur propre migrate ne trouve plus
+  # rien à appliquer et se termine sans rien faire.
   central_worker:
     <<: *central-base
+    depends_on:
+      central_db:
+        condition: service_healthy
+      central_redis:
+        condition: service_healthy
+      central_backend:
+        condition: service_healthy
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3", "--max-time=3600"]
 
   # --- Scheduler Central ---
   central_scheduler:
     <<: *central-base
+    depends_on:
+      central_db:
+        condition: service_healthy
+      central_redis:
+        condition: service_healthy
+      central_backend:
+        condition: service_healthy
     command: ["php", "artisan", "schedule:work"]
 
   # --- Nginx Central (termine le TLS, proxie backend + frontend + reverb) ---
@@ -131,6 +152,13 @@ services:
   # --- Reverb WebSocket Central (accessible uniquement via central_nginx /app/) ---
   central_reverb:
     <<: *central-base
+    depends_on:
+      central_db:
+        condition: service_healthy
+      central_redis:
+        condition: service_healthy
+      central_backend:
+        condition: service_healthy
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
 
   # --- Backup base centrale ---
