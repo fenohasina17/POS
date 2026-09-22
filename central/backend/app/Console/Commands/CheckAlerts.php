@@ -104,7 +104,9 @@ class CheckAlerts extends Command
             ->where('remote_created_at', '>=', $window)
             ->selectRaw('terminal_id, restaurant_id, COUNT(*) as nb')
             ->groupBy('terminal_id', 'restaurant_id')
-            ->having('nb', '>=', 3)
+            // PostgreSQL n'autorise pas un alias du SELECT dans HAVING
+            // (contrairement à MySQL) — il faut répéter l'agrégation.
+            ->havingRaw('COUNT(*) >= ?', [3])
             ->get();
 
         foreach ($groups as $group) {
