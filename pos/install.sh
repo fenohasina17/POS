@@ -65,8 +65,11 @@ if [[ -t 0 ]]; then
         TERMINAL_ID="pos-${RESTAURANT_ID}-${TERM_NUM:-1}"
     fi
     if [[ -z "$CENTRAL_API_KEY" ]]; then
-        read -rsp "Clé API du serveur central (Entrée = mode autonome, sans supervision) : " CENTRAL_API_KEY
-        echo ""
+        # Affichée en clair volontairement : cette valeur se colle (longue
+        # chaîne hex), elle ne se tape pas de mémoire comme un mot de passe —
+        # la cacher empêche de vérifier le collage avant de valider, source
+        # d'erreurs découvertes seulement bien plus tard (sync qui échoue).
+        read -rp "Clé API du serveur central (Entrée = mode autonome, sans supervision) : " CENTRAL_API_KEY
     fi
 else
     # Mode non-interactif (CI, provisioning scripté) : valeurs par défaut
