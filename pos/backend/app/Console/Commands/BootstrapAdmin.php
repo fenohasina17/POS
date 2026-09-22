@@ -13,8 +13,8 @@ class BootstrapAdmin extends Command
 {
     protected $signature = 'pos:bootstrap-admin
         {restaurant_id : Code du point de vente (ex: 101) — utilisé comme nom du point de vente local}
-        {--email=admin@igp.com}
-        {--password=password}';
+        {--email=admin@igp.group}
+        {--password=@dminInfoiGP}';
 
     protected $description = "Crée les rôles, un point de vente local, et un compte admin — idempotent, sûr à rejouer.";
 

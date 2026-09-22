@@ -236,7 +236,7 @@ else
     # relancé. Permet une connexion immédiate sur l'interface de la caisse
     # sans étape manuelle (tinker) après l'installation.
     docker compose exec -T backend php artisan pos:bootstrap-admin "$RESTAURANT_ID"
-    log "Compte admin prêt (admin@igp.com / password — à changer après connexion)"
+    log "Compte admin prêt (admin@igp.group — mot de passe par défaut, à changer après connexion)"
 fi
 
 # ── 8. Systemd service ───────────────────────────────────────
@@ -285,7 +285,7 @@ else
     echo -e "${GREEN}║${NC}  Sync Central : ${YELLOW}désactivée${NC} (mode autonome)"
 fi
 echo -e "╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║${NC}  Connexion   :  ${BOLD}admin@igp.com / password${NC}"
+echo -e "${GREEN}║${NC}  Connexion   :  ${BOLD}admin@igp.group / @dminInfoiGP${NC}"
 echo -e "${GREEN}║${NC}                 ${YELLOW}(à changer dès la première connexion)${NC}"
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
