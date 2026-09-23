@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -sSfL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions \
         -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
-    && install-php-extensions pdo_pgsql zip intl redis pcntl
+    && install-php-extensions pdo_pgsql zip intl redis pcntl gd
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
@@ -41,7 +41,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl iproute2 \
 RUN curl -sSfL https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions \
         -o /usr/local/bin/install-php-extensions \
     && chmod +x /usr/local/bin/install-php-extensions \
-    && install-php-extensions pdo_pgsql zip intl redis pcntl
+    && install-php-extensions pdo_pgsql zip intl redis pcntl gd
 
 COPY --from=builder /var/www /var/www
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache || true
