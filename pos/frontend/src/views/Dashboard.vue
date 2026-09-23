@@ -177,16 +177,48 @@
               <span class="text-[10px] font-black text-indigo-700 uppercase tracking-tight">{{ activePos.name }}</span>
             </div>
 
-            <button
-              type="button"
-              class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
-              aria-label="Notifications"
-            >
-              <FontAwesomeIcon :icon="faBell" class="text-sm" />
-              <span
-                class="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-orange-400"
-              ></span>
-            </button>
+            <div ref="notifRef" class="relative">
+              <button
+                type="button"
+                class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                aria-label="Notifications"
+                aria-haspopup="true"
+                :aria-expanded="notifOpen"
+                @click="toggleNotifications"
+              >
+                <FontAwesomeIcon :icon="faBell" class="text-sm" />
+                <span
+                  v-if="unreadCount > 0"
+                  class="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-orange-400"
+                ></span>
+              </button>
+
+              <div
+                v-if="notifOpen"
+                class="absolute right-0 top-full mt-2 w-72 rounded-lg border border-slate-200 bg-white py-1 shadow-lg z-50"
+              >
+                <div class="border-b border-slate-100 px-4 py-2">
+                  <p class="text-xs font-semibold text-slate-800">Catalogue produits</p>
+                </div>
+                <div v-if="!notifications.length" class="px-4 py-6 text-center text-xs text-slate-400">
+                  Aucune mise à jour du catalogue pour l'instant
+                </div>
+                <div v-else class="max-h-72 overflow-y-auto">
+                  <div
+                    v-for="n in notifications"
+                    :key="n.id"
+                    class="border-b border-slate-50 px-4 py-2.5 last:border-0"
+                  >
+                    <p class="text-xs text-slate-700">
+                      <span v-if="n.created > 0">{{ n.created }} nouveau{{ n.created > 1 ? 'x' : '' }} produit{{ n.created > 1 ? 's' : '' }}</span>
+                      <span v-if="n.created > 0 && n.updated > 0"> · </span>
+                      <span v-if="n.updated > 0">{{ n.updated }} modifié{{ n.updated > 1 ? 's' : '' }}</span>
+                    </p>
+                    <p class="mt-0.5 text-[10px] text-slate-400">{{ formatNotifTime(n.at) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div ref="userMenuRef" class="relative flex items-center">
               <button
                 type="button"
@@ -290,6 +322,7 @@ import {
   } from '@fortawesome/free-solid-svg-icons'
   import { useAuth } from '@/composables/useAuth'
   import { useCategories } from '@/composables/useCategories'
+  import { useCatalogNotifications } from '@/composables/useCatalogNotifications'
   import { storage } from '@/utils/storage'
 
   // Ajout des icônes à la bibliothèque FontAwesome
@@ -327,6 +360,9 @@ const sidebarCollapsed = ref(false)
 const searchQuery = ref('')
 const userMenuOpen = ref(false)
 const userMenuRef = ref(null)
+const notifOpen = ref(false)
+const notifRef = ref(null)
+const { notifications, unreadCount, subscribe: subscribeCatalogNotifications, unsubscribe: unsubscribeCatalogNotifications, markAllRead: markCatalogNotificationsRead } = useCatalogNotifications()
 const expandedMenus = ref(new Set())
 const globalLoading = ref(true)
 const isDesktop = ref(false)
@@ -391,6 +427,20 @@ const closeUserMenu = () => {
 
 const toggleUserMenu = () => {
   userMenuOpen.value = !userMenuOpen.value
+}
+
+const toggleNotifications = () => {
+  notifOpen.value = !notifOpen.value
+  if (notifOpen.value) markCatalogNotificationsRead()
+}
+
+const formatNotifTime = (date) => {
+  const diffMin = Math.round((Date.now() - date.getTime()) / 60000)
+  if (diffMin < 1) return "à l'instant"
+  if (diffMin < 60) return `il y a ${diffMin} min`
+  const diffH = Math.round(diffMin / 60)
+  if (diffH < 24) return `il y a ${diffH} h`
+  return date.toLocaleDateString('fr-FR')
 }
 
 // Gestion des sous-menus
@@ -609,11 +659,14 @@ const logout = () => {
   router.push({ name: 'login' })
 }
 
-// Gestion des clics en dehors du menu utilisateur
+// Gestion des clics en dehors du menu utilisateur / des notifications
 const handleDocumentClick = (event) => {
-  if (!userMenuRef.value) return
-  if (userMenuRef.value.contains(event.target)) return
-  userMenuOpen.value = false
+  if (userMenuRef.value && !userMenuRef.value.contains(event.target)) {
+    userMenuOpen.value = false
+  }
+  if (notifRef.value && !notifRef.value.contains(event.target)) {
+    notifOpen.value = false
+  }
 }
 
 // Gestion du redimensionnement de la fenêtre
@@ -644,6 +697,7 @@ onMounted(async () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize)
   }
+  subscribeCatalogNotifications()
 
   // Optionnel : sauvegarder l'état des sections pliées dans localStorage
   const savedSections = localStorage.getItem('sidebar_sections')
@@ -659,6 +713,7 @@ onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', handleResize)
   }
+  unsubscribeCatalogNotifications()
 })
 
 watch(
