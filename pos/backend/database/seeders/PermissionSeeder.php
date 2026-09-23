@@ -46,6 +46,15 @@ class PermissionSeeder extends Seeder
             }
         }
 
+        // Permission dédiée : un gérant peut marquer un produit disponible/
+        // indisponible sur son point de vente, mais ne peut rien modifier
+        // d'autre au catalogue (nom, référence, catégorie, prix, image —
+        // tous pilotés depuis le Central).
+        Permission::firstOrCreate([
+            'name' => 'update.products.status',
+            'guard_name' => 'api',
+        ]);
+
         // Create admin role with all permissions
         $adminRole = Role::firstOrCreate([
             'name' => 'admin',
