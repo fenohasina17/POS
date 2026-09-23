@@ -185,10 +185,12 @@ BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=${REVERB_APP_ID}
 REVERB_APP_KEY=${REVERB_APP_KEY}
 REVERB_APP_SECRET=${REVERB_APP_SECRET}
+# Connexion interne (backend → reverb, appel REST protocole Pusher — jamais "ws")
 REVERB_HOST=${SERVER_IP}
 REVERB_PORT=8000
-REVERB_SCHEME=ws
+REVERB_SCHEME=http
 
+# Connexion navigateur (caisse → reverb via le proxy nginx /app/, vrai WebSocket)
 VITE_REVERB_APP_KEY=${REVERB_APP_KEY}
 VITE_REVERB_HOST=${SERVER_IP}
 VITE_REVERB_PORT=8000
