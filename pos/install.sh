@@ -185,9 +185,13 @@ BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=${REVERB_APP_ID}
 REVERB_APP_KEY=${REVERB_APP_KEY}
 REVERB_APP_SECRET=${REVERB_APP_SECRET}
-# Connexion interne (backend → reverb, appel REST protocole Pusher — jamais "ws")
-REVERB_HOST=${SERVER_IP}
-REVERB_PORT=8000
+# Connexion interne (backend → reverb) — directement au conteneur, jamais
+# via nginx : nginx ne proxifie que /app/ (poignée de main WebSocket du
+# navigateur), pas /apps/{id}/events (API REST Pusher utilisée par le
+# backend pour déclencher un event) — cette route n'existe nulle part côté
+# nginx. Même patron que central/install.sh (REVERB_HOST=central_reverb).
+REVERB_HOST=reverb
+REVERB_PORT=8080
 REVERB_SCHEME=http
 
 # Connexion navigateur (caisse → reverb via le proxy nginx /app/, vrai WebSocket)
