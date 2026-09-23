@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\SellerReportController;
@@ -48,6 +51,7 @@ Route::middleware(ValidateCentralApiKey::class)->group(function () {
     Route::post('/sync/receive',          [SyncController::class, 'receive']);
     Route::post('/sync/heartbeat',        [SyncController::class, 'heartbeat']);
     Route::post('/sync/import-historical',[SyncController::class, 'importHistorical']);
+    Route::get('/catalog',                [CatalogController::class, 'index']);
 });
 
 // ── Endpoints pour le dashboard siège ────────────────────────────────────────
@@ -75,11 +79,22 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/restaurants',          [RestaurantController::class,   'index']);
     Route::get('/sellers/report',       [SellerReportController::class, 'index']);
 
-    // Gestion utilisateurs — admin uniquement
+    // Gestion utilisateurs + catalogue produits — admin uniquement
     Route::middleware(RequireAdmin::class)->group(function () {
         Route::get('/users',            [UserController::class, 'index']);
         Route::post('/users',           [UserController::class, 'store']);
         Route::put('/users/{user}',     [UserController::class, 'update']);
         Route::delete('/users/{user}',  [UserController::class, 'destroy']);
+
+        Route::get('/categories',           [CategoryController::class, 'index']);
+        Route::post('/categories',          [CategoryController::class, 'store']);
+        Route::put('/categories/{category}',[CategoryController::class, 'update']);
+        Route::delete('/categories/{category}',[CategoryController::class, 'destroy']);
+
+        Route::get('/catalog-products',           [ProductController::class, 'index']);
+        Route::post('/catalog-products',          [ProductController::class, 'store']);
+        Route::put('/catalog-products/{product}', [ProductController::class, 'update']);
+        Route::delete('/catalog-products/{product}',[ProductController::class, 'destroy']);
+        Route::post('/catalog-products/import',   [ProductController::class, 'import']);
     });
 });
