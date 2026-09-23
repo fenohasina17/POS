@@ -152,11 +152,14 @@ services:
     ports:
       - "5173:80"
     environment:
+      # Valeurs VITE_REVERB_* (navigateur), pas REVERB_* (backend interne) —
+      # ce sont deux connexions distinctes qui peuvent légitimement différer
+      # (scheme notamment : "http" en interne, "ws"/"wss" pour le navigateur).
       - API_URL=${VITE_API_URL:-http://localhost:8000}
       - REVERB_APP_KEY=${REVERB_APP_KEY}
-      - REVERB_HOST=${REVERB_HOST:-localhost}
-      - REVERB_PORT=${REVERB_PORT:-8000}
-      - REVERB_SCHEME=${REVERB_SCHEME:-ws}
+      - REVERB_HOST=${VITE_REVERB_HOST:-localhost}
+      - REVERB_PORT=${VITE_REVERB_PORT:-8000}
+      - REVERB_SCHEME=${VITE_REVERB_SCHEME:-ws}
     depends_on:
       - nginx
     networks:
