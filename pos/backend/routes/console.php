@@ -13,3 +13,4 @@ Schedule::command('app:clean-orphan-table-locks')->everyMinute();
 // Synchronisation vers le serveur central (inactif si CENTRAL_SERVER_URL est vide)
 Schedule::command('pos:sync')->everyThirtySeconds();
 Schedule::command('pos:heartbeat')->everyMinute();
+Schedule::command('pos:sync-catalog')->everyFiveMinutes();

@@ -107,7 +107,7 @@ class ProductController extends Controller
 
             $validated = $request->validate([
                 'name'        => 'required|string|max:255',
-                'ref'         => 'required|string|max:8',
+                'ref'         => 'required|string|max:8|unique:products,ref',
                 'price'       => 'required|numeric|min:0',
                 'status'      => 'required|boolean',
                 'category_id' => 'required|exists:categories,id',
@@ -178,7 +178,7 @@ class ProductController extends Controller
 
             $validated = $request->validate([
                 'name'        => 'sometimes|required|string|max:255',
-                'ref'         => 'sometimes|required|string|max:8',
+                'ref'         => "sometimes|required|string|max:8|unique:products,ref,{$product->id}",
                 'price'       => 'sometimes|required|numeric|min:0',
                 'status'      => 'sometimes|required|boolean',
                 'category_id' => 'sometimes|required|exists:categories,id',
