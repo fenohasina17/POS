@@ -105,6 +105,10 @@ class ProductController extends Controller
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
+            if (!$isAdmin) {
+                return response()->json(['message' => 'Seul un administrateur peut créer un produit.'], 403);
+            }
+
             $validated = $request->validate([
                 'name'        => 'required|string|max:255',
                 'ref'         => 'required|string|max:8|unique:products,ref',
@@ -175,6 +179,22 @@ class ProductController extends Controller
 
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
+
+            // Un gérant ne touche qu'un statut de disponibilité local — jamais
+            // le reste du catalogue (nom, référence, catégorie, prix, image),
+            // piloté depuis le Central. Vérifié sur les clés brutes de la
+            // requête, pas sur $validated : plus bas, $validated['image'] est
+            // toujours renseigné (valeur existante réinjectée si absente de la
+            // requête), ce qui ferait échouer ce contrôle à tort si on le
+            // testait après validation.
+            if (!$isAdmin) {
+                if (!$user->hasPermissionTo('update.products.status', 'api')) {
+                    return response()->json(['message' => 'Accès refusé.'], 403);
+                }
+                if (array_diff(array_keys($request->all()), ['status'])) {
+                    return response()->json(['message' => 'Seul le statut de disponibilité peut être modifié.'], 403);
+                }
+            }
 
             $validated = $request->validate([
                 'name'        => 'sometimes|required|string|max:255',
@@ -269,6 +289,10 @@ class ProductController extends Controller
 
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
+
+            if (!$isAdmin) {
+                return response()->json(['message' => 'Seul un administrateur peut supprimer un produit.'], 403);
+            }
 
             $targetPosId = null;
             if ($isAdmin) {

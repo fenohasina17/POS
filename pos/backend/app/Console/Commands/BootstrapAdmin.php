@@ -34,6 +34,16 @@ class BootstrapAdmin extends Command
         (new RoleSeeder())->run();
         (new PermissionSeeder())->run();
 
+        // Le gérant marque juste la disponibilité d'un produit sur son point
+        // de vente — jamais le reste du catalogue (piloté depuis le Central).
+        // Accordé au rôle ici (pas via RolePermissionRelationSeeder, qui ne
+        // tourne jamais en production) pour que tout compte gérant créé
+        // ensuite localement en hérite automatiquement.
+        $managerRole = Role::where('name', 'gérant')->where('guard_name', 'api')->first();
+        if ($managerRole && ! $managerRole->hasPermissionTo('update.products.status')) {
+            $managerRole->givePermissionTo('update.products.status');
+        }
+
         // Point de vente local, nommé d'après le code réel du restaurant
         $pos = PointOfSale::firstOrCreate(['name' => $restaurantId]);
 
