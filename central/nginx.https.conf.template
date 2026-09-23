@@ -13,26 +13,39 @@ server {
     ssl_certificate     /etc/letsencrypt/live/__DOMAIN__/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/__DOMAIN__/privkey.pem;
 
+    # Résolveur DNS Docker (127.0.0.11) avec TTL court : sans ça, nginx résout
+    # central_backend/central_reverb/central_frontend une seule fois au
+    # démarrage et garde cette IP en mémoire indéfiniment. Un déploiement qui
+    # recrée le backend (nouvelle image) sans recréer nginx laisse alors
+    # nginx pointer vers un conteneur qui n'existe plus → 502 sur toute
+    # l'API. Les directives fastcgi_pass/proxy_pass ci-dessous utilisent donc
+    # des variables (seule façon de forcer une résolution dynamique) au lieu
+    # d'un nom d'hôte en dur.
+    resolver 127.0.0.11 valid=10s;
+
     location /api/ {
         try_files $uri $uri/ @php;
     }
 
     location @php {
-        fastcgi_pass central_backend:9000;
+        set $backend_upstream central_backend:9000;
+        fastcgi_pass $backend_upstream;
         fastcgi_param SCRIPT_FILENAME /var/www/public/index.php;
         fastcgi_param PATH_INFO       $fastcgi_path_info;
         include fastcgi_params;
     }
 
     location ~ \.php$ {
-        fastcgi_pass central_backend:9000;
+        set $backend_upstream central_backend:9000;
+        fastcgi_pass $backend_upstream;
         fastcgi_param SCRIPT_FILENAME /var/www/public/index.php;
         include fastcgi_params;
     }
 
     # WebSocket Reverb pour le dashboard (navigateur → nginx → reverb)
     location /app/ {
-        proxy_pass http://central_reverb:8080;
+        set $reverb_upstream central_reverb:8080;
+        proxy_pass http://$reverb_upstream;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -44,7 +57,8 @@ server {
 
     # Dashboard SPA (catch-all)
     location / {
-        proxy_pass http://central_frontend:80;
+        set $frontend_upstream central_frontend:80;
+        proxy_pass http://$frontend_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
