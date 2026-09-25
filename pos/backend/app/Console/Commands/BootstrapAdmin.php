@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\CashRegister;
 use App\Models\PointOfSale;
 use App\Models\User;
 use Database\Seeders\PermissionSeeder;
@@ -46,6 +47,15 @@ class BootstrapAdmin extends Command
 
         // Point de vente local, nommé d'après le code réel du restaurant
         $pos = PointOfSale::firstOrCreate(['name' => $restaurantId]);
+
+        // Une caisse enregistreuse par défaut — sans elle, aucun caissier ne
+        // peut ouvrir de session tant qu'un admin n'en crée pas une à la main
+        // depuis l'interface. Un point de vente qui a réellement besoin de
+        // plusieurs caisses peut toujours en ajouter d'autres ensuite.
+        CashRegister::firstOrCreate([
+            'point_of_sale_id' => $pos->id,
+            'name'             => 'Caisse principale',
+        ]);
 
         // Compte admin — mot de passe en clair : le cast 'hashed' du modèle
         // User s'occupe du hachage. Le repasser dans bcrypt() ici le
