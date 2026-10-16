@@ -8,6 +8,7 @@ use App\Models\User;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
 class BootstrapAdmin extends Command
@@ -15,7 +16,8 @@ class BootstrapAdmin extends Command
     protected $signature = 'pos:bootstrap-admin
         {restaurant_id : Code du point de vente (ex: 101) — utilisé comme nom du point de vente local}
         {--email=admin@igp.group}
-        {--password=@dminInfoiGP}';
+        {--password= : Mot de passe du compte admin à sa création (aléatoire si absent)}
+        {--reset-password : Remplace aussi le mot de passe d\'un compte admin existant}';
 
     protected $description = "Crée les rôles, un point de vente local, et un compte admin — idempotent, sûr à rejouer.";
 
@@ -23,7 +25,9 @@ class BootstrapAdmin extends Command
     {
         $restaurantId = $this->argument('restaurant_id');
         $email        = $this->option('email');
-        $password     = $this->option('password');
+        // Jamais de mot de passe par défaut : le dépôt est public, une valeur
+        // fixe ouvrirait le compte admin de toutes les caisses à la fois.
+        $password     = $this->option('password') ?: Str::password(16, symbols: false);
 
         // RoleSeeder crée admin/gérant/caissier (firstOrCreate, sûr à rejouer).
         // PermissionSeeder crée les permissions CRUD et donne déjà TOUTES les
@@ -60,10 +64,19 @@ class BootstrapAdmin extends Command
         // Compte admin — mot de passe en clair : le cast 'hashed' du modèle
         // User s'occupe du hachage. Le repasser dans bcrypt() ici le
         // hacherait deux fois et casserait la connexion.
-        $admin = User::updateOrCreate(
+        // Un compte existant garde son mot de passe : relancer install.sh ne
+        // doit pas écraser celui que l'admin a choisi (--reset-password pour
+        // forcer, ex. mot de passe perdu).
+        $admin = User::firstOrCreate(
             ['email' => $email],
             ['name' => 'Administrateur', 'password' => $password]
         );
+        $passwordSet = $admin->wasRecentlyCreated;
+
+        if (! $passwordSet && $this->option('reset-password')) {
+            $admin->password = $password;
+            $passwordSet     = true;
+        }
 
         $adminRole = Role::where('name', 'admin')->where('guard_name', 'api')->first();
         if ($adminRole && ! $admin->hasRole('admin')) {
@@ -77,8 +90,14 @@ class BootstrapAdmin extends Command
             $admin->pointsOfSale()->attach($pos->id);
         }
 
-        $this->info("Point de vente '{$pos->name}' prêt. Admin : {$email} / {$password}");
-        $this->warn('Pense à changer ce mot de passe une fois connecté.');
+        $this->info("Point de vente '{$pos->name}' prêt.");
+
+        if ($passwordSet) {
+            $this->info("Admin : {$email} / {$password}");
+            $this->warn('Note ce mot de passe maintenant : il ne sera plus affiché.');
+        } else {
+            $this->info("Admin : {$email} — compte existant, mot de passe inchangé.");
+        }
 
         return self::SUCCESS;
     }

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\PointOfSale;
 use Database\Seeders\{
@@ -34,14 +35,21 @@ class DatabaseSeeder extends Seeder
         // Mot de passe en clair : le modèle User caste 'password' en 'hashed',
         // qui le hache automatiquement à l'assignation. Passer bcrypt('password')
         // ici le hacherait une seconde fois et rendrait la connexion impossible.
+        // Pas de mot de passe fixe (dépôt public) : SEED_ADMIN_PASSWORD si
+        // fourni, sinon aléatoire, affiché une seule fois à la création.
+        $password = env('SEED_ADMIN_PASSWORD') ?: Str::password(16, symbols: false);
         $admin = User::firstOrCreate(
             ['email' => 'admin@igp.group'],
             [
                 'name' => 'Administrateur',
-                'password' => '@dminInfoiGP',
+                'password' => $password,
             ]
         );
         $admin->assignRole('admin');
+
+        if ($admin->wasRecentlyCreated) {
+            $this->command?->info("Admin : admin@igp.group / {$password}");
+        }
 
         // 3. Création de base : Points de vente, Caisses, Caissiers, Tables et Paiements
         $this->call([
