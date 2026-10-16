@@ -12,7 +12,12 @@ fi
 echo "[.env] Génération du fichier $ENV_FILE..."
 
 # Détection IP locale (fallback 127.0.0.1)
-SERVER_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '/src/{print $7}' | head -1)
+if command -v ip >/dev/null 2>&1; then
+    SERVER_IP=$(ip route get 1.1.1.1 2>/dev/null | awk '/src/{print $7}' | head -1 || true)
+else
+    # macOS : pas de commande `ip`
+    SERVER_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)
+fi
 [[ -z "$SERVER_IP" ]] && SERVER_IP="127.0.0.1"
 
 # Génération des secrets
@@ -22,6 +27,14 @@ REDIS_PASSWORD=$(openssl rand -hex 16)
 REVERB_APP_ID=$(shuf -i 100000-999999 -n 1)
 REVERB_APP_KEY=$(openssl rand -hex 16)
 REVERB_APP_SECRET=$(openssl rand -hex 16)
+
+# Identité de la caisse et serveur central — surchargeables par variables
+# d'environnement, mêmes valeurs par défaut que install.sh en mode
+# non-interactif.
+CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-https://b9l1jctg-rjzjkvgqgpc.dynamic-m.com}"
+CENTRAL_API_KEY="${CENTRAL_API_KEY:-}"
+RESTAURANT_ID="${RESTAURANT_ID:-restaurant-1}"
+TERMINAL_ID="${TERMINAL_ID:-pos-$(hostname)}"
 
 cat > "$ENV_FILE" <<EOF
 APP_NAME=POS
@@ -61,14 +74,24 @@ BROADCAST_CONNECTION=reverb
 REVERB_APP_ID=${REVERB_APP_ID}
 REVERB_APP_KEY=${REVERB_APP_KEY}
 REVERB_APP_SECRET=${REVERB_APP_SECRET}
-REVERB_HOST=${SERVER_IP}
-REVERB_PORT=8000
-REVERB_SCHEME=ws
+# Connexion interne (backend → reverb) — directement au conteneur, jamais
+# via nginx (qui ne proxifie que /app/, pas /apps/{id}/events). Même
+# valeurs que install.sh.
+REVERB_HOST=reverb
+REVERB_PORT=8080
+REVERB_SCHEME=http
 
+# Connexion navigateur (caisse → reverb via le proxy nginx /app/, vrai WebSocket)
 VITE_REVERB_APP_KEY=${REVERB_APP_KEY}
 VITE_REVERB_HOST=${SERVER_IP}
 VITE_REVERB_PORT=8000
 VITE_REVERB_SCHEME=ws
+
+# Synchronisation vers le serveur central (CENTRAL_API_KEY vide = POS autonome)
+CENTRAL_SERVER_URL=${CENTRAL_SERVER_URL}
+CENTRAL_API_KEY=${CENTRAL_API_KEY}
+TERMINAL_ID=${TERMINAL_ID}
+RESTAURANT_ID=${RESTAURANT_ID}
 EOF
 
 chmod 600 "$ENV_FILE"

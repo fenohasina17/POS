@@ -281,7 +281,6 @@ echo -e "║  ✅  Installation terminée avec succès !              ║"
 echo -e "╠══════════════════════════════════════════════════════╣${NC}"
 echo -e "${GREEN}║${NC}  Frontend  :  ${BOLD}http://${SERVER_IP}:5173${NC}"
 echo -e "${GREEN}║${NC}  API       :  ${BOLD}http://${SERVER_IP}:8000${NC}"
-echo -e "${GREEN}║${NC}  Jenkins   :  ${BOLD}http://${SERVER_IP}:9090${NC}"
 echo -e "${GREEN}║${NC}  Uptime    :  ${BOLD}http://${SERVER_IP}:3001${NC}"
 echo -e "╠══════════════════════════════════════════════════════╣${NC}"
 if [[ -n "$CENTRAL_API_KEY" ]]; then
