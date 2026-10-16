@@ -36,12 +36,12 @@ class PaymentController extends Controller
     // Créer un nouveau type de paiement
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
         ]);
 
         try {
-            $paymentType = Payment::create($request->validated());
+            $paymentType = Payment::create($validated);
             return response()->json($paymentType, 201);
         } catch (Exception $e) {
             return response()->json(['error' => 'Failed to create payment type'], 500);

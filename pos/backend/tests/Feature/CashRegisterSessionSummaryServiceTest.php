@@ -46,8 +46,9 @@ class CashRegisterSessionSummaryServiceTest extends TestCase
         // On lie l'utilisateur au même POS que la session
         $user = User::factory()->create([
             'password' => bcrypt('password123'),
-            'point_of_sale_id' => $this->pos->id
         ]);
+        // Rattachement multi-POS (table pivot) + POS actif via l'en-tête X-Active-POS-ID
+        $user->pointsOfSale()->attach($this->pos->id);
 
         Permission::findOrCreate($permissionName, 'api');
         Permission::findOrCreate('view.cash_register_sessions', 'api');
@@ -62,6 +63,8 @@ class CashRegisterSessionSummaryServiceTest extends TestCase
         ]);
 
         $token = $response->json('token') ?? $response->json('access_token');
+
+        $this->withHeader('X-Active-POS-ID', (string) $this->pos->id);
 
         return [$user, $token];
     }

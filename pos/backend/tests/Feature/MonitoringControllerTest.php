@@ -134,8 +134,10 @@ class MonitoringControllerTest extends TestCase
              ->getJson("/api/admin/monitoring?pos_id={$this->pos->id}");
 
         $response->assertStatus(200)
-                 ->assertJsonPath('kpis.total_sales', 1)
-                 ->assertJsonPath('kpis.total_revenue', 5000);
+                 ->assertJsonPath('kpis.total_sales', 1);
+
+        // SUM() sur une colonne decimal : Postgres renvoie une chaîne ("5000.00")
+        $this->assertEquals(5000, $response->json('kpis.total_revenue'));
     }
 
     #[Test]

@@ -38,7 +38,7 @@ class OrderLineController extends Controller
     // Créer une nouvelle ligne de commande
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'sale_id' => 'required|exists:sales,id',
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer',
@@ -47,7 +47,7 @@ class OrderLineController extends Controller
         ]);
 
         try {
-            $orderLine = OrderLine::create($request->validated());
+            $orderLine = OrderLine::create($validated);
            
             return response()->json($orderLine, 201);
             
