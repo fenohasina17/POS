@@ -241,8 +241,19 @@ else
     # admin de démarrage — idempotent, sûr à rejouer si l'install.sh est
     # relancé. Permet une connexion immédiate sur l'interface de la caisse
     # sans étape manuelle (tinker) après l'installation.
-    docker compose exec -T backend php artisan pos:bootstrap-admin "$RESTAURANT_ID"
-    log "Compte admin prêt (admin@igp.group — mot de passe par défaut, à changer après connexion)"
+    # Mot de passe propre à chaque caisse, généré ici et affiché une seule
+    # fois dans le résumé. Ignoré par la commande si le compte existe déjà
+    # (réinstallation) : le mot de passe choisi par l'admin est conservé.
+    ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 16)
+    BOOTSTRAP_OUT=$(docker compose exec -T backend php artisan pos:bootstrap-admin \
+        "$RESTAURANT_ID" --password="$ADMIN_PASSWORD")
+    if grep -q "mot de passe inchangé" <<<"$BOOTSTRAP_OUT"; then
+        ADMIN_STATUS="existing"
+        log "Compte admin existant — mot de passe inchangé"
+    else
+        ADMIN_STATUS="created"
+        log "Compte admin créé"
+    fi
 fi
 
 # ── 8. Systemd service ───────────────────────────────────────
@@ -290,11 +301,23 @@ else
     echo -e "${GREEN}║${NC}  Sync Central : ${YELLOW}désactivée${NC} (mode autonome)"
 fi
 echo -e "╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║${NC}  Connexion   :  ${BOLD}admin@igp.group / @dminInfoiGP${NC}"
-echo -e "${GREEN}║${NC}                 ${YELLOW}(à changer dès la première connexion)${NC}"
+case "${ADMIN_STATUS:-}" in
+    created)
+        echo -e "${GREEN}║${NC}  Connexion   :  ${BOLD}admin@igp.group / ${ADMIN_PASSWORD}${NC}"
+        echo -e "${GREEN}║${NC}                 ${YELLOW}(notez-le : il ne sera plus affiché)${NC}"
+        ;;
+    existing)
+        echo -e "${GREEN}║${NC}  Connexion   :  ${BOLD}admin@igp.group${NC} (mot de passe inchangé)"
+        ;;
+    *)
+        echo -e "${GREEN}║${NC}  Connexion   :  ${YELLOW}compte admin non créé (base non prête)${NC}"
+        ;;
+esac
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "  Commandes utiles :"
 echo -e "  ${CYAN}cd ${INSTALL_DIR}/pos && docker compose logs -f${NC}"
 echo -e "  ${CYAN}systemctl status pos${NC}"
+echo -e "  Mot de passe admin perdu :"
+echo -e "  ${CYAN}cd ${INSTALL_DIR}/pos && docker compose exec backend php artisan pos:bootstrap-admin ${RESTAURANT_ID} --reset-password${NC}"
 echo ""
