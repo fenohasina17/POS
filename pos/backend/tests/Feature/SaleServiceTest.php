@@ -52,8 +52,10 @@ class SaleServiceTest extends TestCase
             'is_active' => true
         ]);
 
+        // SaleService::isCashPayment() reconnaît les espèces par le nom exact 'Espèce'
+        // (valeur du PaymentSeeder et du frontend)
         $this->cashPayment = Payment::create([
-            'name' => 'Espèces',
+            'name' => 'Espèce',
             'is_active' => true
         ]);
 

@@ -70,8 +70,9 @@ class SalePaymentControllerTest extends TestCase
         $pos = PointOfSale::factory()->create();
         $user = User::factory()->create([
             'password' => bcrypt('password123'),
-            'point_of_sale_id' => $pos->id
         ]);
+        // Rattachement multi-POS (table pivot) + POS actif via l'en-tête X-Active-POS-ID
+        $user->pointsOfSale()->attach($pos->id);
 
         if ($role) {
             $user->assignRole($role);
@@ -83,6 +84,8 @@ class SalePaymentControllerTest extends TestCase
         ]);
 
         $token = $response->json('token') ?? $response->json('access_token');
+
+        $this->withHeader('X-Active-POS-ID', (string) $pos->id);
 
         return [$user, $token, $pos];
     }

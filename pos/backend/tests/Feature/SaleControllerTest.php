@@ -45,8 +45,9 @@ class SaleControllerTest extends TestCase
         $pos = PointOfSale::factory()->create();
         $user = User::factory()->create([
             'password' => bcrypt('password123'),
-            'point_of_sale_id' => $pos->id
         ]);
+        // Rattachement multi-POS (table pivot) + POS actif via l'en-tête X-Active-POS-ID
+        $user->pointsOfSale()->attach($pos->id);
 
         if ($role) {
             $user->assignRole(Role::findByName($role, 'api'));
@@ -66,6 +67,8 @@ class SaleControllerTest extends TestCase
 
         $token = $response->json('token') ?? $response->json('access_token');
 
+        $this->withHeader('X-Active-POS-ID', (string) $pos->id);
+
         return [$user, $token, $pos];
     }
 
@@ -83,10 +86,11 @@ class SaleControllerTest extends TestCase
     #[Test]
     public function cashier_can_only_see_their_own_sales()
     {
-        [$cashier, $token] = $this->authenticate(null, 'caissier');
+        [$cashier, $token, $pos] = $this->authenticate(null, 'caissier');
 
-        Sale::factory()->create(['user_id' => $cashier->id]);
-        Sale::factory()->create(['user_id' => User::factory()->create()->id]);
+        // Les deux ventes sont sur le POS actif : seul le filtre par caissier doit les départager
+        Sale::factory()->create(['user_id' => $cashier->id, 'point_of_sale_id' => $pos->id]);
+        Sale::factory()->create(['user_id' => User::factory()->create()->id, 'point_of_sale_id' => $pos->id]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->getJson('/api/sales');
@@ -189,6 +193,8 @@ public function user_is_manager_logic()
         ]);
 
         $product = Product::factory()->create();
+        // Catalogue par POS : le produit doit être rattaché au POS de la vente
+        $product->pointsOfSale()->attach($pos->id);
 
         $payload = [
             'table_id' => $table->id,
@@ -241,6 +247,8 @@ public function user_is_manager_logic()
         ]);
 
         $product = Product::factory()->create();
+        // Catalogue par POS : le produit doit être rattaché au POS de la vente
+        $product->pointsOfSale()->attach($pos->id);
         $payment = Payment::create(['name' => 'Espèces']);
 
         $quantity = 2;
@@ -298,6 +306,8 @@ public function user_is_manager_logic()
         ]);
 
         $product = Product::factory()->create();
+        // Catalogue par POS : le produit doit être rattaché au POS de la vente
+        $product->pointsOfSale()->attach($pos->id);
         $payment = Payment::create(['name' => 'Espèces']);
 
         $sale = Sale::create([
@@ -356,6 +366,8 @@ public function user_is_manager_logic()
         ]);
 
         $product = Product::factory()->create();
+        // Catalogue par POS : le produit doit être rattaché au POS de la vente
+        $product->pointsOfSale()->attach($pos->id);
 
         $sale = Sale::create([
             'user_id' => $user->id,
@@ -411,6 +423,8 @@ public function user_is_manager_logic()
         ]);
 
         $product = Product::factory()->create();
+        // Catalogue par POS : le produit doit être rattaché au POS de la vente
+        $product->pointsOfSale()->attach($pos->id);
 
         $sale = Sale::create([
             'user_id' => $user->id,
@@ -465,6 +479,8 @@ public function user_is_manager_logic()
         ]);
 
         $product = Product::factory()->create();
+        // Catalogue par POS : le produit doit être rattaché au POS de la vente
+        $product->pointsOfSale()->attach($pos->id);
         $payment = Payment::create(['name' => 'Espèces']);
 
         $sale = Sale::create([

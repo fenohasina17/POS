@@ -31,8 +31,9 @@ class CashRegisterSessionControllerTest extends TestCase
         $pos = PointOfSale::factory()->create();
         $user = User::factory()->create([
             'password' => bcrypt('password123'),
-            'point_of_sale_id' => $pos->id,
         ]);
+        // Rattachement multi-POS (table pivot) + POS actif via l'en-tête X-Active-POS-ID
+        $user->pointsOfSale()->attach($pos->id);
 
         if ($role) {
             $user->assignRole(\Spatie\Permission\Models\Role::findOrCreate($role, 'api'));
@@ -51,6 +52,8 @@ class CashRegisterSessionControllerTest extends TestCase
         ]);
 
         $token = $loginResponse->json('token') ?? $loginResponse->json('access_token');
+
+        $this->withHeader('X-Active-POS-ID', (string) $pos->id);
 
         return [$user, $token, $pos];
     }
@@ -143,8 +146,10 @@ class CashRegisterSessionControllerTest extends TestCase
     public function la_cloture_echoue_si_le_montant_reel_est_manquant()
     {
         [$user, $token, $pos] = $this->authenticate('update.cash_register_sessions');
+        $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
         $session = CashRegisterSession::factory()->create([
             'user_id' => $user->id,
+            'cash_register_id' => $register->id,
             'is_closed' => false
         ]);
 
@@ -314,7 +319,11 @@ class CashRegisterSessionControllerTest extends TestCase
     {
         // Attention : ton contrôleur utilise 'view.cash_register_sessions' à la ligne 306
         [$user, $token, $pos] = $this->authenticate('view.cash_register_sessions');
-        $session = CashRegisterSession::factory()->create(['user_id' => $user->id]);
+        $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
+        $session = CashRegisterSession::factory()->create([
+            'user_id' => $user->id,
+            'cash_register_id' => $register->id,
+        ]);
 
         // Créer des écarts
         $session->discrepancies()->create([
@@ -398,12 +407,12 @@ class CashRegisterSessionControllerTest extends TestCase
             'cash_register_id' => $registerB->id
         ]);
 
-        // Le gérant A essaie de voir la session du magasin B
-        // Le abort(403) est capturé par le catch(\Exception) du contrôleur → retourne 500
+        // Le gérant A essaie de voir la session du magasin B : refus explicite
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->getJson("/api/cash-register-sessions/{$sessionB->id}");
 
-        $response->assertStatus(500);
+        $response->assertStatus(403)
+            ->assertJsonPath('message', "Accès refusé : la session n'appartient pas à votre point de vente actif.");
     }
 
 
@@ -412,7 +421,11 @@ class CashRegisterSessionControllerTest extends TestCase
     public function on_ne_peut_pas_reouvrir_une_session_deja_ouverte()
     {
         [$user, $token, $pos] = $this->authenticate('update.cash_register_sessions');
-        $session = \App\Models\CashRegisterSession::factory()->create(['is_closed' => false]);
+        $register = CashRegister::factory()->create(['point_of_sale_id' => $pos->id]);
+        $session = CashRegisterSession::factory()->create([
+            'cash_register_id' => $register->id,
+            'is_closed' => false,
+        ]);
 
         $response = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->postJson("/api/cash-register-sessions/{$session->id}/reopen");

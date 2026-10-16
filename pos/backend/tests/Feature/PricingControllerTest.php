@@ -83,7 +83,7 @@ class PricingControllerTest extends TestCase
 
         $response->assertStatus(200)
                  ->assertJsonIsArray()
-                 ->assertJsonFragment(['price' => '1500']);
+                 ->assertJsonFragment(['price' => '1500.00']);
     }
 
     #[Test]
@@ -128,7 +128,7 @@ class PricingControllerTest extends TestCase
         $response = $this->asAdmin()->getJson("/api/pricings/{$this->product->id}");
 
         $response->assertStatus(200)
-                 ->assertJsonFragment(['price' => '3000']);
+                 ->assertJsonFragment(['price' => '3000.00']);
     }
 
     #[Test]
@@ -155,7 +155,7 @@ class PricingControllerTest extends TestCase
 
         $response->assertStatus(201);
 
-        $this->assertDatabaseHas('pricings', [
+        $this->assertDatabaseHas('pricing', [
             'product_id'       => $this->product->id,
             'point_of_sale_id' => $this->pos->id,
             'price'            => 2500,
@@ -199,12 +199,14 @@ class PricingControllerTest extends TestCase
     {
         $pricing = $this->createPricing(['price' => 1000]);
 
-        $this->asAdmin()
+        $response = $this->asAdmin()
              ->putJson("/api/pricings/{$pricing->id}", ['price' => 4500])
-             ->assertStatus(200)
-             ->assertJsonFragment(['price' => '4500']);
+             ->assertStatus(200);
 
-        $this->assertDatabaseHas('pricings', ['id' => $pricing->id, 'price' => 4500]);
+        // Le modèle renvoyé n'est pas relu en base : le prix garde le type envoyé
+        $this->assertEquals(4500, $response->json('price'));
+
+        $this->assertDatabaseHas('pricing', ['id' => $pricing->id, 'price' => 4500]);
     }
 
     #[Test]
@@ -228,7 +230,7 @@ class PricingControllerTest extends TestCase
              ->deleteJson("/api/pricings/{$pricing->id}")
              ->assertStatus(204);
 
-        $this->assertDatabaseMissing('pricings', ['id' => $pricing->id]);
+        $this->assertDatabaseMissing('pricing', ['id' => $pricing->id]);
     }
 
     #[Test]
