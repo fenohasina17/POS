@@ -140,7 +140,7 @@ docker compose restart nginx
 info "Test d'un broadcast backend → reverb…"
 OUTPUT=""
 for _ in $(seq 1 12); do
-    OUTPUT=$(docker compose exec -T backend php artisan tinker --execute="Broadcast::connection('reverb')->broadcast(['fix-reverb-env'], 'check', ['ok' => true]); echo 'BROADCAST_OK';" 2>&1 || true)
+    OUTPUT=$(docker compose exec -T -u www-data -e HOME=/tmp backend php artisan tinker --execute="Broadcast::connection('reverb')->broadcast(['fix-reverb-env'], 'check', ['ok' => true]); echo 'BROADCAST_OK';" 2>&1 || true)
     if grep -q BROADCAST_OK <<<"$OUTPUT"; then
         log "Broadcast OK — correctif appliqué"
         exit 0

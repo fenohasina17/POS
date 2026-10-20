@@ -273,7 +273,7 @@ if [[ $TRIES -ge 30 ]]; then
     warn "Base de données non prête — vérifiez: docker compose logs db"
 else
     log "Base de données prête"
-    docker compose exec -T backend php artisan migrate --force
+    docker compose exec -T -u www-data backend php artisan migrate --force
     log "Migrations exécutées"
 
     # Rôles, point de vente local (nommé d'après RESTAURANT_ID) et compte
@@ -284,7 +284,7 @@ else
     # fois dans le résumé. Ignoré par la commande si le compte existe déjà
     # (réinstallation) : le mot de passe choisi par l'admin est conservé.
     ADMIN_PASSWORD=$(openssl rand -base64 24 | tr -dc 'A-Za-z0-9' | head -c 16)
-    BOOTSTRAP_OUT=$(docker compose exec -T backend php artisan pos:bootstrap-admin \
+    BOOTSTRAP_OUT=$(docker compose exec -T -u www-data backend php artisan pos:bootstrap-admin \
         "$RESTAURANT_ID" --password="$ADMIN_PASSWORD")
     if grep -q "mot de passe inchangé" <<<"$BOOTSTRAP_OUT"; then
         ADMIN_STATUS="existing"
@@ -358,5 +358,5 @@ echo -e "  Commandes utiles :"
 echo -e "  ${CYAN}cd ${INSTALL_DIR}/pos && docker compose logs -f${NC}"
 echo -e "  ${CYAN}systemctl status pos${NC}"
 echo -e "  Mot de passe admin perdu :"
-echo -e "  ${CYAN}cd ${INSTALL_DIR}/pos && docker compose exec backend php artisan pos:bootstrap-admin ${RESTAURANT_ID} --reset-password${NC}"
+echo -e "  ${CYAN}cd ${INSTALL_DIR}/pos && docker compose exec -u www-data backend php artisan pos:bootstrap-admin ${RESTAURANT_ID} --reset-password${NC}"
 echo ""

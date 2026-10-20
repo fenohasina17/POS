@@ -1070,9 +1070,8 @@ const fetchPointOfSales = async () => {
     return
   }
   try {
-    const { data } = await axios.get(`${API_BASE_URL}/point-of-sales`, {
+    const { data } = await apiClient.get('/point-of-sales', {
       params: { per_page: 500 },
-      headers: authHeaders(),
     })
     const points = extractArray(data?.data ?? data)
     const unique = []
