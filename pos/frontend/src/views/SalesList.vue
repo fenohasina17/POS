@@ -1,32 +1,32 @@
 <template>
   <section class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="ui-page-header">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Rapports</p>
-        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <FontAwesomeIcon :icon="faReceipt" class="text-indigo-500" />
+        <p class="ui-page-eyebrow">Rapports</p>
+        <h1 class="ui-page-title mt-3 flex items-center gap-2">
+          <FontAwesomeIcon :icon="faReceipt" class="text-primary-500" />
           Historique des Ventes
         </h1>
         <p class="mt-2 text-sm text-slate-500">Consultez, filtrez et gérez vos transactions.</p>
       </div>
       <div v-if="filteredSales.length" class="flex items-center gap-3">
-        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
-          <span class="text-lg font-bold text-emerald-600">{{ totalAmount }} Ar</span>
+        <div class="ui-card px-4 py-2">
+          <span class="text-lg font-bold text-success-600">{{ totalAmount }} Ar</span>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+        <div class="ui-card px-3 py-2 text-sm font-semibold text-slate-600">
           {{ filteredSales.length }} vente{{ filteredSales.length > 1 ? 's' : '' }}
         </div>
       </div>
     </header>
 
     <!-- Filtres (inchangés) -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-8">
+    <div class="ui-card p-4 mb-8">
       <div class="flex items-center gap-4 overflow-x-auto">
         <div class="flex-1 min-w-0">
           <label class="block text-xs font-medium text-slate-500 mb-1">Rechercher</label>
           <div class="relative">
             <input v-model="searchQuery" type="text" placeholder="N° ticket, client, produit..."
-              class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-indigo-500 text-sm" />
+              class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:border-primary-500 text-sm" />
             <FontAwesomeIcon :icon="faSearch" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           </div>
         </div>
@@ -76,10 +76,10 @@
 
     <!-- États -->
     <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-4">
-      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
+      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-100 border-t-primary-600"></div>
       <p class="text-sm text-slate-400">Chargement des ventes...</p>
     </div>
-    <div v-else-if="loadError" class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-700">{{ loadError }}</div>
+    <div v-else-if="loadError" class="rounded-2xl border border-danger-200 bg-danger-50 p-6 text-center text-sm text-danger-700">{{ loadError }}</div>
     <div v-else-if="filteredSales.length === 0" class="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-white p-16 text-center">
       <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
         <FontAwesomeIcon :icon="faReceipt" class="text-xl" />
@@ -97,7 +97,7 @@
           class="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/80 transition-all"
         >
           <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-indigo-600">
+            <div class="ui-card w-12 h-12 flex items-center justify-center text-primary-600">
               <FontAwesomeIcon :icon="faUser" class="text-lg" />
             </div>
             <div>
@@ -109,7 +109,7 @@
           <div class="flex items-center gap-8">
             <div class="text-right">
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Chiffre d'affaires</p>
-              <p class="font-black text-xl text-indigo-600">{{ formatPrice(group.total) }}</p>
+              <p class="font-black text-xl text-primary-600">{{ formatPrice(group.total) }}</p>
             </div>
             <div class="w-8 h-8 rounded-full flex items-center justify-center bg-white border border-slate-200 text-slate-400 shadow-sm">
               <FontAwesomeIcon :icon="expandedCashiers.has(group.id) ? faChevronUp : faChevronDown" />
@@ -122,7 +122,7 @@
           <article v-for="sale in group.sales" :key="sale.id" class="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-sm transition-all">
             <header class="px-4 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-50" @click="toggleSale(sale.id)">
               <div class="flex items-center gap-4">
-                <div class="bg-indigo-50 text-indigo-700 font-mono font-bold text-lg px-3 py-1.5 rounded-xl border border-indigo-100">
+                <div class="bg-primary-50 text-primary-700 font-mono font-bold text-lg px-3 py-1.5 rounded-xl border border-primary-100">
                   #{{ sale.sale_number || sale.ticket_number || 'N/A' }}
                 </div>
                 <div>
@@ -132,7 +132,7 @@
               </div>
               <div class="flex items-center gap-4">
                 <div class="text-right">
-                  <p class="text-2xl font-bold text-emerald-600">{{ formatPrice(sale.final_amount || sale.total_amount) }}</p>
+                  <p class="text-2xl font-bold text-success-600">{{ formatPrice(sale.final_amount || sale.total_amount) }}</p>
                 </div>
                 <div class="flex items-center gap-2">
                   <div :class="['status-badge', statusClass(sale.status)]">
@@ -143,7 +143,7 @@
                     <button @click.stop="editSale(sale)" class="p-2 hover:bg-slate-100 rounded-lg transition">
                       <FontAwesomeIcon :icon="faPenToSquare" />
                     </button>
-                    <button @click.stop="deleteSale(sale.id)" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition">
+                    <button @click.stop="deleteSale(sale.id)" class="p-2 text-danger-500 hover:bg-danger-50 rounded-lg transition">
                       <FontAwesomeIcon :icon="faTrash" />
                     </button>
                     <button @click.stop="toggleSale(sale.id)" class="p-2 hover:bg-slate-100 rounded-lg transition">
@@ -410,9 +410,9 @@ onMounted(() => {
 .status-badge {
   @apply inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold;
 }
-.status-completed { @apply bg-emerald-100 text-emerald-700; }
-.status-pending { @apply bg-amber-100 text-amber-700; }
-.status-cancelled { @apply bg-rose-100 text-rose-700; }
+.status-completed { @apply bg-success-100 text-success-700; }
+.status-pending { @apply bg-warning-100 text-warning-700; }
+.status-cancelled { @apply bg-danger-100 text-danger-700; }
 .expand-enter-active, .expand-leave-active { transition: all 0.2s ease; }
 .expand-enter-from, .expand-leave-to { opacity: 0; transform: translateY(-10px); }
 </style>

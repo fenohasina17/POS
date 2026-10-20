@@ -27,7 +27,7 @@
                 <div class="flex-1 min-w-0">
                   <p class="text-[11px] font-black text-slate-700 truncate leading-tight uppercase tracking-tight">{{ item.name || 'Produit' }}</p>
                   <div class="flex items-center gap-2 mt-0.5">
-                    <span class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-1.5 rounded-md">x{{ item.quantity }}</span>
+                    <span class="text-[10px] font-bold text-primary-500 bg-primary-50 px-1.5 rounded-md">x{{ item.quantity }}</span>
                     <span class="text-[9px] font-medium text-slate-400">{{ formatPrice(item.unit_price) }} / u</span>
                   </div>
                 </div>
@@ -44,7 +44,7 @@
                 <span>Sous-total HT</span>
                 <span>{{ formatPrice(totalAmount) }}</span>
               </div>
-              <div class="flex justify-between text-sm font-black text-indigo-600 pt-1">
+              <div class="flex justify-between text-sm font-black text-primary-600 pt-1">
                 <span>TOTAL NET</span>
                 <span class="text-base">{{ formatPrice(discountedTotal) }}</span>
               </div>
@@ -139,7 +139,7 @@
               class="field-input"
               @focus="activeInput = 'cardNumber'"
             />
-            <div v-if="cardNumber.replace(/\D/g, '').length > 0 && !isTpeComplete" class="text-xs font-semibold text-rose-500 mt-1">
+            <div v-if="cardNumber.replace(/\D/g, '').length > 0 && !isTpeComplete" class="text-xs font-semibold text-danger-500 mt-1">
               Le numéro de carte doit comporter 16 chiffres.
             </div>
           </div>
@@ -158,9 +158,9 @@
                 placeholder="03X XX XXX XX"
                 class="field-input"
                 :class="{
-                  'border-rose-500': phoneNumber.replace(/\D/g, '').length >= 3 && !phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032'),
-                  'border-rose-400': phoneNumber.replace(/\D/g, '').length > 0 && phoneNumber.replace(/\D/g, '').length < 10 && phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032'),
-                  'border-emerald-500': isPhoneNumberComplete
+                  'border-danger-500': phoneNumber.replace(/\D/g, '').length >= 3 && !phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032'),
+                  'border-danger-400': phoneNumber.replace(/\D/g, '').length > 0 && phoneNumber.replace(/\D/g, '').length < 10 && phoneNumber.replace(/\D/g, '').startsWith(selectedPayment === 'Airtel Money' ? '033' : selectedPayment === 'MVola' ? '034' : '032'),
+                  'border-success-500': isPhoneNumberComplete
                 }"
                 @focus="activeInput = 'phoneNumber'"
               />
@@ -640,7 +640,7 @@ watch(
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #1e1b4b, #312e81);
+  background: linear-gradient(135deg, theme('colors.primary.950'), theme('colors.primary.800'));
   color: #fff;
   flex-shrink: 0;
 }
@@ -712,7 +712,7 @@ watch(
 .item-price {
   font-size: 0.8rem;
   font-weight: 800;
-  color: #4f46e5;
+  color: theme('colors.primary.600');
 }
 
 .panel {
@@ -747,13 +747,13 @@ watch(
   color: #0f172a;
 }
 .value.highlight {
-  color: #4f46e5;
+  color: theme('colors.primary.600');
 }
 .value.success {
-  color: #059669;
+  color: theme('colors.success.600');
 }
 .value.warning {
-  color: #d97706;
+  color: theme('colors.warning.600');
 }
 
 /* ── Chip remise ── */
@@ -774,9 +774,9 @@ watch(
 }
 
 .chip.active {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #fff;
-  border-color: #4f46e5;
+  border-color: theme('colors.primary.600');
 }
 
 /* ── Cash info ── */
@@ -797,18 +797,18 @@ watch(
 }
 
 .info-row.success {
-  background: #ecfdf5;
+  background: theme('colors.success.50');
   color: #065f46;
 }
 .info-row.warning {
-  background: #fffbeb;
+  background: theme('colors.warning.50');
   color: #92400e;
 }
 .info-row.change {
-  background: #eef2ff;
+  background: theme('colors.primary.50');
 }
 .change-amount {
-  color: #4f46e5;
+  color: theme('colors.primary.600');
 }
 
 /* ── Fixed amount ── */
@@ -841,7 +841,7 @@ watch(
 }
 
 .field-input:focus {
-  border-color: #6366f1;
+  border-color: theme('colors.primary.500');
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
@@ -874,8 +874,8 @@ watch(
 }
 
 .badge {
-  background: #eef2ff;
-  color: #4f46e5;
+  background: theme('colors.primary.50');
+  color: theme('colors.primary.600');
   border-radius: 9999px;
   padding: 0.15rem 0.5rem;
   font-size: 0.75rem;
@@ -921,7 +921,7 @@ watch(
 
 .payment-amount {
   font-weight: 600;
-  color: #4f46e5;
+  color: theme('colors.primary.600');
   font-size: 0.875rem;
 }
 
@@ -936,7 +936,7 @@ watch(
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1, #4f46e5);
+  background: linear-gradient(90deg, theme('colors.primary.500'), theme('colors.primary.600'));
   border-radius: 9999px;
   transition: width 0.3s ease;
 }
@@ -975,14 +975,14 @@ watch(
 }
 
 .method-btn:hover {
-  border-color: #a5b4fc;
-  background: #eef2ff;
-  color: #4f46e5;
+  border-color: theme('colors.primary.300');
+  background: theme('colors.primary.50');
+  color: theme('colors.primary.600');
 }
 
 .method-btn.active {
-  background: #4f46e5;
-  border-color: #4f46e5;
+  background: theme('colors.primary.600');
+  border-color: theme('colors.primary.600');
   color: #fff;
 }
 
@@ -999,7 +999,7 @@ watch(
   width: 100%;
   margin-top: 0.75rem;
   padding: 0.75rem;
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #fff;
   border-radius: 0.875rem;
   font-size: 0.875rem;
@@ -1014,7 +1014,7 @@ watch(
 }
 
 .btn-add-payment:hover:not(:disabled) {
-  background: #4338ca;
+  background: theme('colors.primary.700');
 }
 .btn-add-payment:disabled {
   opacity: 0.45;
@@ -1055,11 +1055,11 @@ watch(
 }
 
 .btn.primary {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #fff;
 }
 .btn.primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: theme('colors.primary.700');
 }
 .btn.primary:disabled {
   opacity: 0.45;
@@ -1086,7 +1086,7 @@ watch(
   color: #fff;
 }
 .btn-icon.danger:hover {
-  background: #fff1f2;
-  color: #e11d48;
+  background: theme('colors.danger.50');
+  color: theme('colors.danger.600');
 }
 </style>

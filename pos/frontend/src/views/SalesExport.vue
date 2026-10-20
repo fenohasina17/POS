@@ -51,10 +51,10 @@
         </div>
       </div>
 
-      <div v-if="errorMessage" class="text-rose-500 text-sm">{{ errorMessage }}</div>
+      <div v-if="errorMessage" class="text-danger-500 text-sm">{{ errorMessage }}</div>
 
       <div class="flex justify-center pt-6">
-        <button @click="exportSales" :disabled="isExporting" class="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition">
+        <button @click="exportSales" :disabled="isExporting" class="bg-primary-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-primary-700 transition">
           {{ isExporting ? 'Traitement...' : 'Exporter en CSV' }}
         </button>
       </div>

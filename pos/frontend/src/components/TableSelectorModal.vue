@@ -281,13 +281,13 @@ export default {
   box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
-.table-box.available { background-color: #22c55e; }
-.table-box.occupied { background-color: #ef4444; }
-.table-box.reserved { background-color: #f59e0b; }
+.table-box.available { background-color: theme('colors.success.500'); }
+.table-box.occupied { background-color: theme('colors.danger.500'); }
+.table-box.reserved { background-color: theme('colors.warning.500'); }
 .table-box.out_of_order { background-color: #64748b; }
 
 .table-box.selected-table {
-  outline: 4px solid #4f46e5; /* Bleu Indigo */
+  outline: 4px solid theme('colors.primary.600'); /* Bleu Indigo */
   outline-offset: 2px;
   transform: scale(1.1);
   box-shadow: 0 0 20px rgba(79, 70, 229, 0.5);
@@ -317,5 +317,5 @@ export default {
   font-weight: 600;
   cursor: pointer;
 }
-.btn-refresh { background: #3b82f6; color: white; border: none; }
+.btn-refresh { background: theme('colors.primary.500'); color: white; border: none; }
 </style>

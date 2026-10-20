@@ -7,7 +7,7 @@
         <h2 class="text-2xl font-bold text-slate-900">
           Modifier Vente #{{ sale?.sale_number || sale?.ticket_number || 'N/A' }}
         </h2>
-        <button @click="close" class="text-3xl text-slate-400 hover:text-rose-500">×</button>
+        <button @click="close" class="text-3xl text-slate-400 hover:text-danger-500">×</button>
       </div>
 
       <div class="flex-1 overflow-auto p-6 space-y-6">
@@ -18,7 +18,7 @@
             <!-- Sélecteur de catégorie -->
             <div class="md:col-span-3">
               <label class="block text-sm font-medium text-slate-600 mb-1.5">Catégorie</label>
-              <select v-model="selectedCategoryId" class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-indigo-500">
+              <select v-model="selectedCategoryId" class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-primary-500">
                 <option :value="null">-- Toutes les catégories --</option>
                 <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                   {{ cat.name }}
@@ -28,7 +28,7 @@
             <!-- Sélecteur de produit (filtré par catégorie) -->
             <div class="md:col-span-5">
               <label class="block text-sm font-medium text-slate-600 mb-1.5">Produit</label>
-              <select v-model="selectedProductId" class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-indigo-500">
+              <select v-model="selectedProductId" class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-primary-500">
                 <option value="">-- Sélectionner un produit --</option>
                 <option v-for="p in filteredProductsByCategory" :key="p.id" :value="p.id">
                   {{ p.name }} — {{ p.price != null ? formatPrice(p.price) : 'Prix non défini' }}
@@ -41,14 +41,14 @@
                 type="number"
                 v-model.number="newProductQuantity"
                 min="1"
-                class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-indigo-500"
+                class="w-full rounded-2xl border border-slate-200 py-3 px-4 focus:border-primary-500"
               />
             </div>
             <div class="md:col-span-2">
               <button
                 @click="addSelectedProduct"
                 :disabled="!selectedProductId || newProductQuantity < 1"
-                class="w-full h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-medium disabled:opacity-50"
+                class="w-full h-12 bg-primary-600 hover:bg-primary-700 text-white rounded-2xl font-medium disabled:opacity-50"
               >
                 Ajouter
               </button>
@@ -79,7 +79,7 @@
                   <td class="p-4 text-center">
                     <button
                       @click="removeLine(index)"
-                      class="text-rose-500 hover:text-rose-700 text-xl font-bold"
+                      class="text-danger-500 hover:text-danger-700 text-xl font-bold"
                     >
                       ✕
                     </button>
@@ -93,14 +93,14 @@
 
       <!-- Footer -->
       <div class="p-6 border-t bg-slate-50 rounded-b-3xl flex justify-between items-center">
-        <div class="text-2xl font-bold text-emerald-600">
+        <div class="text-2xl font-bold text-success-600">
           Total : {{ formatPrice(totalAmount) }}
         </div>
         <div class="flex gap-3">
           <button @click="close" class="px-6 py-3 text-slate-600 hover:bg-slate-100 rounded-2xl">
             Annuler
           </button>
-          <button @click="saveChanges" class="px-8 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700">
+          <button @click="saveChanges" class="px-8 py-3 bg-primary-600 text-white rounded-2xl hover:bg-primary-700">
             Enregistrer les modifications
           </button>
         </div>

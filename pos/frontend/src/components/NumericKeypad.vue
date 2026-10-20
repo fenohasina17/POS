@@ -82,19 +82,19 @@ const onKeyClick = (key) => {
 }
 
 .keypad-btn:hover:not(:disabled) {
-  background: #eef2ff;
-  border-color: #a5b4fc;
-  color: #4f46e5;
+  background: theme('colors.primary.50');
+  border-color: theme('colors.primary.300');
+  color: theme('colors.primary.600');
 }
 .keypad-btn:active:not(:disabled) {
   transform: scale(0.95);
 }
 .keypad-btn.danger {
-  color: #e11d48;
+  color: theme('colors.danger.600');
 }
 .keypad-btn.danger:hover {
-  background: #fff1f2;
-  border-color: #fda4af;
+  background: theme('colors.danger.50');
+  border-color: theme('colors.danger.300');
 }
 .keypad-btn.disabled,
 .keypad-btn:disabled {

@@ -318,7 +318,7 @@ const closeModal = () => {
 
 .input:focus,
 .select select:focus {
-  border-color: #00d1b2;
+  border-color: theme('colors.primary.600');
   box-shadow: 0 0 0 0.125em rgba(0, 209, 178, 0.25);
 }
 
@@ -349,7 +349,7 @@ const closeModal = () => {
 }
 
 .button-success {
-  background-color: #00d1b2;
+  background-color: theme('colors.primary.600');
   color: white;
   border: none;
 }
@@ -383,7 +383,7 @@ const closeModal = () => {
 }
 
 .save-error {
-  color: #ff3860;
+  color: theme('colors.danger.500');
   text-align: center;
   margin-top: 1rem;
 }

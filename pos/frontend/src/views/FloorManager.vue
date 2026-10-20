@@ -7,8 +7,8 @@
       <header class="mb-10 flex flex-wrap items-end justify-between gap-6 px-2">
         <div>
           <div class="mb-2 flex items-center gap-3">
-            <div class="h-1 w-10 rounded-full bg-indigo-600"></div>
-            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-600/60">Gestion de salle</span>
+            <div class="h-1 w-10 rounded-full bg-primary-600"></div>
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-primary-600/60">Gestion de salle</span>
           </div>
           <h1 class="text-4xl font-black tracking-tighter text-slate-900 lg:text-5xl">
             Floor <span class="text-slate-400">Manager</span>
@@ -18,7 +18,7 @@
         <div class="flex items-center gap-4">
           <button
             @click="refreshData"
-            class="group flex h-14 w-14 items-center justify-center rounded-2xl bg-white border border-slate-200 text-slate-400 shadow-sm transition-all hover:border-indigo-200 hover:text-indigo-600 hover:shadow-lg hover:shadow-indigo-50 active:scale-90"
+            class="group flex h-14 w-14 items-center justify-center rounded-2xl bg-white border border-slate-200 text-slate-400 shadow-sm transition-all hover:border-primary-200 hover:text-primary-600 hover:shadow-lg hover:shadow-primary-50 active:scale-90"
             title="Rafraîchir le plan"
           >
             <font-awesome-icon icon="fa-solid fa-rotate" :class="{'fa-spin': loading}" />
@@ -46,7 +46,7 @@
       <!-- Grid des Tables -->
       <div v-if="loading && !tables.length" class="flex h-64 items-center justify-center">
         <div class="flex flex-col items-center gap-4">
-          <div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-600"></div>
+          <div class="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary-600"></div>
           <p class="font-bold text-slate-400">Synchronisation du plan de salle...</p>
         </div>
       </div>
@@ -62,7 +62,7 @@
           :key="table.id"
           class="group relative aspect-square overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white p-3 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
           :class="[
-            isTableLockedByOther(table) ? 'bg-slate-50/50' : 'hover:border-indigo-400'
+            isTableLockedByOther(table) ? 'bg-slate-50/50' : 'hover:border-primary-400'
           ]"
         >
           <!-- Coin de Statut (Indicateur discret) -->
@@ -77,7 +77,7 @@
               v-if="isTableLockedByOther(table)"
               class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-900/10 backdrop-blur-[1px] transition-all"
             >
-                <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white text-rose-500 shadow-xl border border-rose-100">
+                <div class="flex h-16 w-16 items-center justify-center rounded-full bg-white text-danger-500 shadow-xl border border-danger-100">
                     <font-awesome-icon icon="fa-solid fa-lock" class="text-3xl" />
                 </div>
             </div>
@@ -86,7 +86,7 @@
             <div class="flex items-center justify-between">
                 <div
                     class="flex h-7 w-7 items-center justify-center rounded-lg shadow-sm"
-                    :class="isTableLockedByOther(table) ? 'bg-slate-200 text-slate-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white'"
+                    :class="isTableLockedByOther(table) ? 'bg-slate-200 text-slate-400' : 'bg-slate-50 text-slate-400 group-hover:bg-primary-600 group-hover:text-white'"
                 >
                     <font-awesome-icon :icon="getStatusIcon(table.status)" class="text-[10px]" />
                 </div>
@@ -104,7 +104,7 @@
             <div class="relative z-30">
                 <!-- Nom caissier si verrouillage -->
                 <div v-if="isTableLockedByOther(table)" class="flex items-center justify-center gap-1 rounded-xl bg-white/90 py-1.5 border border-slate-200 shadow-sm">
-                    <span class="truncate text-[9px] font-black text-rose-600 uppercase tracking-tighter">Par {{ table.locked_by_session?.user?.name || 'Occupé' }}</span>
+                    <span class="truncate text-[9px] font-black text-danger-600 uppercase tracking-tighter">Par {{ table.locked_by_session?.user?.name || 'Occupé' }}</span>
                 </div>
 
                 <!-- Actions Compactes -->
@@ -116,7 +116,7 @@
                         :class="[
                             (table.status === 'out_of_order' || isTableLockedByOther(table))
                                 ? 'bg-slate-400'
-                                : 'bg-slate-900 hover:bg-indigo-600'
+                                : 'bg-slate-900 hover:bg-primary-600'
                         ]"
                     >
                         {{ isTableLockedByOther(table) ? 'OCCUPÉ' : 'CMD' }}
@@ -130,7 +130,7 @@
                     <button
                         @click="printTableBill(table)"
                         :disabled="table.status === 'available'"
-                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-all hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-30"
+                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 transition-all hover:bg-success-50 hover:text-success-600 disabled:opacity-30"
                     >
                         <font-awesome-icon icon="fa-solid fa-print" class="text-[9px]" />
                     </button>
@@ -148,8 +148,8 @@
       <div class="relative w-full max-w-sm overflow-hidden rounded-[3rem] bg-white shadow-2xl transition-all border border-white">
         <header class="relative overflow-hidden bg-slate-900 p-8 pb-12">
           <!-- Motifs décoratifs -->
-          <div class="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-indigo-500/20 blur-3xl"></div>
-          <div class="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-emerald-500/10 blur-2xl"></div>
+          <div class="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-primary-500/20 blur-3xl"></div>
+          <div class="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-success-500/10 blur-2xl"></div>
 
           <div class="relative z-10 flex items-center justify-between text-white">
             <div>
@@ -183,7 +183,7 @@
 
           <button
             @click="closeTableDetails"
-            class="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-slate-900 py-4 text-xs font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 hover:shadow-indigo-200 active:scale-95"
+            class="mt-8 flex w-full items-center justify-center gap-3 rounded-2xl bg-slate-900 py-4 text-xs font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-primary-600 hover:shadow-primary-200 active:scale-95"
           >
             TERMINÉ
           </button>
@@ -271,9 +271,9 @@ const getStatusText = (status) => {
 
 const getStatusBgClass = (status) => {
   const classes = {
-    available: 'bg-emerald-500',
-    occupied: 'bg-indigo-500',
-    reserved: 'bg-amber-500',
+    available: 'bg-success-500',
+    occupied: 'bg-primary-500',
+    reserved: 'bg-warning-500',
     out_of_order: 'bg-slate-500'
   }
   return classes[status] || 'bg-slate-400'
@@ -281,9 +281,9 @@ const getStatusBgClass = (status) => {
 
 const getStatusTextClass = (status) => {
   const classes = {
-    available: 'text-emerald-600 bg-emerald-50',
-    occupied: 'text-indigo-600 bg-indigo-50',
-    reserved: 'text-amber-600 bg-amber-50',
+    available: 'text-success-600 bg-success-50',
+    occupied: 'text-primary-600 bg-primary-50',
+    reserved: 'text-warning-600 bg-warning-50',
     out_of_order: 'text-slate-600 bg-slate-50'
   }
   return classes[status] || 'text-slate-500 bg-slate-50'

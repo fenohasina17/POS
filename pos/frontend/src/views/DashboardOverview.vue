@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-4 shadow-sm">
+    <div class="ui-card flex flex-wrap items-center justify-between gap-4 px-6 py-4">
       <div>
-        <p class="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-500">Vue d'ensemble</p>
+        <p class="ui-page-eyebrow">Vue d'ensemble</p>
         <p class="mt-1 text-lg font-semibold text-slate-900">
           {{ selectedPointOfSaleLabel }}
         </p>
@@ -14,7 +14,7 @@
         <label class="font-semibold text-slate-600">Point de vente</label>
         <select
           v-model="selectedPointOfSale"
-          class="min-w-[220px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+          class="min-w-[220px] rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
         >
           <option value="">Tous les points de vente</option>
           <option
@@ -32,7 +32,7 @@
       <article
         v-for="card in statCards"
         :key="card.id"
-        class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+        class="ui-card p-6"
       >
         <div class="flex items-start justify-between">
           <div class="flex items-center gap-3">
@@ -47,7 +47,7 @@
           <span
             :class="[
               'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold',
-              card.positive ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600',
+              card.positive ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600',
             ]"
           >
             <FontAwesomeIcon :icon="card.positive ? faArrowTrendUp : faArrowTrendDown" class="mr-1" />
@@ -59,7 +59,7 @@
     </section>
 
     <section v-if="canViewStats" class="flex flex-col gap-6 lg:flex-row">
-      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:w-96 lg:flex-none">
+      <article class="ui-card p-6 lg:w-96 lg:flex-none">
         <div class="flex items-start justify-between">
           <div>
             <p class="text-sm font-medium text-slate-500">Objectif mensuel</p>
@@ -86,7 +86,7 @@
                 cx="60"
                 cy="60"
                 r="52"
-                class="text-indigo-500"
+                class="text-primary-500"
                 stroke="url(#targetGradient)"
                 stroke-width="12"
                 stroke-linecap="round"
@@ -97,8 +97,8 @@
               />
               <defs>
                 <linearGradient id="targetGradient" x1="0%" x2="0%" y1="0%" y2="100%">
-                  <stop offset="0%" stop-color="#6366F1" />
-                  <stop offset="100%" stop-color="#6366F1" stop-opacity="0.6" />
+                  <stop offset="0%" stop-color="#f6404f" />
+                  <stop offset="100%" stop-color="#f6404f" stop-opacity="0.6" />
                 </linearGradient>
               </defs>
               <circle cx="60" cy="60" r="41" fill="white" />
@@ -107,7 +107,7 @@
               <p class="text-3xl font-semibold text-slate-900">{{ monthlyTargetProgressFormatted }}</p>
               <span
                 class="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold"
-                :class="targetDeltaPositive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'"
+                :class="targetDeltaPositive ? 'bg-success-50 text-success-600' : 'bg-danger-50 text-danger-600'"
               >
                 <FontAwesomeIcon :icon="targetDeltaIcon" />
                 {{ targetDeltaDisplay }}
@@ -126,7 +126,7 @@
             <span
               :class="[
                 'mt-1 inline-flex items-center gap-1 text-xs font-medium',
-                item.positive ? 'text-emerald-600' : 'text-rose-600',
+                item.positive ? 'text-success-600' : 'text-danger-600',
               ]"
             >
               <FontAwesomeIcon :icon="item.positive ? faArrowTrendUp : faArrowTrendDown" />
@@ -136,7 +136,7 @@
         </div>
       </article>
 
-      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm flex-1">
+      <article class="ui-card p-6 flex-1">
         <header class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p class="text-base font-semibold text-slate-900">Heatmap horaires</p>
@@ -183,7 +183,7 @@
     </section>
 
     <section v-if="canViewStats" class="grid gap-6 grid-cols-1">
-      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <article class="ui-card p-6">
         <header class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p class="text-base font-semibold text-slate-900">Tendance quotidienne</p>
@@ -193,7 +193,7 @@
           </div>
           <span
             class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
-            :class="dailyTrendChange >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'"
+            :class="dailyTrendChange >= 0 ? 'bg-success-100 text-success-600' : 'bg-danger-100 text-danger-600'"
           >
             <FontAwesomeIcon :icon="dailyTrendChange >= 0 ? faArrowTrendUp : faArrowTrendDown" class="mr-1" />
             {{ formatChange(dailyTrendChange) }}
@@ -205,15 +205,15 @@
             <svg viewBox="0 0 100 48" class="h-full w-full">
               <defs>
                 <linearGradient id="dailyTrendGradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stop-color="#6366F1" stop-opacity="0.25" />
-                  <stop offset="100%" stop-color="#6366F1" stop-opacity="0" />
+                  <stop offset="0%" stop-color="#f6404f" stop-opacity="0.25" />
+                  <stop offset="100%" stop-color="#f6404f" stop-opacity="0" />
                 </linearGradient>
               </defs>
               <path :d="dailyTrendChart.area" fill="url(#dailyTrendGradient)" />
               <path
                 :d="dailyTrendChart.line"
                 fill="none"
-                stroke="#4F46E5"
+                stroke="#d81f33"
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -223,7 +223,7 @@
                   :cx="dailyTrendChart.points[index].x"
                   :cy="dailyTrendChart.points[index].y"
                   r="1.6"
-                  fill="#4F46E5"
+                  fill="#d81f33"
                 />
               </g>
             </svg>
@@ -254,13 +254,13 @@
     </section>
 
     <section v-if="canViewStats" class="grid gap-6 xl:grid-cols-3">
-      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+      <article class="ui-card p-6 xl:col-span-2">
         <header class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p class="text-base font-semibold text-slate-900">Ventes mensuelles</p>
             <p class="text-sm text-slate-500">Suivez le chiffre généré mois par mois</p>
           </div>
-          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600">
+          <button type="button" class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-primary-200 hover:text-primary-600">
             Télécharger le rapport
           </button>
         </header>
@@ -271,9 +271,9 @@
               :key="month.label"
               class="flex flex-1 flex-col items-center gap-3"
             >
-              <div class="flex h-full w-full items-end justify-center rounded-t-full bg-indigo-100">
+              <div class="flex h-full w-full items-end justify-center rounded-t-full bg-primary-100">
                 <div
-                  class="relative w-10 rounded-t-full bg-indigo-500 shadow-inner"
+                  class="relative w-10 rounded-t-full bg-primary-500 shadow-inner"
                   :style="{ height: getMonthlySalesHeight(month.value) }"
                 >
                   <span
@@ -287,14 +287,14 @@
             </div>
           </div>
           <div v-else class="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 text-center text-sm text-slate-500">
-            <FontAwesomeIcon :icon="faArrowTrendUp" class="text-indigo-300" />
+            <FontAwesomeIcon :icon="faArrowTrendUp" class="text-primary-300" />
             <p>Aucune vente enregistrée sur les 12 derniers mois.</p>
             <p class="text-xs text-slate-400">Les ventes apparaîtront automatiquement après les premières transactions.</p>
           </div>
         </div>
       </article>
 
-      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <article class="ui-card p-6">
         <header class="flex items-start justify-between">
           <div>
             <p class="text-base font-semibold text-slate-900">Top produits</p>
@@ -343,7 +343,7 @@
     </section>
 
     <section v-if="canViewStats" class="grid gap-6 xl:grid-cols-3">
-      <article class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-3">
+      <article class="ui-card p-6 xl:col-span-3">
         <div class="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p class="text-base font-semibold text-slate-900">Statistiques</p>
@@ -363,12 +363,12 @@
           </div>
         </div>
 
-        <div class="mt-6 overflow-hidden rounded-2xl bg-gradient-to-b from-indigo-50 to-white p-6">
+        <div class="mt-6 overflow-hidden rounded-2xl bg-gradient-to-b from-primary-50 to-white p-6">
           <svg viewBox="0 0 100 100" class="h-56 w-full">
             <defs>
               <linearGradient id="statsGradient" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stop-color="#6366F1" stop-opacity="0.25" />
-                <stop offset="100%" stop-color="#6366F1" stop-opacity="0" />
+                <stop offset="0%" stop-color="#f6404f" stop-opacity="0.25" />
+                <stop offset="100%" stop-color="#f6404f" stop-opacity="0" />
               </linearGradient>
             </defs>
             <path
@@ -380,7 +380,7 @@
               v-if="statisticsChart.line"
               :d="statisticsChart.line"
               fill="none"
-              stroke="#6366F1"
+              stroke="#f6404f"
               stroke-width="2"
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -418,7 +418,7 @@ import { useCategories } from '@/composables/useCategories'
 defineOptions({ name: 'DashboardOverview' })
 
 const monthLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
-const colorPalette = ['bg-indigo-100 text-indigo-600', 'bg-sky-100 text-sky-600', 'bg-emerald-100 text-emerald-600', 'bg-amber-100 text-amber-600']
+const colorPalette = ['bg-primary-100 text-primary-600', 'bg-sky-100 text-sky-600', 'bg-success-100 text-success-600', 'bg-warning-100 text-warning-600']
 
 const salesData = ref([])
 const isLoading = ref(false)
@@ -793,7 +793,7 @@ const statCards = computed(() => [
     positive: revenueGrowth.value >= 0,
     description: 'Variation par rapport au mois précédent.',
     icon: faCashRegister,
-    iconBg: 'bg-indigo-100 text-indigo-600',
+    iconBg: 'bg-primary-100 text-primary-600',
   },
   {
     id: 'orders',
@@ -803,7 +803,7 @@ const statCards = computed(() => [
     positive: ticketGrowth.value >= 0,
     description: 'Nombre de tickets enregistrés sur les 12 derniers mois.',
     icon: faReceipt,
-    iconBg: 'bg-indigo-50 text-indigo-600',
+    iconBg: 'bg-primary-50 text-primary-600',
   },
   {
     id: 'average-ticket',
@@ -813,7 +813,7 @@ const statCards = computed(() => [
     positive: averageTicketGrowth.value >= 0,
     description: 'Montant moyen par vente.',
     icon: faChartLine,
-    iconBg: 'bg-emerald-100 text-emerald-600',
+    iconBg: 'bg-success-100 text-success-600',
   },
 ])
 

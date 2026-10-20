@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="ui-page-header">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
-        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <font-awesome-icon icon="fa-solid fa-key" class="text-indigo-500" />
+        <p class="ui-page-eyebrow">Administration</p>
+        <h1 class="ui-page-title mt-3 flex items-center gap-2">
+          <font-awesome-icon icon="fa-solid fa-key" class="text-primary-500" />
           Gestion des permissions
         </h1>
         <p class="mt-2 text-sm text-slate-500">
@@ -13,25 +13,25 @@
       </div>
       <router-link
         :to="{ name: 'dashboard-permissions-create' }"
-        class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+        class="ui-btn ui-btn-primary"
       >
         <font-awesome-icon icon="fa-solid fa-plus" />
         Nouvelle permission
       </router-link>
     </header>
 
-    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section class="ui-card">
       <div class="border-b border-slate-100 px-6 py-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="text-base font-semibold text-slate-800">Permissions disponibles</h2>
-          <span class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
+          <span class="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600">
             {{ permissions.length }} permission{{ permissions.length > 1 ? 's' : '' }}
           </span>
         </div>
       </div>
 
       <div v-if="loading" class="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-sm text-slate-500">
-        <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
+        <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-primary-500"></span>
         <div>
           <p class="font-semibold text-slate-700">Chargement des permissions…</p>
           <p class="text-xs text-slate-400">Veuillez patienter pendant le chargement des données.</p>
@@ -53,7 +53,7 @@
         </div>
         <router-link
           :to="{ name: 'dashboard-permissions-create' }"
-          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          class="ui-btn ui-btn-primary"
         >
           <font-awesome-icon icon="fa-solid fa-plus" />
           Créer une permission
@@ -64,7 +64,7 @@
         <article
           v-for="permission in permissions"
           :key="permission.id"
-          class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"
+          class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white/80 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md"
         >
           <div>
             <h3 class="text-base font-semibold text-slate-800">{{ permission.name }}</h3>
@@ -74,7 +74,7 @@
           <div class="mt-5 flex justify-end">
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+              class="inline-flex items-center gap-2 rounded-full border border-danger-200 bg-danger-50 px-3 py-1.5 text-xs font-semibold text-danger-600 transition hover:bg-danger-100"
               @click="deletePermission(permission.id)"
             >
               <font-awesome-icon icon="fa-solid fa-trash" />

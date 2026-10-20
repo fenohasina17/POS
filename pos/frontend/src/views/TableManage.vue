@@ -1,18 +1,18 @@
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="ui-page-header">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Point de Vente</p>
-        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <font-awesome-icon icon="fa-solid fa-table-cells" class="text-indigo-500" />
+        <p class="ui-page-eyebrow">Point de Vente</p>
+        <h1 class="ui-page-title mt-3 flex items-center gap-2">
+          <font-awesome-icon icon="fa-solid fa-table-cells" class="text-primary-500" />
           Gestion des Tables
         </h1>
         <p class="mt-2 text-sm text-slate-500">Gérez les tables de votre point de vente.</p>
       </div>
       <button
         @click="openCreateModal"
-        class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95"
+        class="ui-btn ui-btn-primary active:scale-95"
       >
         <font-awesome-icon icon="fa-solid fa-plus" />
         Nouvelle Table
@@ -21,7 +21,7 @@
 
     <!-- Statistics Cards -->
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
-      <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="ui-card p-5">
         <div class="flex items-center gap-3">
           <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100">
             <font-awesome-icon icon="fa-solid fa-table-cells" class="text-slate-600" />
@@ -32,43 +32,43 @@
           </div>
         </div>
       </div>
-      <div class="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
+      <div class="rounded-3xl border border-success-100 bg-success-50 p-5 shadow-sm">
         <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100">
-            <font-awesome-icon icon="fa-solid fa-circle-check" class="text-emerald-600" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-success-100">
+            <font-awesome-icon icon="fa-solid fa-circle-check" class="text-success-600" />
           </div>
           <div>
-            <p class="text-2xl font-bold text-emerald-700">{{ statistics.available_tables }}</p>
-            <p class="text-xs text-emerald-600">Disponibles</p>
+            <p class="text-2xl font-bold text-success-700">{{ statistics.available_tables }}</p>
+            <p class="text-xs text-success-600">Disponibles</p>
           </div>
         </div>
       </div>
-      <div class="rounded-3xl border border-rose-100 bg-rose-50 p-5 shadow-sm">
+      <div class="rounded-3xl border border-danger-100 bg-danger-50 p-5 shadow-sm">
         <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-100">
-            <font-awesome-icon icon="fa-solid fa-users" class="text-rose-600" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-danger-100">
+            <font-awesome-icon icon="fa-solid fa-users" class="text-danger-600" />
           </div>
           <div>
-            <p class="text-2xl font-bold text-rose-700">{{ statistics.occupied_tables }}</p>
-            <p class="text-xs text-rose-600">Occupées</p>
+            <p class="text-2xl font-bold text-danger-700">{{ statistics.occupied_tables }}</p>
+            <p class="text-xs text-danger-600">Occupées</p>
           </div>
         </div>
       </div>
-      <div class="rounded-3xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
+      <div class="rounded-3xl border border-primary-100 bg-primary-50 p-5 shadow-sm">
         <div class="flex items-center gap-3">
-          <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-100">
-            <font-awesome-icon icon="fa-solid fa-percent" class="text-indigo-600" />
+          <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-100">
+            <font-awesome-icon icon="fa-solid fa-percent" class="text-primary-600" />
           </div>
           <div>
-            <p class="text-2xl font-bold text-indigo-700">{{ statistics.occupancy_rate }}%</p>
-            <p class="text-xs text-indigo-600">Occupation</p>
+            <p class="text-2xl font-bold text-primary-700">{{ statistics.occupancy_rate }}%</p>
+            <p class="text-xs text-primary-600">Occupation</p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Filters -->
-    <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section class="ui-card p-5">
       <div class="flex flex-wrap items-center gap-3">
         <div class="relative flex-1 min-w-48">
           <font-awesome-icon icon="fa-solid fa-magnifying-glass" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
@@ -76,7 +76,7 @@
             v-model="searchQuery"
             type="text"
             placeholder="Rechercher par numéro ou nom..."
-            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            class="w-full rounded-2xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
           />
         </div>
         <div class="flex flex-wrap gap-2">
@@ -86,8 +86,8 @@
             @click="toggleStatusFilter(status.value)"
             class="inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-semibold transition"
             :class="activeFilters.includes(status.value)
-              ? 'bg-indigo-600 text-white shadow-sm'
-              : 'border border-slate-200 text-slate-600 hover:border-indigo-200 hover:text-indigo-600'"
+              ? 'bg-primary-600 text-white shadow-sm'
+              : 'border border-slate-200 text-slate-600 hover:border-primary-200 hover:text-primary-600'"
           >
             <font-awesome-icon :icon="status.faIcon" />
             {{ status.label }}
@@ -103,18 +103,18 @@
         :key="table.id"
         class="cursor-pointer rounded-3xl border bg-white shadow-sm transition hover:shadow-md"
         :class="{
-          'border-emerald-200': table.status === 'available',
-          'border-rose-200': table.status === 'occupied',
-          'border-amber-200': table.status === 'reserved',
+          'border-success-200': table.status === 'available',
+          'border-danger-200': table.status === 'occupied',
+          'border-warning-200': table.status === 'reserved',
           'border-slate-200': table.status === 'out_of_order',
         }"
         @click="selectTable(table)"
       >
         <div class="border-b px-4 py-3 flex items-center justify-between"
           :class="{
-            'border-emerald-100 bg-emerald-50/50': table.status === 'available',
-            'border-rose-100 bg-rose-50/50': table.status === 'occupied',
-            'border-amber-100 bg-amber-50/50': table.status === 'reserved',
+            'border-success-100 bg-success-50/50': table.status === 'available',
+            'border-danger-100 bg-danger-50/50': table.status === 'occupied',
+            'border-warning-100 bg-warning-50/50': table.status === 'reserved',
             'border-slate-100 bg-slate-50': table.status === 'out_of_order',
           }"
         >
@@ -122,9 +122,9 @@
           <span
             class="rounded-full px-2.5 py-1 text-xs font-semibold"
             :class="{
-              'bg-emerald-100 text-emerald-700': table.status === 'available',
-              'bg-rose-100 text-rose-700': table.status === 'occupied',
-              'bg-amber-100 text-amber-700': table.status === 'reserved',
+              'bg-success-100 text-success-700': table.status === 'available',
+              'bg-danger-100 text-danger-700': table.status === 'occupied',
+              'bg-warning-100 text-warning-700': table.status === 'reserved',
               'bg-slate-100 text-slate-600': table.status === 'out_of_order',
             }"
           >
@@ -151,19 +151,19 @@
             :value="table.status"
             :disabled="loading && loadingTableId === table.id"
             @change.stop="handleStatusChange(table, $event)"
-            class="flex-1 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:border-indigo-300 focus:outline-none"
+            class="flex-1 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-700 focus:border-primary-300 focus:outline-none"
           >
             <option v-for="s in statusFilters" :key="s.value" :value="s.value">{{ s.label }}</option>
           </select>
           <button
             @click.stop="editTable(table)"
-            class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-indigo-200 hover:text-indigo-600"
+            class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-primary-200 hover:text-primary-600"
           >
             <font-awesome-icon icon="fa-solid fa-pen" class="text-xs" />
           </button>
           <button
             @click.stop="deleteTable(table)"
-            class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:text-rose-600"
+            class="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-400 transition hover:border-danger-200 hover:text-danger-600"
           >
             <font-awesome-icon icon="fa-solid fa-trash" class="text-xs" />
           </button>
@@ -172,7 +172,7 @@
     </div>
 
     <!-- Empty State -->
-    <div v-if="filteredTables.length === 0" class="flex flex-col items-center justify-center rounded-3xl border border-slate-200 bg-white py-16 shadow-sm">
+    <div v-if="filteredTables.length === 0" class="ui-card flex flex-col items-center justify-center py-16">
       <div class="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100">
         <font-awesome-icon icon="fa-solid fa-table-cells" class="text-2xl text-slate-400" />
       </div>
@@ -180,7 +180,7 @@
       <p class="mt-1 text-sm text-slate-400">{{ getEmptyStateMessage() }}</p>
       <button
         @click="openCreateModal"
-        class="mt-6 inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+        class="ui-btn ui-btn-primary mt-6"
       >
         <font-awesome-icon icon="fa-solid fa-plus" />
         Créer une table
@@ -202,7 +202,7 @@
         <form @submit.prevent="saveTable" class="px-6 py-6">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="text-sm font-medium text-slate-600" for="table_number">Numéro <span class="text-rose-500">*</span></label>
+              <label class="text-sm font-medium text-slate-600" for="table_number">Numéro <span class="text-danger-500">*</span></label>
               <input
                 id="table_number"
                 v-model="form.table_number"
@@ -211,10 +211,10 @@
                 placeholder="Ex: T01"
                 class="mt-1 w-full rounded-2xl border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2"
                 :class="errors.table_number
-                  ? 'border-rose-300 focus:ring-rose-100'
-                  : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-200'"
+                  ? 'border-danger-300 focus:ring-danger-100'
+                  : 'border-slate-200 focus:border-primary-500 focus:ring-primary-200'"
               />
-              <p v-if="errors.table_number" class="mt-1 text-xs text-rose-600">{{ errors.table_number }}</p>
+              <p v-if="errors.table_number" class="mt-1 text-xs text-danger-600">{{ errors.table_number }}</p>
             </div>
 
             <div>
@@ -224,12 +224,12 @@
                 v-model="form.name"
                 type="text"
                 placeholder="Ex: Table terrasse"
-                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
 
             <div>
-              <label class="text-sm font-medium text-slate-600" for="capacity">Capacité <span class="text-rose-500">*</span></label>
+              <label class="text-sm font-medium text-slate-600" for="capacity">Capacité <span class="text-danger-500">*</span></label>
               <input
                 id="capacity"
                 v-model.number="form.capacity"
@@ -239,19 +239,19 @@
                 required
                 class="mt-1 w-full rounded-2xl border px-3 py-2.5 text-sm transition focus:outline-none focus:ring-2"
                 :class="errors.capacity
-                  ? 'border-rose-300 focus:ring-rose-100'
-                  : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-200'"
+                  ? 'border-danger-300 focus:ring-danger-100'
+                  : 'border-slate-200 focus:border-primary-500 focus:ring-primary-200'"
               />
-              <p v-if="errors.capacity" class="mt-1 text-xs text-rose-600">{{ errors.capacity }}</p>
+              <p v-if="errors.capacity" class="mt-1 text-xs text-danger-600">{{ errors.capacity }}</p>
             </div>
 
             <div>
-              <label class="text-sm font-medium text-slate-600" for="status">Statut <span class="text-rose-500">*</span></label>
+              <label class="text-sm font-medium text-slate-600" for="status">Statut <span class="text-danger-500">*</span></label>
               <select
                 id="status"
                 v-model="form.status"
                 required
-                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               >
                 <option value="available">Disponible</option>
                 <option value="occupied">Occupée</option>
@@ -268,7 +268,7 @@
               v-model="form.description"
               rows="3"
               placeholder="Description ou notes..."
-              class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              class="mt-1 w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
             ></textarea>
           </div>
 
@@ -280,14 +280,14 @@
                 type="number"
                 placeholder="Coordonnée X"
                 min="0"
-                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
               <input
                 v-model.number="form.location.y"
                 type="number"
                 placeholder="Coordonnée Y"
                 min="0"
-                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="rounded-2xl border border-slate-200 px-3 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
           </div>
@@ -296,14 +296,14 @@
             <button
               type="button"
               @click="closeModal"
-              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
             >
               Annuler
             </button>
             <button
               type="submit"
               :disabled="loading"
-              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+              class="ui-btn ui-btn-primary"
             >
               <font-awesome-icon v-if="loading" icon="fa-solid fa-spinner" class="animate-spin" />
               {{ isEditing ? 'Modifier' : 'Créer' }}
@@ -326,19 +326,19 @@
           <p class="text-sm text-slate-600">
             Êtes-vous sûr de vouloir supprimer la table <strong class="text-slate-800">{{ tableToDelete?.table_number }}</strong> ?
           </p>
-          <p class="mt-2 text-xs font-semibold text-rose-600">Cette action est irréversible.</p>
+          <p class="mt-2 text-xs font-semibold text-danger-600">Cette action est irréversible.</p>
         </div>
         <div class="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
           <button
             @click="closeDeleteModal"
-            class="inline-flex items-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+            class="inline-flex items-center rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
           >
             Annuler
           </button>
           <button
             @click="confirmDelete"
             :disabled="loading"
-            class="inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+            class="ui-btn ui-btn-danger-solid"
           >
             <font-awesome-icon v-if="loading" icon="fa-solid fa-spinner" class="animate-spin" />
             Supprimer

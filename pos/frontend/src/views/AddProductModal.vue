@@ -15,7 +15,7 @@
           </div>
           <button
             type="button"
-            class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:text-rose-500"
+            class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-danger-200 hover:text-danger-500"
             aria-label="Fermer"
             @click="closeModal"
           >
@@ -34,7 +34,7 @@
                   maxlength="255"
                   required
                   placeholder="Nom du produit"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
                 />
               </div>
               <div class="space-y-2">
@@ -45,7 +45,7 @@
                   maxlength="4"
                   required
                   placeholder="Ex: B001"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
                 />
                 <p class="text-xs text-slate-400">{{ localProduct.ref.length }}/4 caractères</p>
               </div>
@@ -61,7 +61,7 @@
                   step="0.01"
                   required
                   placeholder="0.00"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
                 />
               </div>
               <div class="space-y-2">
@@ -69,7 +69,7 @@
                 <select
                   v-model="localProduct.category_id"
                   required
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
                 >
                   <option :value="null" disabled>Choisir une catégorie</option>
                   <option v-for="category in categories" :key="category.id" :value="category.id">
@@ -87,7 +87,7 @@
               <label class="relative inline-flex cursor-pointer items-center">
                 <input type="checkbox" class="peer sr-only" v-model="localProduct.status" />
                 <span
-                  class="peer h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-indigo-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"
+                  class="peer h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-primary-500 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"
                 ></span>
               </label>
             </div>
@@ -113,17 +113,17 @@
                   <p>Formats acceptés : JPG, PNG (max 2 Mo)</p>
                   <button
                     type="button"
-                    class="font-semibold text-indigo-600 transition hover:text-indigo-700"
+                    class="font-semibold text-primary-600 transition hover:text-primary-700"
                     @click="triggerFileDialog"
                   >
                     Choisir une image
                   </button>
                 </div>
-                <p v-if="imageError" class="text-xs font-medium text-rose-500">{{ imageError }}</p>
+                <p v-if="imageError" class="text-xs font-medium text-danger-500">{{ imageError }}</p>
               </div>
             </div>
 
-            <p v-if="saveError" class="text-sm font-semibold text-rose-500">{{ saveError }}</p>
+            <p v-if="saveError" class="text-sm font-semibold text-danger-500">{{ saveError }}</p>
           </form>
         </section>
 
@@ -139,7 +139,7 @@
           <button
             type="submit"
             form="add-product-form"
-            class="w-full rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400 sm:w-auto"
+            class="ui-btn ui-btn-primary w-full sm:w-auto"
             :disabled="isSaving"
           >
             <span v-if="isSaving" class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>

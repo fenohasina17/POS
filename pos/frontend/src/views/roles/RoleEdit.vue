@@ -1,14 +1,14 @@
 <template>
   <div class="space-y-6">
     <header
-      class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8"
+      class="ui-card flex flex-wrap items-center justify-between gap-4 px-6 py-6 sm:px-8"
     >
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">
+        <p class="ui-page-eyebrow">
           Administration
         </p>
-        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <font-awesome-icon icon="fa-solid fa-user-gear" class="text-indigo-500" />
+        <h1 class="ui-page-title mt-3 flex items-center gap-2">
+          <font-awesome-icon icon="fa-solid fa-user-gear" class="text-primary-500" />
           Modifier le rôle
         </h1>
         <p class="mt-2 text-sm text-slate-500">
@@ -18,14 +18,14 @@
       <div class="flex flex-wrap items-center gap-2">
         <router-link
           :to="{ name: 'dashboard-roles' }"
-          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
         >
           <font-awesome-icon icon="fa-solid fa-arrow-left" />
           Retour
         </router-link>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+          class="inline-flex items-center gap-2 rounded-2xl border border-danger-200 bg-danger-50 px-4 py-2 text-sm font-semibold text-danger-600 transition hover:bg-danger-100 disabled:cursor-not-allowed disabled:opacity-60"
           @click="deleteRole"
           :disabled="isDeleting || role?.name === 'admin'"
         >
@@ -37,10 +37,10 @@
 
     <div
       v-if="loading"
-      class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500 shadow-sm"
+      class="ui-card flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-sm text-slate-500"
     >
       <span
-        class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"
+        class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-primary-500"
       ></span>
       <div>
         <p class="font-semibold text-slate-700">Chargement du rôle…</p>
@@ -53,7 +53,7 @@
     <div v-else class="space-y-6">
       <div
         v-if="error"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger-200 bg-danger-50 px-5 py-4 text-sm text-danger-600"
       >
         <div class="flex items-center gap-2">
           <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
@@ -61,7 +61,7 @@
         </div>
         <button
           type="button"
-          class="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-100"
+          class="rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-danger-600 transition hover:bg-danger-100"
           @click="error = null"
         >
           Fermer
@@ -69,7 +69,7 @@
       </div>
 
       <div v-if="role" class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <section class="space-y-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section class="ui-card space-y-6">
           <div class="border-b border-slate-100 px-6 py-4">
             <h2 class="text-base font-semibold text-slate-800">Informations du rôle</h2>
           </div>
@@ -85,14 +85,14 @@
                 <input
                   v-model="role.name"
                   type="text"
-                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pl-9 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-50"
+                  class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pl-9 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200 disabled:opacity-50"
                   :disabled="role.name === 'admin'"
                   placeholder="Nom du rôle"
                 />
               </div>
               <p
                 v-if="role.name === 'admin'"
-                class="flex items-center gap-2 text-xs font-semibold text-amber-500"
+                class="flex items-center gap-2 text-xs font-semibold text-warning-500"
               >
                 <font-awesome-icon icon="fa-solid fa-lock" />
                 Le rôle administrateur ne peut pas être renommé.
@@ -101,7 +101,7 @@
 
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              class="ui-btn ui-btn-primary"
               @click="updateRole"
               :disabled="isSaving || role.name === 'admin'"
             >
@@ -127,12 +127,12 @@
               <span
                 v-for="permission in role.permissions"
                 :key="permission.id"
-                class="inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/80 px-3 py-1 text-xs font-semibold text-indigo-600"
+                class="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50/80 px-3 py-1 text-xs font-semibold text-primary-600"
               >
                 <font-awesome-icon icon="fa-solid fa-shield-halved" /> {{ permission.name }}
                 <button
                   type="button"
-                  class="rounded-full border border-indigo-100 px-1 text-[11px] text-indigo-500 transition hover:bg-white"
+                  class="rounded-full border border-primary-100 px-1 text-[11px] text-primary-500 transition hover:bg-white"
                   @click="revokePermission(permission.id)"
                   :disabled="isRevoking"
                 >
@@ -150,7 +150,7 @@
           </div>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section class="ui-card">
           <div class="border-b border-slate-100 px-6 py-4">
             <h2 class="text-base font-semibold text-slate-800">Ajouter des permissions</h2>
             <p class="mt-1 text-xs text-slate-400">
@@ -167,13 +167,13 @@
                 <label
                   v-for="permission in availablePermissions"
                   :key="permission.id"
-                  class="flex items-center gap-3 rounded-2xl border border-transparent bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600"
+                  class="flex items-center gap-3 rounded-2xl border border-transparent bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-primary-200 hover:text-primary-600"
                 >
                   <input
                     v-model="selectedPermissions"
                     type="checkbox"
                     :value="permission.name"
-                    class="size-4 rounded border-slate-200 text-indigo-600 focus:ring-indigo-200"
+                    class="size-4 rounded border-slate-200 text-primary-600 focus:ring-primary-200"
                     :disabled="isAssigning"
                   />
                   <span class="truncate">{{ permission.name }}</span>
@@ -191,7 +191,7 @@
             <div class="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                class="ui-btn ui-btn-primary"
                 @click="assignPermissions"
                 :disabled="selectedPermissions.length === 0 || isAssigning"
               >
@@ -203,7 +203,7 @@
               </button>
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
+                class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
                 @click="clearSelection"
                 :disabled="selectedPermissions.length === 0 || isAssigning"
               >

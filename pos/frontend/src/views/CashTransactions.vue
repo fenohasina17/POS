@@ -3,7 +3,7 @@
     <Profile />
 
     <section class="page-section">
-      <div class="page-header">
+      <div class="ui-page-header">
         <div>
           <h1>Transactions de caisse</h1>
           <p class="subtitle">Consultez et corrigez les mouvements enregistrés pour chaque session.</p>

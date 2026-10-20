@@ -20,7 +20,7 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                 <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Chiffre d'Affaires</p>
-                <p class="text-lg font-black text-indigo-600">{{ formatPrice(kpis?.total_revenue || 0) }}</p>
+                <p class="text-lg font-black text-primary-600">{{ formatPrice(kpis?.total_revenue || 0) }}</p>
             </div>
             <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                 <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Panier Moyen</p>
@@ -30,9 +30,9 @@
                 <p class="text-[10px] font-black uppercase text-slate-400 mb-1">Total Ventes</p>
                 <p class="text-lg font-black text-slate-700">{{ kpis?.total_sales || 0 }}</p>
             </div>
-            <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4 shadow-sm">
-                <p class="text-[10px] font-black uppercase text-rose-400 mb-1">Remises & Cadeaux offerts</p>
-                <p class="text-lg font-black text-rose-600">{{ formatPrice(kpis?.total_discounts || 0) }}</p>
+            <div class="bg-danger-50 border border-danger-100 rounded-2xl p-4 shadow-sm">
+                <p class="text-[10px] font-black uppercase text-danger-400 mb-1">Remises & Cadeaux offerts</p>
+                <p class="text-lg font-black text-danger-600">{{ formatPrice(kpis?.total_discounts || 0) }}</p>
             </div>
         </div>
 
@@ -52,21 +52,21 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Tops -->
                 <div>
-                    <h4 class="text-xs font-bold text-emerald-600 mb-3 flex items-center gap-2">⭐ Best-Sellers (À promouvoir)</h4>
+                    <h4 class="text-xs font-bold text-success-600 mb-3 flex items-center gap-2">⭐ Best-Sellers (À promouvoir)</h4>
                     <div class="space-y-3">
                         <div v-for="prod in topProducts" :key="prod.name" class="flex justify-between items-center text-sm border-b border-slate-50 pb-1">
                             <span class="font-bold text-slate-700 truncate pr-2">{{ prod.name }}</span>
-                            <span class="font-black text-emerald-600 shrink-0">{{ prod.total_qty }}x</span>
+                            <span class="font-black text-success-600 shrink-0">{{ prod.total_qty }}x</span>
                         </div>
                     </div>
                 </div>
                 <!-- Flops -->
                 <div>
-                    <h4 class="text-xs font-bold text-rose-500 mb-3 flex items-center gap-2">📉 Flops (À retirer ou revoir)</h4>
+                    <h4 class="text-xs font-bold text-danger-500 mb-3 flex items-center gap-2">📉 Flops (À retirer ou revoir)</h4>
                     <div class="space-y-3">
                         <div v-for="prod in flopProducts" :key="prod.name" class="flex justify-between items-center text-sm border-b border-slate-50 pb-1">
                             <span class="font-bold text-slate-700 truncate pr-2">{{ prod.name }}</span>
-                            <span class="font-black text-rose-500 shrink-0">{{ prod.total_qty }}x</span>
+                            <span class="font-black text-danger-500 shrink-0">{{ prod.total_qty }}x</span>
                         </div>
                     </div>
                 </div>
@@ -80,7 +80,7 @@
               <div v-for="cashier in cashierPerformance" :key="cashier.name" class="border-b border-slate-50 pb-2">
                 <div class="flex justify-between items-center mb-1">
                     <span class="font-bold text-slate-800 text-sm">{{ cashier.name }}</span>
-                    <span class="font-black text-indigo-600 text-sm">{{ formatPrice(cashier.total_revenue) }}</span>
+                    <span class="font-black text-primary-600 text-sm">{{ formatPrice(cashier.total_revenue) }}</span>
                 </div>
                 <div class="text-[10px] font-bold text-slate-400 uppercase">
                     {{ cashier.total_sales }} ventes réalisées
@@ -148,8 +148,8 @@ const chartData = computed(() => ({
   datasets: [{
     label: 'Évolution CA',
     data: props.evolutionData?.map(d => d.total) || [],
-    borderColor: '#4f46e5',
-    backgroundColor: '#e0e7ff',
+    borderColor: '#d81f33',
+    backgroundColor: '#ffe1e1',
     tension: 0.4,
     fill: true
   }]

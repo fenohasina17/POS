@@ -3,7 +3,7 @@
     <header class="mb-6 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-4">
         <h1 class="text-xl font-semibold text-slate-900 flex items-center gap-2">
-          <FontAwesomeIcon :icon="faChartPie" class="text-indigo-600" />
+          <FontAwesomeIcon :icon="faChartPie" class="text-primary-600" />
           Monitoring Global
         </h1>
         <button
@@ -29,7 +29,7 @@
         </select>
         <input type="date" v-model="filters.start_date" @change="fetchData" class="rounded-2xl border-none bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 outline-none" />
         <input type="date" v-model="filters.end_date" @change="fetchData" class="rounded-2xl border-none bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 outline-none" />
-        <select v-if="filters.start_date && filters.start_date === filters.end_date" v-model="filters.time_granularity" @change="fetchData" class="rounded-2xl border-none bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 outline-none">
+        <select v-if="filters.start_date && filters.start_date === filters.end_date" v-model="filters.time_granularity" @change="fetchData" class="rounded-2xl border-none bg-primary-50 px-3 py-2 text-xs font-bold text-primary-700 outline-none">
           <option value="hour">Par Heure</option>
           <option value="minute">Par Minute</option>
         </select>
@@ -37,7 +37,7 @@
     </header>
 
     <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-4">
-      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
+      <div class="h-8 w-8 animate-spin rounded-full border-4 border-slate-100 border-t-primary-600"></div>
       <p class="text-sm text-slate-400">Chargement du monitoring...</p>
     </div>
 
@@ -45,7 +45,7 @@
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       <div v-for="section in monitoringData" :key="section.pos_name || section.label" 
            @click="openDetails(section)"
-           class="cursor-pointer bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-3 hover:border-indigo-200 transition">
+           class="cursor-pointer bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col gap-3 hover:border-primary-200 transition">
         
         <h2 class="text-xs font-black text-slate-800 border-b border-slate-50 pb-2 truncate">{{ section.pos_name || section.label }}</h2>
         
@@ -53,7 +53,7 @@
         <div class="grid grid-cols-3 gap-2 text-center">
           <div class="bg-slate-50 p-2 rounded-xl">
             <p class="text-[8px] font-black uppercase text-slate-400">CA</p>
-            <p class="text-xs font-black text-indigo-600 truncate">{{ formatPrice(section.data.kpis.total_revenue) }}</p>
+            <p class="text-xs font-black text-primary-600 truncate">{{ formatPrice(section.data.kpis.total_revenue) }}</p>
           </div>
           <div class="bg-slate-50 p-2 rounded-xl">
             <p class="text-[8px] font-black uppercase text-slate-400">Ventes</p>
@@ -61,7 +61,7 @@
           </div>
           <div class="bg-slate-50 p-2 rounded-xl">
             <p class="text-[8px] font-black uppercase text-slate-400">Ticket</p>
-            <p class="text-xs font-black text-emerald-600 truncate">{{ formatPrice(section.data.kpis.average_ticket) }}</p>
+            <p class="text-xs font-black text-success-600 truncate">{{ formatPrice(section.data.kpis.average_ticket) }}</p>
           </div>
         </div>
       </div>

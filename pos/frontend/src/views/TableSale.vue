@@ -51,7 +51,7 @@
               >
                 Total
               </p>
-              <p class="text-base font-black text-indigo-600">{{ formatPrice(displayTotal) }}</p>
+              <p class="text-base font-black text-primary-600">{{ formatPrice(displayTotal) }}</p>
             </div>
           </div>
 
@@ -65,7 +65,7 @@
           <button
             v-if="currentPendingOrder"
             @click="printBill"
-            class="flex items-center gap-2 rounded-xl bg-indigo-500 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-indigo-600 active:scale-95"
+            class="flex items-center gap-2 rounded-xl bg-primary-500 px-3 py-2 text-xs font-bold text-white transition-all hover:bg-primary-600 active:scale-95"
           >
             <FontAwesomeIcon icon="fa-solid fa-receipt" />
             <span>Imprimer l'Addition</span>
@@ -85,13 +85,13 @@
             <div class="relative w-full sm:max-w-[200px] group">
               <FontAwesomeIcon
                 icon="fa-solid fa-search"
-                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500 text-xs"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-primary-500 text-xs"
               />
               <input
                 type="text"
                 placeholder="Rechercher..."
                 v-model="searchQuery"
-                class="w-full rounded-xl border-none bg-slate-100/80 py-2 pl-9 pr-3 text-xs text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-indigo-500/20"
+                class="w-full rounded-xl border-none bg-slate-100/80 py-2 pl-9 pr-3 text-xs text-slate-700 shadow-inner outline-none transition-all focus:bg-white focus:ring-2 focus:ring-primary-500/20"
               />
             </div>
           </div>
@@ -115,8 +115,8 @@
               class="rounded-lg px-2 py-2 text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 border shadow-sm truncate"
               :class="
                 activeCategoryId === category.id
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100 ring-1 ring-indigo-500 ring-offset-1'
-                  : 'bg-white text-slate-600 border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30'
+                  ? 'bg-primary-600 text-white border-primary-600 shadow-primary-100 ring-1 ring-primary-500 ring-offset-1'
+                  : 'bg-white text-slate-600 border-slate-100 hover:border-primary-200 hover:bg-primary-50/30'
               "
               @click="activeCategoryId = category.id"
             >
@@ -129,7 +129,7 @@
         <div class="mt-4 flex-1 overflow-y-auto pr-2 scrollbar-thin">
           <div v-if="loadingProducts" class="flex h-64 items-center justify-center">
             <div
-              class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"
+              class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-primary-600"
             ></div>
           </div>
 
@@ -142,7 +142,7 @@
             <button
               v-for="product in filteredProducts"
               :key="product.id"
-              class="group relative flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-2 text-center transition-all duration-300 hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-100/30 active:scale-95 disabled:opacity-30 disabled:grayscale"
+              class="group relative flex flex-col items-center rounded-2xl border border-slate-100 bg-white p-2 text-center transition-all duration-300 hover:border-primary-100 hover:shadow-xl hover:shadow-primary-100/30 active:scale-95 disabled:opacity-30 disabled:grayscale"
               :disabled="isInteractionLocked"
               @click="addToCart(product)"
             >
@@ -160,7 +160,7 @@
                 </p>
                 <div class="pt-0.5">
                   <span
-                    class="inline-block rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-black text-indigo-600"
+                    class="inline-block rounded-md bg-primary-50 px-1.5 py-0.5 text-[10px] font-black text-primary-600"
                   >
                     {{ formatPrice(getProductPrice(product)) }}
                   </span>
@@ -176,16 +176,16 @@
         <!-- Commande en Attente -->
         <div
           v-if="currentPendingOrder"
-          class="rounded-[2rem] border border-amber-100 bg-amber-50/50 p-4 shadow-xl shadow-amber-900/5"
+          class="rounded-[2rem] border border-warning-100 bg-warning-50/50 p-4 shadow-xl shadow-warning-900/5"
         >
           <div class="mb-3 flex items-center justify-between">
             <h3
-              class="flex items-center gap-2 text-[10px] font-black text-amber-800 uppercase tracking-widest"
+              class="flex items-center gap-2 text-[10px] font-black text-warning-800 uppercase tracking-widest"
             >
               <FontAwesomeIcon icon="fa-solid fa-clock" />
               DÉJÀ COMMANDÉ
             </h3>
-            <span class="rounded-lg bg-amber-100 px-2 py-0.5 text-[9px] font-black text-amber-600">
+            <span class="rounded-lg bg-warning-100 px-2 py-0.5 text-[9px] font-black text-warning-600">
               #{{ currentPendingOrder.id }}
             </span>
           </div>
@@ -194,12 +194,12 @@
             <div
               v-for="line in currentPendingOrder.order_lines"
               :key="line.id"
-              class="flex items-center justify-between rounded-xl bg-white/60 p-2 border border-amber-100"
+              class="flex items-center justify-between rounded-xl bg-white/60 p-2 border border-warning-100"
             >
-              <span class="text-xs font-bold text-amber-900 leading-tight">
-                <span class="text-amber-500">{{ line.quantity }}x</span> {{ line.product?.name }}
+              <span class="text-xs font-bold text-warning-900 leading-tight">
+                <span class="text-warning-500">{{ line.quantity }}x</span> {{ line.product?.name }}
               </span>
-              <span class="text-xs font-black text-amber-700 whitespace-nowrap ml-2">
+              <span class="text-xs font-black text-warning-700 whitespace-nowrap ml-2">
                 {{ formatPrice(getLinePrice(line) * line.quantity) }}
               </span>
             </div>
@@ -220,7 +220,7 @@
             <button
               v-if="cart.length"
               @click="clearCart"
-              class="h-8 w-8 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-rose-500 transition-colors"
+              class="h-8 w-8 flex items-center justify-center rounded-xl bg-slate-50 text-slate-400 hover:text-danger-500 transition-colors"
             >
               <FontAwesomeIcon icon="fa-solid fa-trash" class="text-xs" />
             </button>
@@ -263,14 +263,14 @@
                 </div>
 
                 <div class="min-w-[65px] text-right">
-                  <span class="text-xs font-black text-indigo-600">{{
+                  <span class="text-xs font-black text-primary-600">{{
                     formatPrice(getItemTotal(item))
                   }}</span>
                 </div>
 
                 <button
                   @click="removeItem(item)"
-                  class="text-slate-300 hover:text-rose-500 transition-colors p-1"
+                  class="text-slate-300 hover:text-danger-500 transition-colors p-1"
                 >
                   <FontAwesomeIcon icon="fa-solid fa-xmark" class="text-[10px]" />
                 </button>
@@ -300,7 +300,7 @@
               <button
                 v-if="cart.length > 0 && !currentPendingOrder"
                 @click="holdOrder"
-                class="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-black text-white transition-all hover:bg-indigo-600 active:scale-95 shadow-xl shadow-slate-200"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-black text-white transition-all hover:bg-primary-600 active:scale-95 shadow-xl shadow-slate-200"
               >
                 <FontAwesomeIcon icon="fa-solid fa-receipt" />
                 ENVOYER EN CUISINE
@@ -309,7 +309,7 @@
               <button
                 v-if="currentPendingOrder && !isAddingToPending"
                 @click="beginAddToPending"
-                class="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-50 py-3 text-xs font-black text-indigo-600 border border-indigo-100 transition-all hover:bg-indigo-100 active:scale-95"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-50 py-3 text-xs font-black text-primary-600 border border-primary-100 transition-all hover:bg-primary-100 active:scale-95"
               >
                 <FontAwesomeIcon icon="fa-solid fa-plus" />
                 NOUVELLE TOURNÉE
@@ -319,7 +319,7 @@
                 v-if="currentPendingOrder && isAddingToPending"
                 @click="confirmAddToPending"
                 :disabled="!cart.length"
-                class="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-xs font-black text-white shadow-lg shadow-emerald-200 transition-all hover:bg-emerald-600 active:scale-95 disabled:opacity-30"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-success-500 py-3 text-xs font-black text-white shadow-lg shadow-success-200 transition-all hover:bg-success-600 active:scale-95 disabled:opacity-30"
               >
                 <FontAwesomeIcon icon="fa-solid fa-check" />
                 CONFIRMER L'AJOUT
@@ -328,7 +328,7 @@
               <button
                 v-if="cart.length > 0 || currentPendingOrder"
                 @click="openPaymentModalDirectly"
-                class="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3.5 text-xs font-black text-white shadow-xl shadow-indigo-100 transition-all hover:bg-indigo-500 active:scale-95"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 py-3.5 text-xs font-black text-white shadow-xl shadow-primary-100 transition-all hover:bg-primary-500 active:scale-95"
               >
                 <FontAwesomeIcon icon="fa-solid fa-check-circle" />
                 {{ currentPendingOrder ? 'ENCAISSER LA TABLE' : 'ENCAISSER DIRECT' }}
@@ -573,10 +573,10 @@ const getStatusText = (status) => {
 
 const statusBadgeClass = (status) => {
   const classes = {
-    available: 'bg-emerald-100 text-emerald-600',
-    occupied: 'bg-indigo-100 text-indigo-600',
-    reserved: 'bg-amber-100 text-amber-600',
-    out_of_order: 'bg-rose-100 text-rose-600',
+    available: 'bg-success-100 text-success-600',
+    occupied: 'bg-primary-100 text-primary-600',
+    reserved: 'bg-warning-100 text-warning-600',
+    out_of_order: 'bg-danger-100 text-danger-600',
   }
   return classes[status] || 'bg-slate-100 text-slate-400'
 }

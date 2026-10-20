@@ -1,37 +1,37 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="ui-page-header">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
-        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <font-awesome-icon icon="fa-solid fa-user-tag" class="text-indigo-500" />
+        <p class="ui-page-eyebrow">Administration</p>
+        <h1 class="ui-page-title mt-3 flex items-center gap-2">
+          <font-awesome-icon icon="fa-solid fa-user-tag" class="text-primary-500" />
           Créer un Rôle
         </h1>
         <p class="mt-2 text-sm text-slate-500">Définissez un nouveau rôle et assignez des permissions.</p>
       </div>
       <router-link
         :to="{ name: 'dashboard-roles' }"
-        class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+        class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
       >
         <font-awesome-icon icon="fa-solid fa-arrow-left" />
         Retour
       </router-link>
     </header>
 
-    <div v-if="error" class="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+    <div v-if="error" class="flex items-center gap-3 rounded-2xl border border-danger-200 bg-danger-50 px-5 py-4 text-sm text-danger-700">
       <font-awesome-icon icon="fa-solid fa-circle-exclamation" />
       {{ error }}
     </div>
 
     <form @submit.prevent="createRole" class="space-y-6">
-      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="ui-card">
         <div class="border-b border-slate-100 px-6 py-4">
           <h2 class="text-base font-semibold text-slate-800">Informations du rôle</h2>
         </div>
         <div class="px-6 py-6">
           <div>
             <label class="text-sm font-medium text-slate-600" for="role-name">
-              Nom du rôle <span class="text-rose-500">*</span>
+              Nom du rôle <span class="text-danger-500">*</span>
             </label>
             <input
               id="role-name"
@@ -42,25 +42,25 @@
               placeholder="Ex: Administrateur, Gérant, Modérateur"
               class="mt-1.5 w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:outline-none focus:ring-2"
               :class="nameError
-                ? 'border-rose-300 focus:border-rose-500 focus:ring-rose-100'
-                : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-200'"
+                ? 'border-danger-300 focus:border-danger-500 focus:ring-danger-100'
+                : 'border-slate-200 focus:border-primary-500 focus:ring-primary-200'"
             />
-            <p v-if="nameError" class="mt-1.5 text-xs text-rose-600">{{ nameError }}</p>
+            <p v-if="nameError" class="mt-1.5 text-xs text-danger-600">{{ nameError }}</p>
             <p class="mt-1.5 text-xs text-slate-400">Entre 3 et 50 caractères, unique dans le système.</p>
           </div>
         </div>
       </section>
 
-      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="ui-card">
         <div class="border-b border-slate-100 px-6 py-4">
           <h2 class="text-base font-semibold text-slate-800">Permissions</h2>
         </div>
         <div class="px-6 py-6">
           <div v-if="loadingPerms" class="flex items-center justify-center py-10 text-sm text-slate-500">
-            <font-awesome-icon icon="fa-solid fa-spinner" class="mr-2 animate-spin text-indigo-500" />
+            <font-awesome-icon icon="fa-solid fa-spinner" class="mr-2 animate-spin text-primary-500" />
             Chargement des permissions...
           </div>
-          <div v-else-if="permError" class="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+          <div v-else-if="permError" class="flex items-center gap-3 rounded-2xl border border-danger-200 bg-danger-50 px-5 py-4 text-sm text-danger-700">
             <font-awesome-icon icon="fa-solid fa-circle-exclamation" />
             {{ permError }}
           </div>
@@ -71,16 +71,16 @@
             <label
               v-for="permission in permissions"
               :key="permission.id"
-              class="flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition hover:border-indigo-200 hover:bg-indigo-50/50"
+              class="flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 transition hover:border-primary-200 hover:bg-primary-50/50"
               :class="selectedPermissions.includes(permission.name)
-                ? 'border-indigo-200 bg-indigo-50'
+                ? 'border-primary-200 bg-primary-50'
                 : 'border-slate-100'"
             >
               <input
                 type="checkbox"
                 :value="permission.name"
                 v-model="selectedPermissions"
-                class="h-4 w-4 rounded border-slate-200 text-indigo-600 focus:ring-indigo-500"
+                class="h-4 w-4 rounded border-slate-200 text-primary-600 focus:ring-primary-500"
               />
               <span class="text-sm text-slate-700">{{ permission.name }}</span>
             </label>
@@ -91,14 +91,14 @@
       <div class="flex items-center justify-end gap-3">
         <router-link
           :to="{ name: 'dashboard-roles' }"
-          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
         >
           Annuler
         </router-link>
         <button
           type="submit"
           :disabled="isCreating || !name.trim() || loadingPerms"
-          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+          class="ui-btn ui-btn-primary"
         >
           <font-awesome-icon v-if="isCreating" icon="fa-solid fa-spinner" class="animate-spin" />
           <font-awesome-icon v-else icon="fa-solid fa-plus" />

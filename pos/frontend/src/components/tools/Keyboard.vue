@@ -32,7 +32,7 @@
       <button
         v-for="n in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']"
         :key="n"
-        class="min-w-[45px] h-[45px] rounded-lg bg-slate-100 px-2 text-lg font-medium text-slate-800 transition hover:bg-indigo-600 hover:text-white"
+        class="min-w-[45px] h-[45px] rounded-lg bg-slate-100 px-2 text-lg font-medium text-slate-800 transition hover:bg-primary-600 hover:text-white"
         @click.stop="pressKey(n)"
       >
         {{ n }}
@@ -48,7 +48,7 @@
       <button
         v-for="key in row"
         :key="key"
-        class="min-w-[45px] h-[45px] rounded-lg bg-slate-100 px-2 text-lg font-medium text-slate-800 transition hover:bg-indigo-600 hover:text-white"
+        class="min-w-[45px] h-[45px] rounded-lg bg-slate-100 px-2 text-lg font-medium text-slate-800 transition hover:bg-primary-600 hover:text-white"
         @click.stop="pressKey(key)"
       >
         {{ formatKey(key) }}
@@ -57,7 +57,7 @@
 
     <!-- Dernière ligne -->
     <div class="flex flex-wrap justify-center gap-2">
-      <button class="min-w-[45px] h-[45px] rounded-lg bg-indigo-600 px-2 text-lg font-medium text-white transition hover:bg-indigo-700" @click.stop="toggleShift">⇧ Shift</button>
+      <button class="min-w-[45px] h-[45px] rounded-lg bg-primary-600 px-2 text-lg font-medium text-white transition hover:bg-primary-700" @click.stop="toggleShift">⇧ Shift</button>
       <button class="min-w-[45px] h-[45px] rounded-lg bg-yellow-500 px-2 text-lg font-medium text-black transition hover:bg-yellow-600" @click.stop="backspace">DELL</button>
       <button class="min-w-[100px] h-[45px] flex-grow rounded-lg bg-green-600 px-2 text-lg font-medium text-white transition hover:bg-green-700" @click.stop="pressKey(' ')">Espace</button>
     </div>

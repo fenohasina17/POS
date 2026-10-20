@@ -4,10 +4,10 @@
     <div class="modal-card relative z-10 w-full max-w-md overflow-hidden rounded-[2.5rem] border border-white bg-white p-8 shadow-2xl transition-all duration-300">
       <header class="mb-8 flex items-center justify-between">
         <div>
-          <p class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-500">Caisse</p>
+          <p class="text-[10px] font-black uppercase tracking-[0.3em] text-primary-500">Caisse</p>
           <h3 class="text-2xl font-black text-slate-800">{{ title }}</h3>
         </div>
-        <button @click="closeModal" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-500 active:scale-95">
+        <button @click="closeModal" class="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-400 transition-all hover:bg-danger-50 hover:text-danger-500 active:scale-95">
           <FontAwesomeIcon icon="fa-solid fa-xmark" />
         </button>
       </header>
@@ -19,7 +19,7 @@
             <input
               v-model="form.name"
               type="text"
-              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none"
+              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 transition-all focus:border-primary-500 focus:bg-white focus:outline-none"
               placeholder="Ex: Caisse Principale"
               required
             />
@@ -30,7 +30,7 @@
           <label class="text-xs font-black uppercase tracking-widest text-slate-400">Point de Vente</label>
           <select
             v-model="form.point_of_sale_id"
-            class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none"
+            class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-5 py-4 text-sm font-bold text-slate-700 transition-all focus:border-primary-500 focus:bg-white focus:outline-none"
             required
           >
             <option :value="null">Choisir un point de vente...</option>
@@ -40,7 +40,7 @@
           </select>
         </div>
 
-        <div v-if="error" class="rounded-2xl bg-rose-50 p-4 text-xs font-bold text-rose-500">
+        <div v-if="error" class="rounded-2xl bg-danger-50 p-4 text-xs font-bold text-danger-500">
           {{ error }}
         </div>
 
@@ -55,7 +55,7 @@
           <button
             type="submit"
             :disabled="loading"
-            class="flex-[2] rounded-2xl bg-slate-900 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-indigo-600 disabled:opacity-50 active:scale-95"
+            class="flex-[2] rounded-2xl bg-slate-900 py-4 text-sm font-black text-white shadow-xl shadow-slate-200 transition-all hover:bg-primary-600 disabled:opacity-50 active:scale-95"
           >
             <span v-if="!loading">{{ submitLabel }}</span>
             <span v-else class="flex items-center justify-center gap-2">

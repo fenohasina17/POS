@@ -2,17 +2,17 @@
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur">
     <!-- 🔒 OVERLAY DE VERROUILLAGE GLOBAL (Incontournable) -->
     <div v-if="isSessionBilleted" class="absolute inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-xl rounded-3xl">
-      <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-[2.5rem] shadow-2xl border-4 border-rose-500 scale-90 sm:scale-105">
-        <div class="h-24 w-24 rounded-full bg-rose-500 flex items-center justify-center text-white shadow-2xl animate-bounce">
+      <div class="flex flex-col items-center gap-6 p-10 bg-white rounded-[2.5rem] shadow-2xl border-4 border-danger-500 scale-90 sm:scale-105">
+        <div class="h-24 w-24 rounded-full bg-danger-500 flex items-center justify-center text-white shadow-2xl animate-bounce">
           <i class="fas fa-lock text-5xl"></i>
         </div>
         <div class="text-center">
           <h2 class="text-3xl font-black text-slate-900 uppercase tracking-tighter">Clôture Requise</h2>
-          <p class="text-lg font-bold text-rose-600 mt-2">Votre billetage a été validé.</p>
+          <p class="text-lg font-bold text-danger-600 mt-2">Votre billetage a été validé.</p>
           <p class="text-sm font-medium text-slate-500 mt-1 italic">Vous devez clôturer cette session avant toute autre action.</p>
         </div>
         <div class="flex flex-col w-full gap-3 mt-2">
-          <button @click="router.push({ name: 'dashboard-direct' })" class="w-full px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-xl hover:bg-indigo-700 transition-all transform active:scale-95">
+          <button @click="router.push({ name: 'dashboard-direct' })" class="w-full px-8 py-4 bg-primary-600 text-white rounded-2xl font-black shadow-xl hover:bg-primary-700 transition-all transform active:scale-95">
             RETOURNER À MA SESSION
           </button>
           <button @click="closeModal" class="w-full px-8 py-3 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-all">
@@ -27,7 +27,7 @@
       <!-- Header -->
       <header class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5 flex-shrink-0">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Connexion caisse</p>
+          <p class="ui-page-eyebrow">Connexion caisse</p>
           <h1 class="mt-2 text-2xl font-semibold text-slate-900">Choisir une caisse</h1>
           <p class="mt-1 text-sm text-slate-500">Sélectionnez la caisse que vous souhaitez utiliser</p>
         </div>
@@ -42,7 +42,7 @@
           </button>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-rose-200 hover:text-rose-600"
+            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-danger-200 hover:text-danger-600"
             @click="closeModal"
           >
             <i class="fas fa-xmark"></i> Fermer
@@ -54,7 +54,7 @@
       <div class="px-6 py-6 overflow-y-auto flex-grow">
 
         <!-- Message machine détectée -->
-        <div v-if="machineIdentifier" class="mb-6 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-600">
+        <div v-if="machineIdentifier" class="mb-6 rounded-2xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-600">
           <i class="fas fa-microchip mr-2"></i>
           Machine détectée : <strong>{{ machineIdentifier }}</strong>
           <span v-if="machineRegister"> → Caisse associée : {{ machineRegister.name }}</span>
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Message admin -->
-        <div v-if="isAdmin && !hasActiveSession" class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div v-if="isAdmin && !hasActiveSession" class="mb-6 rounded-2xl border border-warning-200 bg-warning-50 px-4 py-3 text-sm text-warning-700">
           <i class="fas fa-shield-alt mr-2"></i>
           Mode Administrateur : Vous pouvez superviser une caisse existante ou en créer une nouvelle.
         </div>
@@ -74,7 +74,7 @@
             <button
               v-if="debugMode"
               type="button"
-              class="text-xs text-indigo-500 underline"
+              class="text-xs text-primary-500 underline"
               @click="refreshAllStatuses"
             >
               🔄 Rafraîchir les statuts
@@ -83,7 +83,7 @@
 
           <div v-if="loadingRegisters" class="py-8 text-center text-slate-500">
             <div class="flex flex-col items-center gap-3">
-              <i class="fas fa-circle-notch animate-spin text-2xl text-indigo-500"></i>
+              <i class="fas fa-circle-notch animate-spin text-2xl text-primary-500"></i>
               <p class="text-sm font-medium">Chargement des caisses...</p>
             </div>
           </div>
@@ -92,13 +92,13 @@
             <!-- Barre de recherche moderne -->
             <div class="relative group">
               <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <i class="fas fa-search text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+                <i class="fas fa-search text-slate-400 group-focus-within:text-primary-500 transition-colors"></i>
               </div>
               <input
                 v-model="searchRegister"
                 type="text"
                 placeholder="Rechercher une caisse..."
-                class="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 py-3.5 text-sm transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 focus:outline-none shadow-sm"
+                class="w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 py-3.5 text-sm transition-all focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 focus:outline-none shadow-sm"
               />
             </div>
 
@@ -118,8 +118,8 @@
                 class="group relative flex flex-col p-5 bg-white rounded-[24px] border transition-all duration-300 shadow-sm hover:shadow-md active:scale-[0.98] w-[calc(50%-10px)]"
                 :class="[
                   selectedCashRegister === register.id 
-                    ? 'border-indigo-500 ring-2 ring-indigo-500/15 bg-indigo-50/30' 
-                    : 'border-slate-200 hover:border-indigo-200',
+                    ? 'border-primary-500 ring-2 ring-primary-500/15 bg-primary-50/30' 
+                    : 'border-slate-200 hover:border-primary-200',
                   (isRegisterLocked(register.id) && !isAdmin)
                     ? 'grayscale opacity-60 cursor-not-allowed bg-slate-50'
                     : 'cursor-pointer'
@@ -131,7 +131,7 @@
                 <div class="flex items-center justify-between w-full mb-3">
                   <div 
                     class="size-10 flex items-center justify-center rounded-xl transition-colors"
-                    :class="selectedCashRegister === register.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'"
+                    :class="selectedCashRegister === register.id ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-500'"
                   >
                     <i class="fas fa-desktop text-base"></i>
                   </div>
@@ -158,7 +158,7 @@
                 <!-- Badge Utilisateur (Style Compact Figma) -->
                 <div v-if="register.current_session?.user?.name" class="mt-auto pt-3 border-t border-slate-100 w-full">
                   <div class="flex items-center gap-2">
-                    <div class="size-5 rounded-full bg-indigo-100 flex items-center justify-center text-[9px] text-indigo-600 font-bold border border-indigo-200">
+                    <div class="size-5 rounded-full bg-primary-100 flex items-center justify-center text-[9px] text-primary-600 font-bold border border-primary-200">
                       {{ register.current_session.user.name.charAt(0) }}
                     </div>
                     <p class="text-[10px] font-medium text-slate-600 truncate">
@@ -181,11 +181,11 @@
           </div>
         </div>
 
-        <p v-if="isSelfConnected" class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-600">
+        <p v-if="isSelfConnected" class="mt-4 rounded-2xl border border-success-200 bg-success-50 px-4 py-3 text-sm font-semibold text-success-600">
           ✅ Caisse connectée : {{ activeSession?.cash_register?.name || connectedCashRegisterName }}
         </p>
 
-        <p v-if="isAdminVirtualSession" class="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-600">
+        <p v-if="isAdminVirtualSession" class="mt-4 rounded-2xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm font-semibold text-primary-600">
           👑 Mode supervision Admin - Session virtuelle active
         </p>
       </div>
@@ -194,14 +194,14 @@
       <div class="px-6 py-6 flex-shrink-0 border-t border-slate-100">
         <button
           type="button"
-          class="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          class="ui-btn ui-btn-primary w-full px-6 py-3.5"
           :disabled="connectButtonDisabled"
           @click="onConnectButtonClick"
         >
           <i class="fas fa-link"></i> {{ connectButtonText }}
         </button>
 
-        <div v-if="errorMessage" class="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-600">
+        <div v-if="errorMessage" class="mt-4 rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm font-semibold text-danger-600">
           {{ errorMessage }}
         </div>
       </div>
@@ -230,7 +230,7 @@
         <div v-if="summaryLoading" class="text-center py-8 text-slate-500">
           <i class="fas fa-spinner fa-spin mr-2"></i> Chargement...
         </div>
-        <div v-else-if="summaryError" class="text-center py-8 text-rose-500">
+        <div v-else-if="summaryError" class="text-center py-8 text-danger-500">
           {{ summaryError }}
         </div>
         <div v-else-if="sessionSummary" class="summary-content">
@@ -397,9 +397,9 @@ const connectButtonDisabled = computed(() => {
 
 const statusBadgeClass = (registerId) => {
   const text = statusBadgeText(registerId)
-  if (text?.includes('Erreur')) return 'bg-rose-100 text-rose-700'
-  if (text?.includes('Occupée (vous)')) return 'bg-indigo-50 text-indigo-700'
-  if (text?.includes('Occupée')) return 'bg-amber-100 text-amber-700'
+  if (text?.includes('Erreur')) return 'bg-danger-100 text-danger-700'
+  if (text?.includes('Occupée (vous)')) return 'bg-primary-50 text-primary-700'
+  if (text?.includes('Occupée')) return 'bg-warning-100 text-warning-700'
   return 'bg-green-100 text-green-700'
 }
 
@@ -874,18 +874,18 @@ onMounted(async () => {
 }
 
 .cash-register-card.selected {
-  border-color: #4f46e5 !important;
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%) !important;
+  border-color: theme('colors.primary.600') !important;
+  background: linear-gradient(135deg, theme('colors.primary.50') 0%, theme('colors.primary.100') 100%) !important;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25), 0 0 0 2px rgba(79, 70, 229, 0.1);
   transform: scale(1.02);
 }
 
 .cash-register-card.selected .text-slate-900 {
-  color: #1e1b4b !important;
+  color: theme('colors.primary.950') !important;
 }
 
 .cash-register-card.selected .bg-slate-100 {
-  background-color: #4f46e5 !important;
+  background-color: theme('colors.primary.600') !important;
   color: white !important;
 }
 
@@ -895,7 +895,7 @@ onMounted(async () => {
 
 /* Hover effect */
 .cash-register-card:hover:not(.selected):not(.opacity-60) {
-  border-color: #c7d2fe;
+  border-color: theme('colors.primary.200');
   background-color: #f8fafc;
   transform: translateY(-2px);
   box-shadow: 0 8px 20px -12px rgba(0, 0, 0, 0.15);
@@ -922,7 +922,7 @@ onMounted(async () => {
 
 /* Style de focus pour la recherche */
 input:focus {
-  border-color: #6366f1;
+  border-color: theme('colors.primary.500');
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
@@ -1065,7 +1065,7 @@ input:focus {
 
 .summary-action-primary {
   border: 1px solid transparent;
-  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  background: linear-gradient(135deg, theme('colors.primary.600') 0%, theme('colors.primary.700') 100%);
   color: #fff;
   box-shadow: 0 20px 36px -24px rgba(79, 70, 229, 0.8);
 }

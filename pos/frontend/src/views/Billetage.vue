@@ -3,11 +3,11 @@
     <div class="py-0 px-0">
       <section class="flex w-full flex-col gap-6">
         <!-- En-tête -->
-        <header class="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-lg">
+        <header class="ui-card p-6">
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.35em] text-rose-500">Sécurité caisse</p>
-              <h1 class="mt-2 text-3xl font-bold text-slate-900">Clôture de session</h1>
+              <p class="ui-page-eyebrow">Sécurité caisse</p>
+              <h1 class="ui-page-title mt-2">Clôture de session</h1>
               <p class="mt-2 max-w-3xl text-sm text-slate-500">
                 Comptez les espèces présentes dans la caisse. L’écart sera calculé automatiquement.
               </p>
@@ -15,7 +15,7 @@
             <div class="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
+                class="ui-btn ui-btn-secondary"
                 @click="resetForm"
                 :disabled="isSubmitting || isLoading"
               >
@@ -24,7 +24,7 @@
               <button
                 v-if="canShowBilletageButton"
                 type="button"
-                class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
+                class="ui-btn ui-btn-primary"
                 @click="showCashCount = true"
                 :disabled="!sessionId || sessionClosed || hasRecordedBilletage || pendingSalesCount > 0"
               >
@@ -37,7 +37,7 @@
         </header>
 
         <!-- Sélecteur de session -->
-        <div v-if="canSelectSession" class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div v-if="canSelectSession" class="ui-card p-4">
           <label class="block text-sm font-semibold text-slate-700">Session à traiter</label>
           <select v-model="selectedSessionId" @change="onSessionChange" class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm">
             <option v-for="sess in openSessions" :key="sess.id" :value="sess.id">
@@ -49,7 +49,7 @@
         <!-- Grille principale -->
         <div class="grid gap-6 xl:grid-cols-[1fr_420px_auto]">
           <!-- Récapitulatif -->
-          <section class="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-md">
+          <section class="ui-card min-w-0 p-4">
             <div class="mb-3 border-b border-slate-100 pb-3">
               <h2 class="text-lg font-semibold text-slate-900">Produits vendus</h2>
             </div>
@@ -63,22 +63,22 @@
                 <p class="text-xs font-semibold uppercase text-slate-400">Articles vendus</p>
                 <p class="mt-2 text-2xl font-bold text-slate-800">{{ sessionProductsCount }}</p>
               </div>
-              <div class="rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3">
-                <p class="text-xs font-semibold uppercase text-indigo-500">Produits distincts</p>
+              <div class="rounded-2xl border border-primary-200 bg-primary-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase text-primary-500">Produits distincts</p>
                 <p class="mt-2 text-2xl font-bold text-slate-800">{{ totalProductTypes }}</p>
               </div>
             </div>
           </section>
 
           <!-- Formulaire Billetage -->
-          <form class="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-md" @submit.prevent="submit">
+          <form class="ui-card space-y-6 p-6" @submit.prevent="submit">
             <div class="space-y-4">
               <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 class="text-lg font-semibold text-slate-900">Comptage des espèces</h2>
                 </div>
-                <span v-if="sessionClosed" class="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">Session clôturée</span>
-                <span v-else-if="hasRecordedBilletage" class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600">Billetage validé</span>
+                <span v-if="sessionClosed" class="rounded-full border border-warning-200 bg-warning-50 px-3 py-1 text-xs font-semibold text-warning-600">Session clôturée</span>
+                <span v-else-if="hasRecordedBilletage" class="rounded-full border border-success-200 bg-success-50 px-3 py-1 text-xs font-semibold text-success-600">Billetage validé</span>
               </div>
 
               <div v-if="showCashCount && sessionId && !sessionClosed && hasAnySale" class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -93,7 +93,7 @@
                     step="1"
                     :disabled="isSubmitting || isLoading || sessionClosed || hasRecordedBilletage || !canEditBilletage"
                     @focus="activeField = { type: 'denomination', value: denomination.value }"
-                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 disabled:opacity-60"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200 disabled:opacity-60"
                   />
                   <span class="text-right text-sm font-semibold text-slate-600">{{ formatCurrency(denominationTotal(denomination.value)) }}</span>
                 </div>
@@ -101,29 +101,29 @@
                 <!-- Total Récapitulatif -->
                 <div class="mt-4 flex items-center justify-between border-t border-slate-200 pt-4 px-2">
                   <p class="text-xs font-black uppercase tracking-widest text-slate-400">Total Espèces Comptées</p>
-                  <p class="text-xl font-black text-indigo-600">{{ formatCurrency(totalCounted) }}</p>
+                  <p class="text-xl font-black text-primary-600">{{ formatCurrency(totalCounted) }}</p>
                 </div>
               </div>
               
               <!-- Résultat -->
               <div v-if="validationAttempted || hasRecordedBilletage" class="rounded-2xl border p-5 shadow-sm"
-                   :class="varianceStatus === 'conforme' ? 'border-emerald-200 bg-emerald-50' : 'border-rose-200 bg-rose-50'">
+                   :class="varianceStatus === 'conforme' ? 'border-success-200 bg-success-50' : 'border-danger-200 bg-danger-50'">
                 <div class="flex items-start justify-between">
                   <div>
-                    <h3 class="text-lg font-bold" :class="varianceStatus === 'conforme' ? 'text-emerald-800' : 'text-rose-800'">
+                    <h3 class="text-lg font-bold" :class="varianceStatus === 'conforme' ? 'text-success-800' : 'text-danger-800'">
                       {{ varianceStatusLabel }}
                     </h3>
                   </div>
                   <div class="text-right">
-                    <p class="text-2xl font-black" :class="varianceStatus === 'conforme' ? 'text-emerald-700' : 'text-rose-700'">
+                    <p class="text-2xl font-black" :class="varianceStatus === 'conforme' ? 'text-success-700' : 'text-danger-700'">
                       {{ varianceAmount > 0 ? '+' : '' }}{{ formatCurrency(varianceAmount) }}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <p v-if="errorMessage" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-600">{{ errorMessage }}</p>
-              <p v-if="successMessage" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-600">{{ successMessage }}</p>
+              <p v-if="errorMessage" class="rounded-xl border border-danger-200 bg-danger-50 px-4 py-2 text-sm text-danger-600">{{ errorMessage }}</p>
+              <p v-if="successMessage" class="rounded-xl border border-success-200 bg-success-50 px-4 py-2 text-sm text-success-600">{{ successMessage }}</p>
             </div>
 
             <div class="flex flex-wrap justify-end gap-3 pt-2">
@@ -132,7 +132,7 @@
                 type="submit"
                 class="inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-md transition disabled:opacity-60"
                 :class="[
-                  sessionClosed ? 'bg-slate-400' : 'bg-indigo-600 hover:bg-indigo-700'
+                  sessionClosed ? 'bg-slate-400' : 'bg-primary-600 hover:bg-primary-700'
                 ]"
                 :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || hasRecordedBilletage || !showCashCount || !canEditBilletage || !hasAnySale"
               >
@@ -143,7 +143,7 @@
               <button
                 type="button"
                 @click="closeSession"
-                class="inline-flex items-center gap-2 rounded-xl bg-rose-100 px-5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-200 disabled:opacity-60"
+                class="ui-btn ui-btn-danger"
                 :disabled="isSubmitting || isLoading || !sessionId || sessionClosed || !canCloseSession || !hasRecordedBilletage"
               >
                 Clôturer la session
@@ -153,7 +153,7 @@
 
           <!-- Clavier numérique -->
           <aside class="hidden xl:block">
-            <div class="sticky top-24 space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-md">
+            <div class="ui-card sticky top-24 space-y-6 p-6">
               <NumericKeypad
                 :disabled="isKeypadDisabled"
                 @press="handleKeyPress"
