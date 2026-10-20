@@ -26,7 +26,8 @@ class PermissionSeeder extends Seeder
             'cash_transactions',
             'point_of_sales',
             'printers',
-            'pricing'
+            'pricing',
+            'sale_payments'
         ];
 
         // Create CRUD permissions for each table

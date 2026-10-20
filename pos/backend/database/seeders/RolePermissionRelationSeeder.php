@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\User;
+use App\Support\RolePermissions;
 
 class RolePermissionRelationSeeder extends Seeder
 {
@@ -34,36 +35,13 @@ class RolePermissionRelationSeeder extends Seeder
 
         // Assign specific permissions to gerant role
         if ($gerantRole) {
-            $gerantPermissions = $allPermissions->filter(function ($permission) {
-                return in_array($permission->name, [
-                    'view.sales', 'create.sales', 'update.sales',
-                    'view.cash_register_sessions', 'create.cash_register_sessions', 'update.cash_register_sessions',
-                    'view.order_lines', 'create.order_lines', 'update.order_lines',
-                    'view.payments', 'create.payments',
-                    'view.cash_registers',
-                    'view.cash_transactions',
-                    'view.products', 'view.categories',
-                    'view.tables', 'update.tables',
-                    'view.point_of_sales',
-                    'view.orderlines',
-                ]);
-            });
+            $gerantPermissions = $allPermissions->whereIn('name', RolePermissions::GERANT);
             $gerantRole->syncPermissions($gerantPermissions);
         }
 
         // Assign specific permissions to caissier role
         if ($caissierRole) {
-            $caissierPermissions = $allPermissions->filter(function ($permission) {
-                return in_array($permission->name, [
-                    'view.sales', 'create.sales',
-                    'view.cash_register_sessions', 'create.cash_register_sessions', 'update.cash_register_sessions',
-                    'view.order_lines', 'create.order_lines',
-                    'view.payments', 'create.payments',
-                    'view.cash_registers',
-                    'view.tables', 'update.tables',
-                    'view.products', 'view.categories',
-                ]);
-            });
+            $caissierPermissions = $allPermissions->whereIn('name', RolePermissions::CAISSIER);
             $caissierRole->syncPermissions($caissierPermissions);
         }
 
