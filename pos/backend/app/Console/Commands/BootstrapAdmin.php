@@ -9,6 +9,8 @@ use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Str;
+use App\Support\RolePermissions;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
 class BootstrapAdmin extends Command
@@ -39,14 +41,20 @@ class BootstrapAdmin extends Command
         (new RoleSeeder())->run();
         (new PermissionSeeder())->run();
 
-        // Le gérant marque juste la disponibilité d'un produit sur son point
-        // de vente — jamais le reste du catalogue (piloté depuis le Central).
-        // Accordé au rôle ici (pas via RolePermissionRelationSeeder, qui ne
-        // tourne jamais en production) pour que tout compte gérant créé
-        // ensuite localement en hérite automatiquement.
-        $managerRole = Role::where('name', 'gérant')->where('guard_name', 'api')->first();
-        if ($managerRole && ! $managerRole->hasPermissionTo('update.products.status')) {
-            $managerRole->givePermissionTo('update.products.status');
+        // Permissions des rôles caissier et gérant, accordées ici (pas via
+        // RolePermissionRelationSeeder, qui ne tourne jamais en production)
+        // pour que tout compte créé ensuite localement en hérite. Sans elles,
+        // un caissier ne peut ni ouvrir sa session ni vendre (403).
+        // Ajout seulement : une permission accordée à la main est conservée.
+        foreach (['caissier', 'gérant'] as $roleName) {
+            $role = Role::where('name', $roleName)->where('guard_name', 'api')->first();
+            if (! $role) {
+                continue;
+            }
+            $permissions = Permission::where('guard_name', 'api')
+                ->whereIn('name', RolePermissions::forRole($roleName))
+                ->get();
+            $role->givePermissionTo($permissions);
         }
 
         // Point de vente local, nommé d'après le code réel du restaurant

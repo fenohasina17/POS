@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
 
@@ -60,5 +61,36 @@ class BootstrapAdminCommandTest extends TestCase
 
         $admin = User::where('email', 'admin@igp.group')->firstOrFail();
         $this->assertTrue(Hash::check('NewPass456', $admin->password));
+    }
+
+    #[Test]
+    public function it_grants_cashier_and_manager_permissions()
+    {
+        $this->artisan('pos:bootstrap-admin', ['restaurant_id' => '101'])->assertSuccessful();
+
+        $caissier = Role::findByName('caissier', 'api');
+        foreach (['view.sales', 'create.sales', 'create.cash_register_sessions', 'update.cash_register_sessions', 'create.sale_payments'] as $permission) {
+            $this->assertTrue($caissier->hasPermissionTo($permission, 'api'), "caissier sans {$permission}");
+        }
+        // Pas de modification ni de suppression de vente pour le caissier
+        $this->assertFalse($caissier->hasPermissionTo('update.sales', 'api'));
+        $this->assertFalse($caissier->hasPermissionTo('delete.sales', 'api'));
+
+        $gerant = Role::findByName('gérant', 'api');
+        $this->assertTrue($gerant->hasPermissionTo('view.sales', 'api'));
+        $this->assertTrue($gerant->hasPermissionTo('update.products.status', 'api'));
+        // Catalogue piloté par le Central
+        $this->assertFalse($gerant->hasPermissionTo('update.products', 'api'));
+    }
+
+    #[Test]
+    public function rerunning_keeps_manually_granted_permissions()
+    {
+        $this->artisan('pos:bootstrap-admin', ['restaurant_id' => '101'])->assertSuccessful();
+        Role::findByName('caissier', 'api')->givePermissionTo('update.sales');
+
+        $this->artisan('pos:bootstrap-admin', ['restaurant_id' => '101'])->assertSuccessful();
+
+        $this->assertTrue(Role::findByName('caissier', 'api')->hasPermissionTo('update.sales', 'api'));
     }
 }
