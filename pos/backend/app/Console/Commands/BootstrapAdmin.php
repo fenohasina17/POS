@@ -3,8 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Models\CashRegister;
+use App\Models\Payment;
 use App\Models\PointOfSale;
 use App\Models\User;
+use Database\Seeders\PaymentSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Console\Command;
@@ -68,6 +70,14 @@ class BootstrapAdmin extends Command
             'point_of_sale_id' => $pos->id,
             'name'             => 'Caisse principale',
         ]);
+
+        // Modes de paiement par défaut (Espèce, TPE, Mobile Money...) — sans
+        // eux l'écran d'encaissement n'affiche aucun moyen de paiement et
+        // aucune vente ne peut être finalisée. Seulement sur une table vide :
+        // un mode renommé ou supprimé par l'admin ne réapparaît pas au rejeu.
+        if (Payment::count() === 0) {
+            (new PaymentSeeder())->run();
+        }
 
         // Compte admin — mot de passe en clair : le cast 'hashed' du modèle
         // User s'occupe du hachage. Le repasser dans bcrypt() ici le
