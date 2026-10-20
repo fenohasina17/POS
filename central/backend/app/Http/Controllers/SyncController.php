@@ -129,26 +129,25 @@ class SyncController extends Controller
                     'received_at'   => now(),
                 ];
 
+                // Seulement les champs présents dans l'envoi : un champ absent
+                // ne doit ni écraser une valeur déjà reçue par null (upsert),
+                // ni contourner la valeur par défaut de la colonne (insert).
                 foreach ($fields as $sourceKey => $destKey) {
-                    $row[$destKey] = $record[$sourceKey] ?? null;
+                    if (array_key_exists($sourceKey, $record)) {
+                        $row[$destKey] = $record[$sourceKey];
+                    }
                 }
 
-                // Upsert pour enrichir les noms dénormalisés sur les lignes existantes
-                if ($model === RemoteOrderLine::class) {
-                    $affected = $model::upsert(
-                        [$row],
-                        ['terminal_id', 'remote_id'],
-                        ['product_name', 'category_name']
-                    );
-                } elseif ($model === RemoteSale::class) {
-                    $affected = $model::upsert(
-                        [$row],
-                        ['terminal_id', 'remote_id'],
-                        ['seller_name', 'point_of_sale_name']
-                    );
-                } else {
-                    $affected = $model::insertOrIgnore([$row]);
-                }
+                // Upsert complet : la caisse est la source de vérité et renvoie
+                // un enregistrement à chaque modification (clôture de session,
+                // annulation de vente, total_sales recalculé...). Avec
+                // insertOrIgnore, seule la 1re version arrivait — une session
+                // clôturée restait « en cours » ici pour toujours.
+                $affected = $model::upsert(
+                    [$row],
+                    ['terminal_id', 'remote_id'],
+                    array_values(array_diff(array_keys($row), ['terminal_id', 'remote_id']))
+                );
                 $affected ? $inserted++ : $skipped++;
             }
         });

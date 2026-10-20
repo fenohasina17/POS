@@ -47,9 +47,7 @@ Route::get('/health', function (\Illuminate\Http\Request $request) {
     // Sync status
     $pendingSync = 0;
     try {
-        $pendingSync = \App\Models\Sale::whereNull('synced_at')->count()
-            + \App\Models\CashRegisterSession::whereNull('synced_at')->count()
-            + \App\Models\CashTransaction::whereNull('synced_at')->count();
+        $pendingSync = app(\App\Services\SyncService::class)->countPending();
     } catch (\Exception $e) {}
 
     $lastSync = null;
