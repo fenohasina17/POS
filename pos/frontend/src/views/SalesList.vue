@@ -389,10 +389,7 @@ const onSaleUpdated = async () => {
 const deleteSale = async (saleId) => {
   if (!confirm("Supprimer définitivement cette vente ?")) return
   try {
-    const auth = storage.getAuth()
-    await axios.delete(`${API_BASE_URL}/sales/${saleId}`, {
-      headers: { Authorization: `Bearer ${auth?.token}` }
-    })
+    await apiClient.delete(`/sales/${saleId}`)
     await loadSales()  // recharge après suppression
   } catch (err) {
     console.error(err)
