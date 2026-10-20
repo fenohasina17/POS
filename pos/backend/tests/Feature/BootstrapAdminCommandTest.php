@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -92,5 +93,26 @@ class BootstrapAdminCommandTest extends TestCase
         $this->artisan('pos:bootstrap-admin', ['restaurant_id' => '101'])->assertSuccessful();
 
         $this->assertTrue(Role::findByName('caissier', 'api')->hasPermissionTo('update.sales', 'api'));
+    }
+
+    #[Test]
+    public function it_creates_default_payment_methods_including_cash()
+    {
+        $this->artisan('pos:bootstrap-admin', ['restaurant_id' => '101'])->assertSuccessful();
+
+        // 'Espèce' : nom exact attendu par SaleService::isCashPayment()
+        $this->assertDatabaseHas('payments', ['name' => 'Espèce']);
+        $this->assertGreaterThan(1, Payment::count());
+    }
+
+    #[Test]
+    public function rerunning_does_not_recreate_payment_methods_removed_by_the_admin()
+    {
+        $this->artisan('pos:bootstrap-admin', ['restaurant_id' => '101'])->assertSuccessful();
+        Payment::where('name', 'Airtel Money')->delete();
+
+        $this->artisan('pos:bootstrap-admin', ['restaurant_id' => '101'])->assertSuccessful();
+
+        $this->assertDatabaseMissing('payments', ['name' => 'Airtel Money']);
     }
 }
