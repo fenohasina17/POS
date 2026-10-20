@@ -31,7 +31,7 @@ REVERB_APP_SECRET=$(openssl rand -hex 16)
 # Identité de la caisse et serveur central — surchargeables par variables
 # d'environnement, mêmes valeurs par défaut que install.sh en mode
 # non-interactif.
-CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-https://b9l1jctg-rjzjkvgqgpc.dynamic-m.com}"
+CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-https://central.igp.group}"
 CENTRAL_API_KEY="${CENTRAL_API_KEY:-}"
 RESTAURANT_ID="${RESTAURANT_ID:-restaurant-1}"
 TERMINAL_ID="${TERMINAL_ID:-pos-$(hostname)}"

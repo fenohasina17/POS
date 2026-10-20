@@ -22,20 +22,17 @@ REPO_URL="${REPO_URL:-https://github.com/fenohasina17/POS.git}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/pos}"
 APP_USER="${APP_USER:-pos}"
 
-# Le dépôt est chown vers $APP_USER après le clone (plus bas), donc root
-# (qui exécute tout ce script) n'en est plus "propriétaire" aux yeux de git
-# dès le 2e passage — refusé par sécurité (CVE-2022-24765) sans cette
-# exception explicite.
-git config --global --get-all safe.directory 2>/dev/null | grep -qx "$INSTALL_DIR" \
-    || git config --global --add safe.directory "$INSTALL_DIR"
-
 # Serveur central : une seule instance pour toute la chaîne, fixe — inutile
 # de la retaper à chaque caisse. Surchargeable via CENTRAL_SERVER_URL si un
 # jour plusieurs instances Central existent.
-CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-https://b9l1jctg-rjzjkvgqgpc.dynamic-m.com}"
+CENTRAL_SERVER_URL="${CENTRAL_SERVER_URL:-https://central.igp.group}"
 CENTRAL_API_KEY="${CENTRAL_API_KEY:-}"
 RESTAURANT_ID="${RESTAURANT_ID:-}"
 TERMINAL_ID="${TERMINAL_ID:-}"
+# Identifiants admin du central pour l'enrôlement (questions si interactif,
+# ou variables d'environnement en déploiement scripté)
+ENROLL_EMAIL="${ENROLL_EMAIL:-}"
+ENROLL_PASSWORD="${ENROLL_PASSWORD:-}"
 
 detect_server_ip() {
     ip route get 1.1.1.1 2>/dev/null \
@@ -65,11 +62,16 @@ if [[ -t 0 ]]; then
         TERMINAL_ID="pos-${RESTAURANT_ID}-${TERM_NUM:-1}"
     fi
     if [[ -z "$CENTRAL_API_KEY" ]]; then
-        # Affichée en clair volontairement : cette valeur se colle (longue
-        # chaîne hex), elle ne se tape pas de mémoire comme un mot de passe —
-        # la cacher empêche de vérifier le collage avant de valider, source
-        # d'erreurs découvertes seulement bien plus tard (sync qui échoue).
-        read -rp "Clé API du serveur central (Entrée = mode autonome, sans supervision) : " CENTRAL_API_KEY
+        # La clé API n'est plus collée à la main : un admin du siège
+        # s'identifie et la caisse la récupère auprès du central (après
+        # l'installation des dépendances, curl étant requis).
+        echo ""
+        info "Enrôlement auprès du central (${CENTRAL_SERVER_URL})"
+        [[ -z "$ENROLL_EMAIL" ]] && read -rp "Email d'un admin du central (Entrée = mode autonome, sans supervision) : " ENROLL_EMAIL
+        if [[ -n "$ENROLL_EMAIL" && -z "$ENROLL_PASSWORD" ]]; then
+            read -rsp "Mot de passe : " ENROLL_PASSWORD
+            echo ""
+        fi
     fi
 else
     # Mode non-interactif (CI, provisioning scripté) : valeurs par défaut
@@ -78,15 +80,52 @@ else
     TERMINAL_ID="${TERMINAL_ID:-pos-$(hostname)}"
 fi
 
-if [[ -z "$CENTRAL_API_KEY" ]]; then
-    warn "Aucune clé API — ce POS tournera en mode autonome (pas de supervision centrale)"
-fi
-
 # ── 1. Dépendances système ───────────────────────────────────
 step "Installation des dépendances système"
 apt-get update -qq
 apt-get install -y -qq ca-certificates curl gnupg lsb-release git openssl make > /dev/null
 log "Dépendances installées"
+
+# Le dépôt est chown vers $APP_USER après le clone (plus bas), donc root
+# (qui exécute tout ce script) n'en est plus "propriétaire" aux yeux de git
+# dès le 2e passage — refusé par sécurité (CVE-2022-24765) sans cette
+# exception explicite.
+git config --global --get-all safe.directory 2>/dev/null | grep -qx "$INSTALL_DIR" \
+    || git config --global --add safe.directory "$INSTALL_DIR"
+
+# ── Enrôlement auprès du central ─────────────────────────────
+json_escape() { local v=${1//\\/\\\\}; v=${v//\"/\\\"}; printf '%s' "$v"; }
+
+if [[ -z "$CENTRAL_API_KEY" && -n "${ENROLL_EMAIL:-}" ]]; then
+    step "Enrôlement auprès du central"
+    for attempt in 1 2 3; do
+        # Corps JSON passé sur stdin : le mot de passe n'apparaît jamais
+        # dans la liste des processus (ps), contrairement à curl -d '...'.
+        RESPONSE=$(printf '{"email":"%s","password":"%s","restaurant_id":"%s","terminal_id":"%s"}' \
+                "$(json_escape "$ENROLL_EMAIL")" "$(json_escape "$ENROLL_PASSWORD")" \
+                "$(json_escape "$RESTAURANT_ID")" "$(json_escape "$TERMINAL_ID")" \
+            | curl -sS -w '\n%{http_code}' -X POST \
+                -H 'Content-Type: application/json' -H 'Accept: application/json' \
+                --data @- "${CENTRAL_SERVER_URL}/api/terminals/enroll" 2>&1) || true
+        HTTP_CODE=${RESPONSE##*$'\n'}
+        BODY=${RESPONSE%$'\n'*}
+
+        if [[ "$HTTP_CODE" == "200" ]]; then
+            CENTRAL_API_KEY=$(sed -n 's/.*"api_key":"\([^"]*\)".*/\1/p' <<<"$BODY")
+            [[ -n "$CENTRAL_API_KEY" ]] && { log "Clé API récupérée auprès du central"; break; }
+        fi
+
+        warn "Enrôlement refusé (HTTP ${HTTP_CODE}) : $(sed -n 's/.*"message":"\([^"]*\)".*/\1/p' <<<"$BODY")"
+        [[ "$HTTP_CODE" != "401" || $attempt -eq 3 || ! -t 0 ]] && break
+        read -rsp "Mot de passe (nouvel essai ${attempt}/2) : " ENROLL_PASSWORD
+        echo ""
+    done
+    unset ENROLL_PASSWORD
+fi
+
+if [[ -z "$CENTRAL_API_KEY" ]]; then
+    warn "Aucune clé API — ce POS tournera en mode autonome (pas de supervision centrale)"
+fi
 
 # ── 2. Docker ────────────────────────────────────────────────
 step "Installation de Docker"

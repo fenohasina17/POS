@@ -16,6 +16,7 @@ use App\Http\Controllers\SessionsController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TerminalController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EnrollmentController;
 use App\Http\Middleware\ValidateCentralApiKey;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +45,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me',      [AuthController::class, 'me']);
 });
+
+// ── Enrôlement d'une nouvelle caisse (install.sh) ─────────────────────────────
+// Identifiants admin du siège → clé API partagée. Throttle strict : endpoint
+// public qui vérifie un mot de passe, cible naturelle du brute-force.
+Route::post('/terminals/enroll', [EnrollmentController::class, 'enroll'])
+    ->middleware('throttle:5,1');
 
 // ── Endpoints appelés par les terminaux POS ───────────────────────────────────
 // Authentifiés par la clé API partagée (CENTRAL_API_KEY)
