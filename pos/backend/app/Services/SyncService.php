@@ -85,10 +85,10 @@ class SyncService
     {
         $sent = 0;
 
-        Sale::with(['user:id,name', 'pointOfSale:id,name'])
-            ->whereNull('synced_at')
-            ->orderBy('id')
-            ->chunk(self::BATCH_SIZE, function ($records) use (&$sent) {
+        $readAt = $this->readAt();
+
+        $this->pending(Sale::with(['user:id,name', 'pointOfSale:id,name']))
+            ->chunkById(self::BATCH_SIZE, function ($records) use (&$sent, $readAt) {
                 $rows = $records->map(function ($sale) {
                     $arr = $sale->toArray();
                     $arr['seller_name']       = $sale->user?->name;
@@ -111,7 +111,7 @@ class SyncService
 
                 if ($response->successful()) {
                     $ids = $records->pluck('id')->all();
-                    Sale::whereIn('id', $ids)->update(['synced_at' => now()]);
+                    $this->markSynced(Sale::class, $ids, $readAt);
                     $sent += count($ids);
                 } else {
                     Log::warning('SyncService: échec batch sales', [
@@ -135,10 +135,10 @@ class SyncService
     {
         $sent = 0;
 
-        OrderLine::with(['product.category'])
-            ->whereNull('synced_at')
-            ->orderBy('id')
-            ->chunk(self::BATCH_SIZE, function ($records) use (&$sent) {
+        $readAt = $this->readAt();
+
+        $this->pending(OrderLine::with(['product.category']))
+            ->chunkById(self::BATCH_SIZE, function ($records) use (&$sent, $readAt) {
                 $rows = $records->map(function ($line) {
                     $arr = $line->toArray();
                     $arr['product_name']   = $line->product?->name;
@@ -161,7 +161,7 @@ class SyncService
 
                 if ($response->successful()) {
                     $ids = $records->pluck('id')->all();
-                    OrderLine::whereIn('id', $ids)->update(['synced_at' => now()]);
+                    $this->markSynced(OrderLine::class, $ids, $readAt);
                     $sent += count($ids);
                 } else {
                     Log::warning('SyncService: échec batch order_lines', [
@@ -178,15 +178,51 @@ class SyncService
     }
 
     /**
-     * Synchronise les enregistrements non encore envoyés d'un modèle donné.
+     * Enregistrements à envoyer : jamais synchronisés, OU modifiés depuis leur
+     * dernier envoi (clôture de session, total_sales mis à jour par une
+     * vente, annulation de vente...). Sans la 2e condition, seule la
+     * création atteignait le Central — une session y restait « en cours »
+     * pour toujours.
+     */
+    private function pending($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('synced_at')
+              ->orWhereColumn('updated_at', '>', 'synced_at');
+        });
+    }
+
+    /**
+     * Instant de lecture, pris AVANT la requête et reculé d'une seconde
+     * (timestamps à la seconde) : un enregistrement modifié pendant l'envoi
+     * garde updated_at > synced_at et repart au cycle suivant. Un renvoi en
+     * trop est sans conséquence, le Central fait un upsert.
+     */
+    private function readAt(): \Illuminate\Support\Carbon
+    {
+        return now()->subSecond();
+    }
+
+    /**
+     * toBase() : un update() Eloquent toucherait aussi updated_at, qui doit
+     * rester l'heure de la dernière vraie modification.
+     */
+    private function markSynced(string $modelClass, array $ids, $readAt): void
+    {
+        $modelClass::whereIn('id', $ids)->toBase()->update(['synced_at' => $readAt]);
+    }
+
+    /**
+     * Synchronise les enregistrements nouveaux ou modifiés d'un modèle donné.
      */
     private function syncModel($query, string $resource): int
     {
         $sent = 0;
 
-        $query->whereNull('synced_at')
-            ->orderBy('id')
-            ->chunk(self::BATCH_SIZE, function ($records) use ($resource, &$sent) {
+        $readAt = $this->readAt();
+
+        $this->pending($query)
+            ->chunkById(self::BATCH_SIZE, function ($records) use ($resource, &$sent, $readAt) {
                 $payload = [
                     'terminal_id'   => $this->terminalId,
                     'restaurant_id' => $this->restaurantId,
@@ -203,7 +239,7 @@ class SyncService
                 if ($response->successful()) {
                     // Marquer tous les enregistrements du batch comme synchronisés
                     $ids = $records->pluck('id')->all();
-                    $records->first()->getModel()::whereIn('id', $ids)->update(['synced_at' => now()]);
+                    $this->markSynced(get_class($records->first()), $ids, $readAt);
                     $sent += count($ids);
                 } else {
                     Log::warning("SyncService: échec batch {$resource}", [
@@ -249,10 +285,10 @@ class SyncService
      */
     public function countPending(): int
     {
-        return Sale::whereNull('synced_at')->count()
-            + CashRegisterSession::whereNull('synced_at')->count()
-            + CashTransaction::whereNull('synced_at')->count()
-            + OrderLine::whereNull('synced_at')->count()
-            + SalePayment::whereNull('synced_at')->count();
+        return $this->pending(Sale::query())->count()
+            + $this->pending(CashRegisterSession::query())->count()
+            + $this->pending(CashTransaction::query())->count()
+            + $this->pending(OrderLine::query())->count()
+            + $this->pending(SalePayment::query())->count();
     }
 }
