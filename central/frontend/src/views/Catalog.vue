@@ -27,6 +27,31 @@
     </p>
     <p v-if="importError" class="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{{ importError }}</p>
 
+    <!-- Règle de prix par catégorie -->
+    <div v-if="categories.length" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="mb-3">
+        <h2 class="text-sm font-black text-slate-900">Prix par catégorie</h2>
+        <p class="text-xs text-slate-400">
+          Prix fixe : imposé à toutes les caisses. Prix modifiable : chaque gérant peut l'ajuster pour son point de vente.
+        </p>
+      </div>
+      <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <label v-for="c in categories" :key="c.id"
+               class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2 hover:bg-slate-50">
+          <span class="text-sm font-semibold text-slate-700">{{ c.name }}</span>
+          <span class="flex items-center gap-2">
+            <span class="text-[10px] font-black uppercase tracking-wide"
+                  :class="c.price_editable ? 'text-emerald-600' : 'text-slate-400'">
+              {{ c.price_editable ? 'Modifiable' : 'Fixe' }}
+            </span>
+            <input type="checkbox" class="h-4 w-4 accent-indigo-600" :checked="c.price_editable"
+                   :disabled="togglingCategory === c.id" @change="togglePriceEditable(c)" />
+          </span>
+        </label>
+      </div>
+      <p v-if="categoryError" class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{{ categoryError }}</p>
+    </div>
+
     <!-- Recherche -->
     <div class="relative max-w-xs">
       <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
@@ -175,6 +200,9 @@ const importResult = ref(null)
 const importError  = ref('')
 const fileInput    = ref(null)
 
+const togglingCategory = ref(null)
+const categoryError    = ref('')
+
 const newCategoryName = ref('')
 const form = ref({ ref: '', name: '', category_id: '', price: 0, size: '' })
 
@@ -199,6 +227,19 @@ async function load() {
     categories.value = categoriesRes.data
   } finally {
     loading.value = false
+  }
+}
+
+async function togglePriceEditable(c) {
+  togglingCategory.value = c.id
+  categoryError.value = ''
+  try {
+    const res = await api.put(`/categories/${c.id}`, { price_editable: !c.price_editable })
+    c.price_editable = res.data.price_editable
+  } catch (e) {
+    categoryError.value = e.response?.data?.message ?? 'Impossible de modifier la règle de prix.'
+  } finally {
+    togglingCategory.value = null
   }
 }
 
