@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="ui-page-header">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Caisse</p>
-        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <font-awesome-icon icon="fa-solid fa-cash-register" class="text-indigo-500" />
+        <p class="ui-page-eyebrow">Caisse</p>
+        <h1 class="ui-page-title mt-3 flex items-center gap-2">
+          <font-awesome-icon icon="fa-solid fa-cash-register" class="text-primary-500" />
           Gestion des Caisses
         </h1>
         <p class="mt-2 text-sm text-slate-500">
@@ -14,7 +14,7 @@
       <div class="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
           @click="fetchRegisters"
           :disabled="loading"
         >
@@ -23,7 +23,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          class="ui-btn ui-btn-primary"
           @click="showCreateForm = !showCreateForm"
         >
           <font-awesome-icon icon="fa-solid fa-plus" />
@@ -36,14 +36,14 @@
     <section v-if="isAdmin || pointsOfSale.length > 1" class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div class="flex flex-wrap items-center gap-4">
         <div class="flex items-center gap-2 text-sm font-bold text-slate-600">
-          <font-awesome-icon icon="fa-solid fa-filter" class="text-indigo-500" />
+          <font-awesome-icon icon="fa-solid fa-filter" class="text-primary-500" />
           Filtrer par site :
         </div>
         <div class="flex flex-wrap gap-2">
           <button
             @click="selectedPosFilter = null"
             class="rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all"
-            :class="selectedPosFilter === null ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'"
+            :class="selectedPosFilter === null ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'"
           >
             Tous mes sites
           </button>
@@ -52,7 +52,7 @@
             :key="pos.id"
             @click="selectedPosFilter = pos.id"
             class="rounded-xl px-4 py-2 text-xs font-black uppercase tracking-widest transition-all"
-            :class="selectedPosFilter === pos.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'"
+            :class="selectedPosFilter === pos.id ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'"
           >
             {{ pos.name }}
           </button>
@@ -61,7 +61,7 @@
     </section>
 
     <!-- Alertes -->
-    <div v-if="errorMessage" class="flex items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600">
+    <div v-if="errorMessage" class="flex items-center justify-between gap-3 rounded-2xl border border-danger-200 bg-danger-50 px-5 py-4 text-sm text-danger-600">
       <div class="flex items-center gap-2">
         <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
         <span>{{ errorMessage }}</span>
@@ -69,7 +69,7 @@
       <button @click="errorMessage = ''" class="text-xs font-bold uppercase tracking-widest">Fermer</button>
     </div>
 
-    <div v-if="successMessage" class="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600">
+    <div v-if="successMessage" class="flex items-center justify-between gap-3 rounded-2xl border border-success-200 bg-success-50 px-5 py-4 text-sm text-success-600">
       <div class="flex items-center gap-2">
         <font-awesome-icon icon="fa-solid fa-circle-check" />
         <span>{{ successMessage }}</span>
@@ -78,7 +78,7 @@
     </div>
 
     <!-- Formulaire de Création -->
-    <section v-if="showCreateForm" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <section v-if="showCreateForm" class="ui-card overflow-hidden">
       <div class="border-b border-slate-100 bg-slate-50/50 px-6 py-4">
         <h2 class="text-base font-bold text-slate-800">Ajouter une caisse</h2>
         <p class="text-xs text-slate-500 font-medium">Configurez une nouvelle unité de vente sur un site.</p>
@@ -91,7 +91,7 @@
             <input
               v-model.trim="form.name"
               type="text"
-              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none"
+              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all focus:border-primary-500 focus:bg-white focus:outline-none"
               placeholder="Ex. Caisse 01"
               required
             />
@@ -101,7 +101,7 @@
             <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">Point de Vente</label>
             <select
               v-model="form.point_of_sale_id"
-              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all focus:border-indigo-500 focus:bg-white focus:outline-none"
+              class="w-full rounded-2xl border-2 border-slate-50 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 transition-all focus:border-primary-500 focus:bg-white focus:outline-none"
               required
             >
               <option :value="null">Choisir un point de vente...</option>
@@ -122,7 +122,7 @@
           <button type="button" @click="resetForm" class="rounded-xl px-6 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all">
             Annuler
           </button>
-          <button type="submit" :disabled="saving" class="rounded-xl bg-slate-900 px-8 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-slate-200 hover:bg-indigo-600 transition-all disabled:opacity-50">
+          <button type="submit" :disabled="saving" class="rounded-xl bg-slate-900 px-8 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-slate-200 hover:bg-primary-600 transition-all disabled:opacity-50">
             {{ saving ? 'Création...' : 'Créer la caisse' }}
           </button>
         </div>
@@ -130,7 +130,7 @@
     </section>
 
     <!-- Liste des Caisses -->
-    <section class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <section class="ui-card overflow-hidden">
       <div class="border-b border-slate-100 bg-slate-50/30 px-6 py-4">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-bold text-slate-800">Unités de vente enregistrées</h2>
@@ -141,7 +141,7 @@
       </div>
 
       <div v-if="loading" class="flex flex-col items-center justify-center py-16 text-slate-400">
-        <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-primary-600"></div>
         <p class="mt-4 text-xs font-bold uppercase tracking-widest">Récupération des données...</p>
       </div>
 
@@ -159,7 +159,7 @@
           class="group flex flex-wrap items-center justify-between gap-4 px-6 py-5 transition-all hover:bg-slate-50/50"
         >
           <div class="flex items-center gap-4">
-            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-indigo-500 shadow-sm border border-slate-100 group-hover:border-indigo-100 transition-all">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary-500 shadow-sm border border-slate-100 group-hover:border-primary-100 transition-all">
               <font-awesome-icon icon="fa-solid fa-cash-register" />
             </div>
             <div>
@@ -168,7 +168,7 @@
                 <!-- Badge Statut -->
                 <span 
                   v-if="register.current_session" 
-                  class="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-emerald-600 border border-emerald-100"
+                  class="rounded-full bg-success-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-tighter text-success-600 border border-success-100"
                 >
                   Ouverte
                 </span>
@@ -188,7 +188,7 @@
                 </div>
                 <div v-if="register.current_session" class="flex items-center gap-1.5">
                   <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Caissier :</span>
-                  <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                  <span class="text-[10px] font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-md">
                     {{ register.current_session.user?.name || 'Inconnu' }}
                   </span>
                 </div>
@@ -199,14 +199,14 @@
           <div class="flex items-center gap-2">
             <button
               @click="openEditModal(register)"
-              class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-md transition-all active:scale-95 shadow-sm"
+              class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-primary-600 hover:border-primary-100 hover:shadow-md transition-all active:scale-95 shadow-sm"
               title="Modifier"
             >
               <font-awesome-icon icon="fa-solid fa-pen" class="text-xs" />
             </button>
             <button
               @click="deleteRegister(register)"
-              class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-600 hover:border-rose-100 hover:shadow-md transition-all active:scale-95 shadow-sm"
+              class="flex h-9 w-9 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-danger-600 hover:border-danger-100 hover:shadow-md transition-all active:scale-95 shadow-sm"
               title="Supprimer"
             >
               <font-awesome-icon icon="fa-solid fa-trash" class="text-xs" />

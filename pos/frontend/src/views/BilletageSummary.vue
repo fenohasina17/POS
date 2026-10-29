@@ -26,7 +26,7 @@
         <!-- Produits vendus par catégorie -->
         <div class="space-y-4">
           <div v-for="cat in categorySummary" :key="cat.category_id" class="space-y-1">
-            <h3 class="text-[10px] font-black text-indigo-500 uppercase tracking-widest border-b border-indigo-100 pb-1">{{ cat.category_name }}</h3>
+            <h3 class="text-[10px] font-black text-primary-500 uppercase tracking-widest border-b border-primary-100 pb-1">{{ cat.category_name }}</h3>
             <div v-for="item in cat.products" :key="item.product_id" class="flex justify-between py-1 border-b border-dotted border-slate-100">
               <div class="text-sm font-bold">{{ item.product_name }} <span class="text-[10px] text-slate-400">x{{ item.quantity }}</span></div>
               <span class="text-sm font-black">{{ formatPrice(item.amount) }}</span>
@@ -52,7 +52,7 @@
               <span class="font-bold">Réel (Montant compté)</span>
               <span class="font-black">{{ sessionInfo?.actual_cash_amount || 0 }}</span>
             </div>
-            <div class="flex justify-between text-base font-black pt-2 mt-2" :class="variance >= 0 ? 'text-emerald-700' : 'text-rose-700'">
+            <div class="flex justify-between text-base font-black pt-2 mt-2" :class="variance >= 0 ? 'text-success-700' : 'text-danger-700'">
               <span>ÉCART</span>
               <span>{{ formatPrice(variance) }}</span>
             </div>
@@ -70,7 +70,7 @@
     <!-- Actions -->
     <div class="mx-auto max-w-2xl mt-8 flex gap-4 print:hidden">
       <button @click="goBack" class="flex-1 rounded-xl bg-slate-200 py-3 font-black text-slate-700">Retour</button>
-      <button @click="printSummary" class="flex-1 rounded-xl bg-indigo-600 py-3 font-black text-white shadow-lg">Imprimer (XPrinter)</button>
+      <button @click="printSummary" class="flex-1 rounded-xl bg-primary-600 py-3 font-black text-white shadow-lg">Imprimer (XPrinter)</button>
     </div>
   </div>
 </template>

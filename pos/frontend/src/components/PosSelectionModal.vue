@@ -12,9 +12,9 @@
             v-for="pos in pointsOfSale"
             :key="pos.id"
             @click="$emit('select', pos)"
-            class="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-200 bg-slate-50 transition-all hover:bg-indigo-600 hover:border-indigo-600 hover:shadow-lg text-center"
+            class="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-200 bg-slate-50 transition-all hover:bg-primary-600 hover:border-primary-600 hover:shadow-lg text-center"
           >
-            <div class="mb-2 p-2 rounded-full bg-white group-hover:bg-indigo-500/20 text-indigo-600 group-hover:text-white transition-colors">
+            <div class="mb-2 p-2 rounded-full bg-white group-hover:bg-primary-500/20 text-primary-600 group-hover:text-white transition-colors">
               <i class="fas fa-store text-lg"></i>
             </div>
             <span class="text-xs font-semibold text-slate-700 group-hover:text-white transition-colors truncate w-full px-1">

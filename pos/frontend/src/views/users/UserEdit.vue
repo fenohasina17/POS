@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-6">
-    <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+    <header class="ui-page-header">
       <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
-        <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-          <font-awesome-icon icon="fa-solid fa-user-pen" class="text-indigo-500" />
+        <p class="ui-page-eyebrow">Administration</p>
+        <h1 class="ui-page-title mt-3 flex items-center gap-2">
+          <font-awesome-icon icon="fa-solid fa-user-pen" class="text-primary-500" />
           Modifier l’utilisateur
         </h1>
         <p class="mt-2 text-sm text-slate-500">
@@ -14,14 +14,14 @@
       <div class="flex flex-wrap items-center gap-2">
         <router-link
           :to="{ name: 'dashboard-users' }"
-          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
         >
           <font-awesome-icon icon="fa-solid fa-arrow-left" />
           Retour
         </router-link>
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
           @click="resetForm"
           :disabled="loading"
         >
@@ -33,9 +33,9 @@
 
     <div
       v-if="loading"
-      class="flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-16 text-center text-sm text-slate-500 shadow-sm"
+      class="ui-card flex flex-col items-center justify-center gap-3 px-6 py-16 text-center text-sm text-slate-500"
     >
-      <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
+      <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-primary-500"></span>
       <div>
         <p class="font-semibold text-slate-700">Chargement de l’utilisateur…</p>
         <p class="text-xs text-slate-400">Nous récupérons les informations du profil.</p>
@@ -45,7 +45,7 @@
     <div v-else class="space-y-6">
       <div
         v-if="error"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-600"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger-200 bg-danger-50 px-5 py-4 text-sm text-danger-600"
       >
         <div class="flex items-center gap-2">
           <font-awesome-icon icon="fa-solid fa-triangle-exclamation" />
@@ -53,7 +53,7 @@
         </div>
         <button
           type="button"
-          class="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-100"
+          class="rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-danger-600 transition hover:bg-danger-100"
           @click="error = ''"
         >
           Fermer
@@ -62,7 +62,7 @@
 
       <div
         v-if="success"
-        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-600"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-success-200 bg-success-50 px-5 py-4 text-sm text-success-600"
       >
         <div class="flex items-center gap-2">
           <font-awesome-icon icon="fa-solid fa-circle-check" />
@@ -70,25 +70,25 @@
         </div>
         <button
           type="button"
-          class="rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600 transition hover:bg-emerald-100"
+          class="rounded-full border border-success-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-success-600 transition hover:bg-success-100"
           @click="success = ''"
         >
           Fermer
         </button>
       </div>
 
-      <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section class="ui-card">
         <div class="grid gap-6 px-6 py-6 sm:grid-cols-2">
           <div class="space-y-2">
             <label class="text-sm font-medium text-slate-600">Nom d’utilisateur</label>
             <input
               v-model="user.name"
               type="text"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               placeholder="Entrez le nom de l’utilisateur"
-              :class="{ 'border-rose-300': errors.name }"
+              :class="{ 'border-danger-300': errors.name }"
             />
-            <p v-if="errors.name" class="text-xs font-semibold text-rose-500">{{ errors.name }}</p>
+            <p v-if="errors.name" class="text-xs font-semibold text-danger-500">{{ errors.name }}</p>
           </div>
 
           <div class="space-y-2">
@@ -96,11 +96,11 @@
             <input
               v-model="user.email"
               type="email"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               placeholder="prenom.nom@entreprise.com"
-              :class="{ 'border-rose-300': errors.email }"
+              :class="{ 'border-danger-300': errors.email }"
             />
-            <p v-if="errors.email" class="text-xs font-semibold text-rose-500">{{ errors.email }}</p>
+            <p v-if="errors.email" class="text-xs font-semibold text-danger-500">{{ errors.email }}</p>
           </div>
 
           <div class="space-y-2">
@@ -108,11 +108,11 @@
             <input
               v-model="user.password"
               type="password"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               placeholder="Laisser vide pour ne pas changer"
-              :class="{ 'border-rose-300': errors.password }"
+              :class="{ 'border-danger-300': errors.password }"
             />
-            <p v-if="errors.password" class="text-xs font-semibold text-rose-500">{{ errors.password }}</p>
+            <p v-if="errors.password" class="text-xs font-semibold text-danger-500">{{ errors.password }}</p>
           </div>
 
           <div class="space-y-2">
@@ -120,11 +120,11 @@
             <input
               v-model="user.password_confirmation"
               type="password"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               placeholder="Confirmez le mot de passe"
-              :class="{ 'border-rose-300': errors.password_confirmation }"
+              :class="{ 'border-danger-300': errors.password_confirmation }"
             />
-            <p v-if="errors.password_confirmation" class="text-xs font-semibold text-rose-500">
+            <p v-if="errors.password_confirmation" class="text-xs font-semibold text-danger-500">
               {{ errors.password_confirmation }}
             </p>
           </div>
@@ -133,22 +133,22 @@
             <label class="text-sm font-medium text-slate-600">Rôle</label>
             <select
               v-model="user.role"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-              :class="{ 'border-rose-300': errors.role }"
+              class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
+              :class="{ 'border-danger-300': errors.role }"
             >
               <option value="">Sélectionner un rôle</option>
               <option v-for="role in roles" :key="role.id" :value="role.name">
                 {{ role.name }}
               </option>
             </select>
-            <p v-if="errors.role" class="text-xs font-semibold text-rose-500">{{ errors.role }}</p>
+            <p v-if="errors.role" class="text-xs font-semibold text-danger-500">{{ errors.role }}</p>
           </div>
 
           <!-- Section Points de Vente (Multi-sélection) -->
           <div class="space-y-3 sm:col-span-2">
             <label class="text-sm font-medium text-slate-600 flex items-center justify-between">
               <span>Points de vente autorisés</span>
-              <span class="text-[10px] uppercase font-black text-indigo-400">
+              <span class="text-[10px] uppercase font-black text-primary-400">
                 {{ user.point_of_sale_ids?.length || 0 }} sélectionné(s)
               </span>
             </label>
@@ -158,18 +158,18 @@
                 v-for="pos in pointsOfSale" 
                 :key="pos.id"
                 class="flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer bg-white"
-                :class="user.point_of_sale_ids?.includes(pos.id) ? 'border-indigo-200 bg-indigo-50/50 ring-2 ring-indigo-50' : 'border-slate-100 hover:border-slate-200'"
+                :class="user.point_of_sale_ids?.includes(pos.id) ? 'border-primary-200 bg-primary-50/50 ring-2 ring-primary-50' : 'border-slate-100 hover:border-slate-200'"
               >
                 <input 
                   type="checkbox" 
                   :value="pos.id" 
                   v-model="user.point_of_sale_ids"
-                  class="rounded border-slate-200 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                  class="rounded border-slate-200 text-primary-600 focus:ring-primary-500 h-4 w-4"
                 />
                 <span class="text-xs font-bold text-slate-700">{{ pos.name }}</span>
               </label>
             </div>
-            <p v-if="errors.point_of_sale_id" class="text-xs font-semibold text-rose-500">
+            <p v-if="errors.point_of_sale_id" class="text-xs font-semibold text-danger-500">
               {{ errors.point_of_sale_id }}
             </p>
           </div>
@@ -178,7 +178,7 @@
         <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            class="ui-btn ui-btn-primary"
             @click="updateUser"
             :disabled="loading || !isFormValid"
           >

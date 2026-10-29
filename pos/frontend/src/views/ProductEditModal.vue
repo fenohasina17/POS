@@ -3,7 +3,7 @@
   <div v-if="isOpen" class="fixed inset-0 z-50 flex items-center justify-center px-4 sm:px-6">
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="closeModal"></div>
     <div class="relative z-10 flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-2xl">
-      <header class="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 px-6 py-5 text-white">
+      <header class="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-primary-600 via-primary-500 to-primary-600 px-6 py-5 text-white">
         <div>
           <p class="text-xs uppercase tracking-[0.2em] text-white/80">Produits</p>
           <h2 class="text-2xl font-semibold leading-snug">Éditer le produit</h2>
@@ -22,7 +22,7 @@
         <div>
           <label class="mb-2 block text-sm font-semibold text-slate-700">Nom du produit</label>
           <input
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
             type="text"
             v-model="localProduct.name"
             maxlength="255"
@@ -34,7 +34,7 @@
         <div>
           <label class="mb-2 block text-sm font-semibold text-slate-700">Référence du produit</label>
           <input
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
             type="text"
             v-model="localProduct.ref"
             maxlength="255"
@@ -47,7 +47,7 @@
         <div>
           <label class="mb-2 block text-sm font-semibold text-slate-700">Prix</label>
           <input
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
             type="number"
             v-model.number="localProduct.price"
             min="0"
@@ -60,7 +60,7 @@
         <!-- Statut actif -->
         <div>
           <label class="inline-flex items-center gap-3 text-sm font-semibold text-slate-700">
-            <input type="checkbox" v-model="localProduct.status" class="size-4 rounded border-slate-200 text-indigo-600 focus:ring-2 focus:ring-indigo-200" />
+            <input type="checkbox" v-model="localProduct.status" class="size-4 rounded border-slate-200 text-primary-600 focus:ring-2 focus:ring-primary-200" />
             Actif
           </label>
         </div>
@@ -70,7 +70,7 @@
           <label class="mb-2 block text-sm font-semibold text-slate-700">Catégorie</label>
           <select
             v-model="localProduct.category_id"
-            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            class="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
           >
             <option :value="null" disabled>Choisir une catégorie</option>
             <option v-for="category in categories" :key="category.id" :value="category.id">
@@ -86,9 +86,9 @@
             type="file"
             accept="image/*"
             @change="onImageChange"
-            class="block w-full cursor-pointer text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-indigo-600 file:px-4 file:py-2 file:font-semibold file:text-white transition hover:file:bg-indigo-700"
+            class="block w-full cursor-pointer text-sm text-slate-600 file:mr-4 file:rounded-xl file:border-0 file:bg-primary-600 file:px-4 file:py-2 file:font-semibold file:text-white transition hover:file:bg-primary-700"
           />
-          <p v-if="imageError" class="mt-2 text-sm text-rose-500">{{ imageError }}</p>
+          <p v-if="imageError" class="mt-2 text-sm text-danger-500">{{ imageError }}</p>
           <figure class="mt-4 rounded-2xl border border-dashed border-slate-200 bg-white/80 p-4 text-center shadow-sm">
             <img :src="imageUrl" :alt="localProduct.name" class="mx-auto h-auto max-h-48 rounded-2xl object-contain shadow" loading="lazy" />
             <figcaption class="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -100,7 +100,7 @@
 
       <footer class="flex items-center justify-end gap-3 border-t border-slate-200 bg-white/90 px-6 py-4">
         <button
-          class="inline-flex items-center rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
+          class="ui-btn ui-btn-primary"
           :class="{ 'cursor-not-allowed': isSaving }"
           @click="saveProduct"
           :disabled="isSaving"
@@ -108,14 +108,14 @@
           Enregistrer
         </button>
         <button
-          class="inline-flex items-center rounded-2xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60"
+          class="ui-btn ui-btn-secondary"
           @click="closeModal"
           :disabled="isSaving"
         >
           Annuler
         </button>
       </footer>
-      <p v-if="saveError" class="px-6 pb-4 text-center text-sm font-semibold text-rose-600">{{ saveError }}</p>
+      <p v-if="saveError" class="px-6 pb-4 text-center text-sm font-semibold text-danger-600">{{ saveError }}</p>
     </div>
   </div>
 </template>

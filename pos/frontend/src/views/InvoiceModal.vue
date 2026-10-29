@@ -12,7 +12,7 @@
         </div>
         <button
           @click="closeModal"
-          class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-all hover:bg-rose-50 hover:text-rose-500 active:scale-95"
+          class="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition-all hover:bg-danger-50 hover:text-danger-500 active:scale-95"
         >
           <FontAwesomeIcon icon="fa-solid fa-times" class="text-xs" />
         </button>
@@ -24,24 +24,24 @@
         <!-- Colonne Gauche : Résumé & Paiement -->
         <div class="p-6 border-r border-slate-100 overflow-y-auto scrollbar-hide flex flex-col gap-4">
           <!-- En-tête Ticket -->
-          <div class="flex flex-col items-center text-center p-4 rounded-3xl bg-indigo-50 border border-indigo-100 shadow-sm">
-            <div class="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 shadow-inner">
+          <div class="flex flex-col items-center text-center p-4 rounded-3xl bg-primary-50 border border-primary-100 shadow-sm">
+            <div class="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 text-primary-600 shadow-inner">
               <FontAwesomeIcon icon="fa-solid fa-receipt" class="text-xl" />
             </div>
-            <p class="text-base font-black text-indigo-900 leading-tight">Ticket N°{{ invoiceNumber }}</p>
-            <p class="text-[10px] font-bold text-indigo-500 mt-1 uppercase tracking-widest">{{ currentDateTime }}</p>
+            <p class="text-base font-black text-primary-900 leading-tight">Ticket N°{{ invoiceNumber }}</p>
+            <p class="text-[10px] font-bold text-primary-500 mt-1 uppercase tracking-widest">{{ currentDateTime }}</p>
           </div>
 
           <!-- Infos Client & Paiement -->
           <div class="grid grid-cols-1 gap-3">
-            <div class="flex items-center justify-between rounded-2xl bg-white border border-slate-200 p-4 shadow-sm">
+            <div class="ui-card flex items-center justify-between p-4">
               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Client</p>
               <p class="text-xs font-black text-slate-800">{{ clientName || 'Client' }}</p>
             </div>
           </div>
 
           <!-- Règlement détaillé : Tous les paiements sans regroupement -->
-          <div v-if="payments?.length" class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+          <div v-if="payments?.length" class="ui-card p-4">
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Détails Règlement</p>
             <div class="space-y-3">
               <div v-for="(payment, index) in payments" :key="index" class="flex items-center justify-between text-xs border-b border-slate-50 pb-2 last:border-0 last:pb-0">
@@ -60,13 +60,13 @@
           <!-- Section Monnaie / Reste -->
           <div v-if="totalPaymentsAmount !== finalTotal"
                class="rounded-2xl p-4 border shadow-sm"
-               :class="totalPaymentsAmount > finalTotal ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'"
+               :class="totalPaymentsAmount > finalTotal ? 'bg-success-50 border-success-100' : 'bg-danger-50 border-danger-100'"
           >
             <div class="flex items-center justify-between text-sm">
-              <p class="font-black uppercase tracking-widest" :class="totalPaymentsAmount > finalTotal ? 'text-emerald-700' : 'text-rose-700'">
+              <p class="font-black uppercase tracking-widest" :class="totalPaymentsAmount > finalTotal ? 'text-success-700' : 'text-danger-700'">
                 {{ totalPaymentsAmount > finalTotal ? 'Rendu client' : 'Reste à payer' }}
               </p>
-              <p class="font-black" :class="totalPaymentsAmount > finalTotal ? 'text-emerald-800' : 'text-rose-800'">
+              <p class="font-black" :class="totalPaymentsAmount > finalTotal ? 'text-success-800' : 'text-danger-800'">
                 {{ formatPrice(Math.abs(totalPaymentsAmount - finalTotal)) }}
               </p>
             </div>
@@ -76,7 +76,7 @@
           <div class="mt-auto rounded-3xl bg-slate-50 border border-slate-100 p-6 shadow-sm">
             <div class="flex justify-between items-center mb-2">
               <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total payé</p>
-              <div class="px-2 py-0.5 rounded-lg bg-indigo-50 text-[8px] font-black text-indigo-600 uppercase tracking-widest">
+              <div class="px-2 py-0.5 rounded-lg bg-primary-50 text-[8px] font-black text-primary-600 uppercase tracking-widest">
                 {{ totalPaymentsAmount >= finalTotal ? 'PAYÉ' : 'PARTIEL' }}
               </div>
             </div>
@@ -93,14 +93,14 @@
           </h4>
 
           <div class="space-y-2 flex-1 overflow-y-auto pr-1">
-            <div v-for="(item, index) in groupedItems" :key="index" class="flex items-center justify-between rounded-xl bg-white p-3 border border-slate-100 shadow-sm transition-all hover:border-indigo-100">
+            <div v-for="(item, index) in groupedItems" :key="index" class="flex items-center justify-between rounded-xl bg-white p-3 border border-slate-100 shadow-sm transition-all hover:border-primary-100">
               <div class="flex-1 min-w-0 pr-2">
                 <p class="text-xs font-black text-slate-950 truncate leading-tight">{{ item.name }}</p>
                 <p class="text-sm font-medium text-slate-400 mt-0.5">
                   {{ item.quantity }} x {{ formatPrice(item.price) }}
                 </p>
               </div>
-              <p class="text-sm font-black text-indigo-600">
+              <p class="text-sm font-black text-primary-600">
                 {{ formatPrice(item.price * item.quantity) }}
               </p>
             </div>
@@ -117,7 +117,7 @@
       <div class="p-6 flex justify-center border-t border-slate-50 bg-white rounded-b-[2rem]">
         <button
           @click="printAndClose"
-          class="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-12 py-3 text-[10px] font-black text-white shadow-lg shadow-indigo-100 transition-all hover:bg-indigo-700 active:scale-95"
+          class="flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-12 py-3 text-[10px] font-black text-white shadow-lg shadow-primary-100 transition-all hover:bg-primary-700 active:scale-95"
         >
           <FontAwesomeIcon icon="fa-solid fa-print" class="text-xs" />
           IMPRIMER LE REÇU
@@ -128,7 +128,7 @@
       <div v-if="notification.show" class="fixed bottom-4 right-4 z-[200] animate-slide-up">
         <div :class="[
           'rounded-xl px-4 py-3 shadow-lg flex items-center gap-3',
-          notification.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+          notification.type === 'success' ? 'bg-success-500 text-white' : 'bg-danger-500 text-white'
         ]">
           <FontAwesomeIcon :icon="notification.type === 'success' ? 'fa-solid fa-check-circle' : 'fa-solid fa-exclamation-circle'" />
           <p class="text-sm font-medium">{{ notification.message }}</p>

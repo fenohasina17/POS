@@ -31,7 +31,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  background: linear-gradient(135deg, theme('colors.primary.700') 0%, theme('colors.primary.600') 100%);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -179,21 +179,21 @@
 }
 
 .solde-item .value.highlight {
-  color: #4f46e5;
+  color: theme('colors.primary.600');
   font-size: 1rem;
 }
 
 .solde-item .value.warning {
-  color: #d97706;
+  color: theme('colors.warning.600');
   font-size: 1rem;
 }
 
 .solde-item .value.success {
-  color: #10b981;
+  color: theme('colors.success.500');
 }
 
 .remaining-box {
-  background: #fef3c7;
+  background: theme('colors.warning.100');
   border-radius: 0.75rem;
   margin-top: 0.25rem;
   padding: 0.5rem 0.75rem;
@@ -223,7 +223,7 @@
 }
 
 .chip.active {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #ffffff;
 }
 
@@ -269,9 +269,9 @@
 }
 
 .toggle-installment.active {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #ffffff;
-  border-color: #4f46e5;
+  border-color: theme('colors.primary.600');
 }
 
 .installment-info {
@@ -343,7 +343,7 @@
 }
 
 .row-input:focus {
-  border-color: #4f46e5;
+  border-color: theme('colors.primary.600');
   outline: none;
   box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
@@ -366,19 +366,19 @@
 }
 
 .change-hint {
-  color: #ef4444;
+  color: theme('colors.danger.500');
   font-weight: 600;
 }
 
 .change-amount {
   font-size: 1rem;
   font-weight: 800;
-  color: #dc2626;
-  background: #fef2f2;
+  color: theme('colors.danger.600');
+  background: theme('colors.danger.50');
   padding: 0.25rem 0.6rem;
   border-radius: 0.5rem;
   display: inline-block;
-  border: 1px solid #fecaca;
+  border: 1px solid theme('colors.danger.200');
 }
 
 /* SECTION TITLE */
@@ -415,15 +415,15 @@
 }
 
 .method-btn:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
+  background: theme('colors.primary.50');
+  border-color: theme('colors.primary.200');
   transform: translateY(-2px);
 }
 
 .method-btn.active {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #ffffff;
-  border-color: #4f46e5;
+  border-color: theme('colors.primary.600');
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
@@ -466,7 +466,7 @@
 }
 
 .keypad-btn:hover:not(:disabled) {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #ffffff;
   transform: scale(1.02);
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
@@ -479,15 +479,15 @@
 }
 
 .keypad-btn.danger {
-  background: #fee2e2;
-  color: #ef4444;
-  border-color: #fecaca;
+  background: theme('colors.danger.100');
+  color: theme('colors.danger.500');
+  border-color: theme('colors.danger.200');
 }
 
 .keypad-btn.danger:hover:not(:disabled) {
-  background: #ef4444;
+  background: theme('colors.danger.500');
   color: #ffffff;
-  border-color: #ef4444;
+  border-color: theme('colors.danger.500');
 }
 
 /* BOUTON AJOUTER */
@@ -499,7 +499,7 @@
   padding: 0.75rem;
   border-radius: 0.75rem;
   border: none;
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #ffffff;
   font-weight: 600;
   cursor: pointer;
@@ -509,7 +509,7 @@
 }
 
 .add-payment-btn:hover:not(:disabled) {
-  background: #4338ca;
+  background: theme('colors.primary.700');
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
@@ -528,8 +528,8 @@
 
 .suggestion-btn {
   background: none;
-  border: 1px dashed #c7d2fe;
-  color: #4f46e5;
+  border: 1px dashed theme('colors.primary.200');
+  color: theme('colors.primary.600');
   padding: 0.4rem 0.8rem;
   border-radius: 9999px;
   font-size: 0.7rem;
@@ -539,7 +539,7 @@
 }
 
 .suggestion-btn:hover {
-  background: #eef2ff;
+  background: theme('colors.primary.50');
   border-style: solid;
 }
 
@@ -555,7 +555,7 @@
 }
 
 .badge {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: white;
   padding: 0.2rem 0.6rem;
   border-radius: 9999px;
@@ -605,7 +605,7 @@
 
 .payment-amount {
   font-weight: 700;
-  color: #10b981;
+  color: theme('colors.success.500');
   font-size: 0.8rem;
 }
 
@@ -615,13 +615,13 @@
   border-radius: 9999px;
   border: none;
   cursor: pointer;
-  background: #fee2e2;
-  color: #ef4444;
+  background: theme('colors.danger.100');
+  color: theme('colors.danger.500');
   transition: all 0.2s;
 }
 
 .icon.small:hover {
-  background: #fecaca;
+  background: theme('colors.danger.200');
   transform: scale(1.05);
 }
 
@@ -632,9 +632,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.6rem;
-  background: #ecfdf5;
+  background: theme('colors.success.50');
   border-radius: 0.75rem;
-  color: #059669;
+  color: theme('colors.success.600');
   font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid #a7f3d0;
@@ -678,13 +678,13 @@
 }
 
 .payment-footer .primary {
-  background: #4f46e5;
+  background: theme('colors.primary.600');
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 .payment-footer .primary:hover:not(:disabled) {
-  background: #4338ca;
+  background: theme('colors.primary.700');
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
 }
@@ -721,7 +721,7 @@
 
 .loading-spinner svg {
   font-size: 2rem;
-  color: #4f46e5;
+  color: theme('colors.primary.600');
 }
 
 /* FORMULAIRES */
@@ -748,7 +748,7 @@
 
 .reference-section input:focus,
 .notes-section input:focus {
-  border-color: #4f46e5;
+  border-color: theme('colors.primary.600');
   outline: none;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }

@@ -1,10 +1,10 @@
 <template>
   <div class="category-wrapper">
     <div class="category-layout grid gap-3 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]">
-      <aside class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <aside class="ui-card flex min-h-0 flex-col overflow-hidden p-3">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-semibold text-slate-800">Catégories</h2>
-          <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600">
+          <span class="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-600">
             {{ filteredCategories.length }}
           </span>
         </div>
@@ -13,7 +13,7 @@
           <div>
             <button
               type="button"
-              class="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+              class="ui-btn ui-btn-primary flex w-full"
               @click="openCreateModal"
             >
               <FontAwesomeIcon icon="fa-solid fa-plus" />
@@ -32,14 +32,14 @@
                 v-model.trim="searchQuery"
                 type="text"
                 placeholder="Rechercher une catégorie..."
-                class="w-full rounded-full border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-full border border-slate-200 bg-white py-2 pl-10 pr-3 text-sm text-slate-600 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
               />
             </div>
           </div>
         </div>
       </aside>
 
-      <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <section class="ui-card flex min-h-0 flex-col overflow-hidden p-3">
         <div class="flex items-center justify-between border-b border-slate-100 pb-2">
           <h1 class="text-base font-semibold text-slate-800">Gestion des catégories</h1>
           <span class="text-xs font-semibold text-slate-400">{{ filteredCategories.length }} résultat(s)</span>
@@ -50,7 +50,7 @@
             v-if="loading"
             class="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-10 text-center text-sm text-slate-500"
           >
-            <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
+            <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-primary-500"></span>
             <p class="mt-4 font-medium">Chargement des catégories...</p>
           </div>
 
@@ -67,7 +67,7 @@
                 <li
                   v-for="category in filteredCategories"
                   :key="category.id"
-                  class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-sm transition hover:border-indigo-200 hover:shadow-md"
+                  class="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-sm transition hover:border-primary-200 hover:shadow-md"
                 >
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex-1">
@@ -80,14 +80,14 @@
                     <div class="flex flex-col items-end gap-2">
                       <button
                         type="button"
-                        class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                        class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary-200 hover:text-primary-600"
                         @click.stop="openEditModal(category)"
                       >
                         <FontAwesomeIcon icon="fa-solid fa-pen" />
                       </button>
                       <button
                         type="button"
-                        class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-rose-500 transition hover:border-rose-200 hover:text-rose-600"
+                        class="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-danger-500 transition hover:border-danger-200 hover:text-danger-600"
                         @click.stop="confirmDelete(category)"
                       >
                         <FontAwesomeIcon icon="fa-solid fa-trash" />
@@ -118,7 +118,7 @@
           Êtes-vous sûr de vouloir supprimer la catégorie
           <strong class="text-slate-700">{{ categoryToDelete?.name }}</strong> ?
         </p>
-        <p class="mt-2 text-xs text-rose-500">
+        <p class="mt-2 text-xs text-danger-500">
           Cette action est irréversible et supprimera également tous les produits associés.
         </p>
         <div class="mt-6 flex justify-end gap-3">
@@ -132,7 +132,7 @@
           </button>
           <button
             type="button"
-            class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+            class="ui-btn ui-btn-danger-solid"
             @click="deleteCategory"
             :disabled="isDeleting"
           >

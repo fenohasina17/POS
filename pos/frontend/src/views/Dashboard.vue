@@ -66,7 +66,7 @@
                   :class="[
                     'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium transition',
                     isActive(item)
-                      ? 'bg-indigo-50 text-indigo-600'
+                      ? 'bg-primary-50 text-primary-600'
                       : 'text-slate-600 hover:bg-slate-100',
                     isSidebarCollapsed ? 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2' : '',
                   ]"
@@ -76,7 +76,7 @@
                     class="flex h-8 w-8 items-center justify-center rounded-lg"
                     :class="
                       isActive(item)
-                        ? 'bg-white text-indigo-600 shadow-sm'
+                        ? 'bg-white text-primary-600 shadow-sm'
                         : 'bg-slate-100 text-slate-500'
                     "
                   >
@@ -91,7 +91,7 @@
                     :icon="faChevronDown"
                     :class="[
                       'text-[10px] text-slate-400 transition-transform',
-                      isMenuExpanded(item) ? 'rotate-180 text-indigo-500' : '',
+                      isMenuExpanded(item) ? 'rotate-180 text-primary-500' : '',
                     ]"
                   />
                 </button>
@@ -107,7 +107,7 @@
                         :class="[
                           'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition',
                           isActive(child)
-                            ? 'bg-indigo-50 text-indigo-600'
+                            ? 'bg-primary-50 text-primary-600'
                             : 'text-slate-600 hover:bg-slate-100',
                         ]"
                         @click="handleNavigation(child)"
@@ -116,7 +116,7 @@
                           class="flex h-7 w-7 items-center justify-center rounded-md"
                           :class="
                             isActive(child)
-                              ? 'bg-white text-indigo-600 shadow-sm'
+                              ? 'bg-white text-primary-600 shadow-sm'
                               : 'bg-slate-100 text-slate-500'
                           "
                         >
@@ -147,7 +147,7 @@
           <div class="flex items-center gap-2">
             <button
               @click="toggleSidebar"
-              class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+              class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-primary-200 hover:text-primary-600"
               aria-label="Menu principal"
             >
               <FontAwesomeIcon :icon="faBars" class="text-sm" />
@@ -156,14 +156,14 @@
             <transition name="fade">
               <div
                 v-if="globalLoading"
-                class="flex items-center gap-1.5 rounded-full bg-indigo-50/50 px-2 py-1"
+                class="flex items-center gap-1.5 rounded-full bg-primary-50/50 px-2 py-1"
               >
-                <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500"></div>
+                <div class="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-500"></div>
                 <div
-                  class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.15s]"
+                  class="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-500 [animation-delay:-0.15s]"
                 ></div>
                 <div
-                  class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-500 [animation-delay:-0.3s]"
+                  class="h-1.5 w-1.5 animate-bounce rounded-full bg-primary-500 [animation-delay:-0.3s]"
                 ></div>
               </div>
             </transition>
@@ -172,15 +172,15 @@
           <!-- RIGHT: Notifications + User menu -->
           <div class="flex flex-1 items-center justify-end gap-2">
             <!-- Badge Site Actif -->
-            <div v-if="activePos" class="hidden sm:flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full mr-2">
-              <span class="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></span>
-              <span class="text-[10px] font-black text-indigo-700 uppercase tracking-tight">{{ activePos.name }}</span>
+            <div v-if="activePos" class="hidden sm:flex items-center gap-2 px-3 py-1 bg-primary-50 border border-primary-100 rounded-full mr-2">
+              <span class="flex h-2 w-2 rounded-full bg-primary-500 animate-pulse"></span>
+              <span class="text-[10px] font-black text-primary-700 uppercase tracking-tight">{{ activePos.name }}</span>
             </div>
 
             <div ref="notifRef" class="relative">
               <button
                 type="button"
-                class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                class="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-primary-200 hover:text-primary-600"
                 aria-label="Notifications"
                 aria-haspopup="true"
                 :aria-expanded="notifOpen"
@@ -222,7 +222,7 @@
             <div ref="userMenuRef" class="relative flex items-center">
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-left text-sm font-medium text-slate-600 shadow-sm transition hover:border-indigo-200 hover:text-indigo-600"
+                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 text-left text-sm font-medium text-slate-600 shadow-sm transition hover:border-primary-200 hover:text-primary-600"
                 @click="toggleUserMenu"
                 aria-haspopup="true"
                 :aria-expanded="userMenuOpen"
@@ -251,7 +251,7 @@
                 </div>
                 <button
                   @click="logout"
-                  class="w-full px-4 py-2 text-left text-xs text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
+                  class="w-full px-4 py-2 text-left text-xs text-slate-600 hover:bg-slate-50 hover:text-primary-600"
                 >
                   Déconnexion
                 </button>
@@ -270,7 +270,7 @@
             >
               <div class="relative flex h-20 w-20 items-center justify-center">
                 <div
-                  class="absolute inset-0 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"
+                  class="absolute inset-0 animate-spin rounded-full border-4 border-slate-100 border-t-primary-600"
                 ></div>
                 <img
                   src="../assets/logoigp.jpg"

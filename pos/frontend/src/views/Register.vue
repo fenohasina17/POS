@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-slate-100">
     <div class="mx-auto flex min-h-screen w-full max-w-6xl flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div class="grid w-full grid-cols-1 gap-8 rounded-3xl border border-slate-200 bg-white/90 shadow-2xl backdrop-blur lg:grid-cols-2">
-        <div class="flex flex-col justify-between rounded-3xl bg-gradient-to-br from-indigo-700 via-indigo-600 to-slate-900 p-8 text-white lg:p-12">
+        <div class="flex flex-col justify-between rounded-3xl bg-gradient-to-br from-primary-700 via-primary-600 to-slate-900 p-8 text-white lg:p-12">
           <div class="flex items-center gap-3">
             <img src="../assets/logoigp.jpg" alt="Logo International Gastronomy Pizza" class="h-14 w-auto rounded-xl bg-white/10 p-1 shadow" />
             <div>
@@ -44,7 +44,7 @@
 
         <div class="flex flex-col justify-center px-6 py-10 sm:px-10 lg:px-12">
           <div class="mb-10">
-            <p class="text-sm font-semibold uppercase tracking-[0.4em] text-indigo-500">Inscription</p>
+            <p class="ui-page-eyebrow">Inscription</p>
             <h2 class="mt-3 text-3xl font-semibold text-slate-900">Créer votre compte</h2>
             <p class="mt-2 text-sm text-slate-500">Renseignez vos informations pour rejoindre l'espace IGP POS.</p>
           </div>
@@ -57,7 +57,7 @@
                 v-model="name"
                 type="text"
                 placeholder="Prénom Nom"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
 
@@ -68,7 +68,7 @@
                 v-model="email"
                 type="email"
                 placeholder="prenom.nom@entreprise.com"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
 
@@ -79,7 +79,7 @@
                 v-model="password"
                 type="password"
                 placeholder="••••••••"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
 
@@ -90,24 +90,24 @@
                 v-model="passwordConfirmation"
                 type="password"
                 placeholder="••••••••"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-200"
               />
             </div>
 
             <button
               type="submit"
               :disabled="loading"
-              class="inline-flex w-full items-center justify-center rounded-2xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
+              class="ui-btn ui-btn-primary w-full px-6 py-3"
             >
               <i class="fas fa-user-plus mr-2"></i>
               {{ loading ? 'Création en cours...' : 'Créer mon compte' }}
             </button>
 
-            <p v-if="error" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+            <p v-if="error" class="rounded-2xl border border-danger-200 bg-danger-50 px-4 py-3 text-sm text-danger-600">
               {{ error }}
             </p>
 
-            <p v-if="success" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-600">
+            <p v-if="success" class="rounded-2xl border border-success-200 bg-success-50 px-4 py-3 text-sm text-success-600">
               {{ success }}
             </p>
           </form>
@@ -115,7 +115,7 @@
           <div class="mt-10 space-y-2 text-sm">
             <p class="text-slate-500">
               Déjà un compte ?
-              <router-link to="/" class="font-semibold text-indigo-600 hover:text-indigo-700">Se connecter</router-link>
+              <router-link to="/" class="font-semibold text-primary-600 hover:text-primary-700">Se connecter</router-link>
             </p>
             <p class="text-xs text-slate-400">
               En créant un compte, vous acceptez les conditions d'utilisation et la politique de confidentialité d'IGP POS.

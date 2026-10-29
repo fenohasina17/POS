@@ -1,3 +1,97 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Thème partagé de la caisse (rouge IGP + ardoise).
+ * Les couleurs nommées (primary, danger, success, warning) sont définies dans
+ * tailwind.config.js ; ces classes regroupent les motifs répétés des écrans.
+ */
+@layer components {
+  /* En-tête de page : sur-titre rouge, titre, sous-titre, actions à droite */
+  .ui-page-header {
+    @apply flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8;
+  }
+  .ui-page-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.3em] text-primary-600;
+  }
+  .ui-page-title {
+    @apply text-2xl font-semibold text-slate-900;
+  }
+  .ui-page-subtitle {
+    @apply text-sm text-slate-500;
+  }
+
+  /* Cartes */
+  .ui-card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+  .ui-card-muted {
+    @apply rounded-2xl border border-slate-200 bg-slate-50;
+  }
+
+  /* Boutons */
+  .ui-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .ui-btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .ui-btn-primary {
+    @apply bg-primary-600 text-white shadow-sm hover:bg-primary-700 focus-visible:ring-primary-500;
+  }
+  .ui-btn-secondary {
+    @apply border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-primary-200 hover:bg-primary-50 hover:text-primary-700 focus-visible:ring-primary-300;
+  }
+  .ui-btn-danger {
+    @apply border border-danger-200 bg-white text-danger-700 shadow-sm hover:border-danger-300 hover:bg-danger-50 focus-visible:ring-danger-400;
+  }
+  .ui-btn-danger-solid {
+    @apply bg-danger-600 text-white shadow-sm hover:bg-danger-700 focus-visible:ring-danger-500;
+  }
+  .ui-btn-success {
+    @apply bg-success-600 text-white shadow-sm hover:bg-success-700 focus-visible:ring-success-500;
+  }
+
+  /* Champs de saisie */
+  .ui-input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 transition focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100;
+  }
+  .ui-label {
+    @apply block text-sm font-semibold text-slate-700;
+  }
+
+  /* Badges */
+  .ui-badge {
+    @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .ui-badge-primary {
+    @apply border-primary-200 bg-primary-50 text-primary-700;
+  }
+  .ui-badge-success {
+    @apply border-success-200 bg-success-50 text-success-700;
+  }
+  .ui-badge-warning {
+    @apply border-warning-200 bg-warning-50 text-warning-700;
+  }
+  .ui-badge-danger {
+    @apply border-danger-200 bg-danger-50 text-danger-700;
+  }
+  .ui-badge-neutral {
+    @apply border-slate-200 bg-slate-100 text-slate-600;
+  }
+
+  /* Modales */
+  .ui-modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm;
+  }
+  .ui-modal-panel {
+    @apply relative w-full overflow-hidden rounded-2xl bg-white shadow-xl;
+  }
+  .ui-modal-header {
+    @apply flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4;
+  }
+  .ui-modal-title {
+    @apply text-lg font-bold text-slate-900;
+  }
+}

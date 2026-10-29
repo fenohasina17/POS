@@ -1,18 +1,18 @@
 <template>
   <div class="product-wrapper">
     <div class="product-layout grid gap-3 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)]">
-      <aside class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <aside class="ui-card flex min-h-0 flex-col overflow-hidden p-3">
         <div class="flex items-center justify-between">
           <h2 class="text-base font-semibold text-slate-800">Catégories</h2>
-          <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-600">
+          <span class="rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-600">
             {{ totalProducts }}
           </span>
         </div>
         <div class="mt-4 flex-1 overflow-y-auto space-y-2 pb-1">
           <button
             type="button"
-            class="flex w-full items-center justify-between rounded-2xl px-4 py-2 text-sm font-medium transition hover:bg-indigo-50"
-            :class="selectedCategory === null ? 'bg-indigo-500/10 text-indigo-600' : 'text-slate-600'"
+            class="flex w-full items-center justify-between rounded-2xl px-4 py-2 text-sm font-medium transition hover:bg-primary-50"
+            :class="selectedCategory === null ? 'bg-primary-500/10 text-primary-600' : 'text-slate-600'"
             @click="selectCategory(null)"
           >
             <span>Tous</span>
@@ -24,8 +24,8 @@
             v-for="cat in categories"
             :key="cat.id"
             type="button"
-            class="flex w-full items-center justify-between rounded-2xl px-4 py-2 text-sm font-medium transition hover:bg-indigo-50"
-            :class="selectedCategory === cat.id ? 'bg-indigo-500/10 text-indigo-600' : 'text-slate-600'"
+            class="flex w-full items-center justify-between rounded-2xl px-4 py-2 text-sm font-medium transition hover:bg-primary-50"
+            :class="selectedCategory === cat.id ? 'bg-primary-500/10 text-primary-600' : 'text-slate-600'"
             @click="selectCategory(cat.id)"
           >
             <span class="truncate">{{ cat.name }}</span>
@@ -36,7 +36,7 @@
         </div>
       </aside>
 
-      <section class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <section class="ui-card flex min-h-0 flex-col overflow-hidden p-3">
         <div class="flex flex-col gap-3 border-b border-slate-100 pb-2">
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div class="relative w-full md:max-w-sm">
@@ -47,14 +47,14 @@
                 v-model.trim="searchQuery"
                 type="text"
                 placeholder="Rechercher un produit..."
-                class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-600 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
               />
             </div>
             <div class="flex justify-end gap-2">
               <button
                 v-if="isAdmin"
                 type="button"
-                class="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                class="ui-btn ui-btn-primary rounded-full"
                 @click="openAddModal"
               >
                 <FontAwesomeIcon icon="fa-solid fa-plus" />
@@ -64,7 +64,7 @@
           </div>
         </div>
 
-        <div v-if="error" class="mt-2 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+        <div v-if="error" class="mt-2 rounded-2xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-600">
           {{ error }}
         </div>
 
@@ -73,7 +73,7 @@
             v-if="loading"
             class="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-10 text-center text-sm text-slate-500"
           >
-            <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-indigo-500"></span>
+            <span class="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-primary-500"></span>
             <p class="mt-4 font-medium">Chargement en cours...</p>
           </div>
 
@@ -107,7 +107,7 @@
                       <img
                         :src="getProductImage(product)"
                         :alt="product.name"
-                        class="h-12 w-12 flex-shrink-0 rounded-full object-cover ring-2 ring-indigo-50"
+                        class="h-12 w-12 flex-shrink-0 rounded-full object-cover ring-2 ring-primary-50"
                         loading="lazy"
                         @error="onProductImageError"
                       />
@@ -135,7 +135,7 @@
                       <button
                         v-if="isAdmin"
                         type="button"
-                        class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                        class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary-200 hover:text-primary-600"
                         @click.stop="openEditModal(product)"
                       >
                         <FontAwesomeIcon icon="fa-solid fa-pencil" />
@@ -143,7 +143,7 @@
                       <button
                         v-if="isAdmin"
                         type="button"
-                        class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-rose-500 transition hover:border-rose-200 hover:text-rose-600"
+                        class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-danger-500 transition hover:border-danger-200 hover:text-danger-600"
                         @click.stop="confirmDelete(product)"
                       >
                         <FontAwesomeIcon icon="fa-solid fa-trash" />
@@ -187,7 +187,7 @@
           </button>
           <button
             type="button"
-            class="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+            class="ui-btn ui-btn-danger-solid"
             @click="deleteProduct"
             :disabled="isDeleting"
           >
@@ -405,8 +405,8 @@ const deleteProduct = async () => {
 }
 const statusBadgeClass = (isActive) =>
   isActive
-    ? 'inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-600'
-    : 'inline-flex items-center rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-600'
+    ? 'inline-flex items-center rounded-full bg-success-50 px-3 py-1 text-xs font-semibold text-success-600'
+    : 'inline-flex items-center rounded-full bg-danger-50 px-3 py-1 text-xs font-semibold text-danger-600'
 </script>
 
 <style scoped>

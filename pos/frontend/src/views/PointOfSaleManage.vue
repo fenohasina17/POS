@@ -1,18 +1,18 @@
 <template>
   <div class="space-y-6">
     <div class="mx-auto max-w-6xl">
-      <header class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+      <header class="ui-page-header">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Administration</p>
-          <h1 class="mt-3 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-            <FontAwesomeIcon icon="fa-solid fa-store" class="text-indigo-500" />
+          <p class="ui-page-eyebrow">Administration</p>
+          <h1 class="ui-page-title mt-3 flex items-center gap-2">
+            <FontAwesomeIcon icon="fa-solid fa-store" class="text-primary-500" />
             Points de Vente
           </h1>
           <p class="mt-2 text-sm text-slate-500">Gérez vos sites et affectez vos collaborateurs.</p>
         </div>
         <button
           @click="openCreate"
-          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 active:scale-95"
+          class="ui-btn ui-btn-primary active:scale-95"
         >
           <FontAwesomeIcon icon="fa-solid fa-plus" />
           Nouveau site
@@ -21,7 +21,7 @@
 
       <!-- Liste des Points de Vente -->
       <div v-if="loading" class="flex h-64 items-center justify-center">
-        <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-indigo-600"></div>
+        <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-primary-600"></div>
       </div>
 
       <div v-else class="space-y-6">
@@ -33,7 +33,7 @@
           <!-- En-tête du POS -->
           <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-50 bg-slate-50/30 p-6">
             <div class="flex items-center gap-4">
-              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-indigo-500 shadow-sm">
+              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary-500 shadow-sm">
                 <FontAwesomeIcon icon="fa-solid fa-store" class="text-xl" />
               </div>
               <div>
@@ -43,10 +43,10 @@
             </div>
 
             <div class="flex items-center gap-2">
-              <button @click="editPointOfSale(pos)" class="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all active:scale-95 shadow-sm">
+              <button @click="editPointOfSale(pos)" class="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-primary-600 hover:border-primary-100 transition-all active:scale-95 shadow-sm">
                 <FontAwesomeIcon icon="fa-solid fa-pen" class="text-sm" />
               </button>
-              <button @click="deletePointOfSale(pos.id)" class="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-rose-600 hover:border-rose-100 transition-all active:scale-95 shadow-sm">
+              <button @click="deletePointOfSale(pos.id)" class="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-danger-600 hover:border-danger-100 transition-all active:scale-95 shadow-sm">
                 <FontAwesomeIcon icon="fa-solid fa-trash" class="text-sm" />
               </button>
             </div>
@@ -56,7 +56,7 @@
           <div class="p-6">
             <div class="mb-4 flex items-center justify-between">
               <h4 class="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                <FontAwesomeIcon icon="fa-solid fa-user-check" class="text-indigo-400" />
+                <FontAwesomeIcon icon="fa-solid fa-user-check" class="text-primary-400" />
                 Équipe Affectée
               </h4>
               <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-black text-slate-500">
@@ -71,14 +71,14 @@
                 :key="user.id"
                 class="group flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 py-2 pl-3 pr-2 transition-all hover:bg-white hover:shadow-md"
               >
-                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm group-hover:bg-indigo-50 group-hover:text-indigo-600">
+                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm group-hover:bg-primary-50 group-hover:text-primary-600">
                   <FontAwesomeIcon icon="fa-solid fa-user" class="text-xs" />
                 </div>
                 <div>
                   <p class="text-xs font-black text-slate-700">{{ user.name }}</p>
                   <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{{ user.email }}</p>
                 </div>
-                <button @click="deleteUserFromPos(user.id, pos.id)" class="ml-2 flex h-6 w-6 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all">
+                <button @click="deleteUserFromPos(user.id, pos.id)" class="ml-2 flex h-6 w-6 items-center justify-center rounded-lg text-slate-300 hover:bg-danger-50 hover:text-danger-500 transition-all">
                   <FontAwesomeIcon icon="fa-solid fa-xmark" class="text-[10px]" />
                 </button>
               </div>
@@ -89,12 +89,12 @@
             </div>
 
             <!-- Action : Ajouter un membre -->
-            <div class="flex flex-wrap items-center gap-3 rounded-[1.5rem] bg-indigo-50/50 p-4 border border-indigo-100/50">
-              <span class="text-[10px] font-black uppercase tracking-widest text-indigo-400">Affecter un nouveau membre :</span>
+            <div class="flex flex-wrap items-center gap-3 rounded-[1.5rem] bg-primary-50/50 p-4 border border-primary-100/50">
+              <span class="text-[10px] font-black uppercase tracking-widest text-primary-400">Affecter un nouveau membre :</span>
               <div class="flex-1 min-w-[200px]">
                 <select 
                   v-model="selectedUserForPos[pos.id]"
-                  class="w-full rounded-xl border-none bg-white py-2 px-4 text-xs font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-indigo-500/20"
+                  class="w-full rounded-xl border-none bg-white py-2 px-4 text-xs font-bold text-slate-700 shadow-sm focus:ring-2 focus:ring-primary-500/20"
                 >
                   <option :value="null">Choisir un utilisateur...</option>
                   <option v-for="user in getAvailableUsersForPos(pos)" :key="user.id" :value="user.id">
@@ -105,7 +105,7 @@
               <button 
                 @click="attachUserToPos(selectedUserForPos[pos.id], pos.id)"
                 :disabled="!selectedUserForPos[pos.id]"
-                class="flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2 text-xs font-black text-white transition-all hover:bg-indigo-700 disabled:opacity-30 active:scale-95 shadow-lg shadow-indigo-900/10"
+                class="flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2 text-xs font-black text-white transition-all hover:bg-primary-700 disabled:opacity-30 active:scale-95 shadow-lg shadow-primary-900/10"
               >
                 <FontAwesomeIcon icon="fa-solid fa-plus" />
                 ATTACHER

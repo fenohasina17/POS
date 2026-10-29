@@ -9,7 +9,7 @@
         <input
           v-model="localName"
           type="text"
-          class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-indigo-300 focus:outline-none focus:ring focus:ring-indigo-200"
+          class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary-300 focus:outline-none focus:ring focus:ring-primary-200"
           placeholder="Ex: Restaurant Centre"
           @keyup.enter="submit"
         />
@@ -24,7 +24,7 @@
         </button>
         <button
           type="button"
-          class="rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          class="ui-btn ui-btn-primary rounded-full"
           @click="submit"
         >
           {{ submitLabel }}

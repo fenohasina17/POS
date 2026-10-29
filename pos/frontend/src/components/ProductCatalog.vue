@@ -6,7 +6,7 @@
         v-model="searchQuery"
         type="text"
         placeholder="Rechercher un produit..."
-        class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none"
+        class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm focus:border-primary-500 focus:outline-none"
       />
     </div>
 
@@ -16,14 +16,14 @@
         v-for="product in filteredProducts"
         :key="product.id"
         @click="$emit('add', product)"
-        class="flex flex-col items-center p-4 rounded-2xl border border-slate-200 bg-white hover:border-indigo-500 hover:shadow-md transition-all"
+        class="flex flex-col items-center p-4 rounded-2xl border border-slate-200 bg-white hover:border-primary-500 hover:shadow-md transition-all"
       >
         <div class="w-16 h-16 mb-3 rounded-full bg-slate-100 flex items-center justify-center">
             <img v-if="product.image" :src="product.image" class="w-full h-full object-cover rounded-full" />
             <i v-else class="fas fa-pizza-slice text-slate-400"></i>
         </div>
         <p class="text-sm font-semibold text-slate-900 text-center truncate w-full">{{ product.name }}</p>
-        <p class="text-xs text-indigo-600 font-bold mt-1">{{ product.price }} Ar</p>
+        <p class="text-xs text-primary-600 font-bold mt-1">{{ product.price }} Ar</p>
       </button>
     </div>
   </div>

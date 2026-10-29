@@ -10,7 +10,7 @@
           </div>
           <button
             type="button"
-            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-rose-200 hover:text-rose-500"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition hover:border-danger-200 hover:text-danger-500"
             @click="close"
           >
             ×
@@ -24,7 +24,7 @@
               v-model.trim="category.name"
               type="text"
               placeholder="Nom de la catégorie"
-              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-600 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
               required
             />
           </div>
@@ -40,7 +40,7 @@
           </button>
           <button
             type="button"
-            class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-50"
+            class="ui-btn ui-btn-primary"
             @click="submit"
             :disabled="!category.name.trim()"
           >

@@ -8,7 +8,7 @@
     <div ref="modalRef" class="relative mx-4 w-full max-w-xl rounded-3xl border border-slate-200 bg-white shadow-2xl">
       <header class="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Fond de caisse</p>
+          <p class="ui-page-eyebrow">Fond de caisse</p>
           <h2 class="mt-2 text-lg font-semibold text-slate-900">Configurer le fond de caisse</h2>
           <p class="mt-1 text-sm text-slate-500">
             Renseignez le montant initial et le ticket de départ pour lancer la session.
@@ -16,7 +16,7 @@
         </div>
         <button
           type="button"
-          class="inline-flex size-9 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
+          class="inline-flex size-9 items-center justify-center rounded-2xl border border-slate-200 text-slate-500 transition hover:border-danger-200 hover:text-danger-600"
           @click="closeModal"
           aria-label="Fermer"
         >
@@ -34,9 +34,9 @@
             @focus="showKeyboard('amount', $event)"
             @input="validateAmount"
             placeholder="Montant"
-            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
           />
-          <p v-if="amountError" class="mt-1 text-sm font-medium text-rose-500">{{ amountError }}</p>
+          <p v-if="amountError" class="mt-1 text-sm font-medium text-danger-500">{{ amountError }}</p>
         </div>
 
         <div>
@@ -47,7 +47,7 @@
               v-model.number="ticketNumber"
               @change="validateTicketNumber"
               @focus="hideKeyboard"
-              class="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+              class="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
             >
               <option value="">Sélectionnez un numéro</option>
               <option v-for="num in ticketNumbers" :key="num" :value="num">
@@ -58,7 +58,7 @@
               <i class="fas fa-chevron-down text-xs"></i>
             </span>
           </div>
-          <p v-if="ticketError" class="mt-1 text-sm font-medium text-rose-500">{{ ticketError }}</p>
+          <p v-if="ticketError" class="mt-1 text-sm font-medium text-danger-500">{{ ticketError }}</p>
         </div>
 
         <div>
@@ -70,7 +70,7 @@
             @focus="showKeyboard('note', $event)"
             maxlength="50"
             placeholder="Note (max 50 caractères)"
-            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200"
+            class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-300 focus:ring-2 focus:ring-primary-200"
           />
         </div>
       </section>
@@ -87,7 +87,7 @@
 
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          class="ui-btn ui-btn-primary"
           @click="sendAmount"
           :disabled="isSending || !!amountError || !!ticketError || amount === null || amount === '' || ticketNumber === null || ticketNumber === ''"
         >

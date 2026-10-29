@@ -3,9 +3,9 @@
     <div class="relative mx-4 w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
       <header class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Configuration</p>
+          <p class="ui-page-eyebrow">Configuration</p>
           <h1 class="mt-2 flex items-center gap-2 text-2xl font-semibold text-slate-900">
-            <FontAwesomeIcon :icon="faDesktop" class="text-indigo-500" />
+            <FontAwesomeIcon :icon="faDesktop" class="text-primary-500" />
             Associer une caisse à cette machine
           </h1>
           <p class="mt-1 text-sm text-slate-500">
@@ -16,7 +16,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600"
+            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary-200 hover:text-primary-600"
             @click="resetForm"
           >
             <FontAwesomeIcon :icon="faRotate" />
@@ -24,7 +24,7 @@
           </button>
           <button
             type="button"
-            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-rose-200 hover:text-rose-600"
+            class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-danger-200 hover:text-danger-600"
             @click="closeModal"
           >
             <FontAwesomeIcon :icon="faXmark" />
@@ -37,7 +37,7 @@
         <section class="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5">
           <header class="flex items-start justify-between gap-2 rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-4">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Machine détectée</p>
+              <p class="ui-page-eyebrow">Machine détectée</p>
               <p class="mt-2 text-sm text-slate-600">
                 {{ machineName ? 'Nom récupéré automatiquement.' : 'Impossible de détecter le nom.' }}
               </p>
@@ -47,7 +47,7 @@
             </div>
             <button
               type="button"
-              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-indigo-600 transition hover:border-indigo-200 hover:bg-indigo-50"
+              class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-3 py-1.5 text-xs font-semibold text-primary-600 transition hover:border-primary-200 hover:bg-primary-50"
               @click="refreshMachineName"
             >
               <FontAwesomeIcon :icon="faArrowsRotate" />
@@ -62,7 +62,7 @@
                 id="cashregister-name"
                 v-model="formName"
                 type="text"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
                 placeholder="Ex. POS-CAISSE-01"
                 maxlength="255"
                 required
@@ -75,7 +75,7 @@
               <select
                 id="point-of-sale"
                 v-model="selectedPointOfSaleId"
-                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
                 :disabled="!isAdmin"
                 required
               >
@@ -90,19 +90,19 @@
             <div class="flex flex-wrap items-center gap-3">
               <button
                 type="submit"
-                class="inline-flex items-center gap-2 rounded-2xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                class="ui-btn ui-btn-primary"
                 :disabled="isSaving || !formValid"
               >
                 <FontAwesomeIcon v-if="isSaving" :icon="faSpinner" class="animate-spin" />
                 <span>{{ isSaving ? 'Enregistrement…' : 'Enregistrer' }}</span>
               </button>
-              <p v-if="errorMessage" class="text-sm font-semibold text-rose-500">{{ errorMessage }}</p>
-              <p v-else-if="successMessage" class="text-sm font-semibold text-emerald-600">{{ successMessage }}</p>
+              <p v-if="errorMessage" class="text-sm font-semibold text-danger-500">{{ errorMessage }}</p>
+              <p v-else-if="successMessage" class="text-sm font-semibold text-success-600">{{ successMessage }}</p>
             </div>
           </form>
         </section>
 
-        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section class="ui-card">
           <header class="flex items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
             <div>
               <h2 class="text-base font-semibold text-slate-800">Caisses enregistrées</h2>
@@ -135,7 +135,7 @@
                     </div>
                     <button
                       type="button"
-                      class="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                      class="rounded-full border border-danger-200 px-3 py-1 text-xs font-semibold text-danger-600 transition hover:bg-danger-50"
                       @click="confirmDelete(register)"
                     >
                       Supprimer

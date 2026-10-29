@@ -8,13 +8,13 @@
         <div class="mt-3 flex gap-2">
           <button 
             @click="testPrint(printerName)"
-            class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
+            class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700"
           >
             Imprimer Bon Test
           </button>
           <button 
             @click="setAsDefault(printerName)"
-            class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700"
+            class="px-4 py-2 bg-success-600 text-white rounded-lg text-sm hover:bg-success-700"
           >
             Définir par défaut
           </button>

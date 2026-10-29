@@ -3,11 +3,11 @@
     <Profile />
     <section class="pt-24 pb-12">
       <div class="max-w-3xl mx-auto px-4">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div class="ui-card p-8">
           <header class="mb-8">
-            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">Configuration</p>
+            <p class="ui-page-eyebrow">Configuration</p>
             <h1 class="mt-2 text-2xl font-semibold text-slate-900 flex items-center gap-3">
-              <span class="inline-flex items-center justify-center w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl">
+              <span class="inline-flex items-center justify-center w-10 h-10 bg-primary-50 text-primary-600 rounded-xl">
                 <FontAwesomeIcon :icon="faPrint" />
               </span>
               Ajouter une imprimante
@@ -23,7 +23,7 @@
                 <h2 class="text-sm font-semibold text-slate-800">Machine locale</h2>
                 <button
                   type="button"
-                  class="px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 border border-slate-200 rounded-xl transition hover:border-indigo-200 hover:bg-indigo-50"
+                  class="px-3 py-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 border border-slate-200 rounded-xl transition hover:border-primary-200 hover:bg-primary-50"
                   @click="refreshMachineName"
                 >
                   Réessayer la détection
@@ -37,7 +37,7 @@
                     id="machine-name"
                     v-model="printer.name"
                     type="text"
-                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
                     :class="{ 'bg-slate-100 text-slate-500': autoDetectedName && !allowNameEdit }"
                     :readonly="!allowNameEdit && autoDetectedName"
                     placeholder="Nom de l'imprimante"
@@ -46,11 +46,11 @@
                   />
                 </div>
 
-                <p v-if="autoDetectedName" class="text-xs text-emerald-600 flex items-center gap-2">
+                <p v-if="autoDetectedName" class="text-xs text-success-600 flex items-center gap-2">
                   <FontAwesomeIcon :icon="faCheckCircle" />
                   Nom détecté automatiquement : <strong>{{ autoDetectedName }}</strong>
                 </p>
-                <p v-else class="text-xs text-amber-600 flex items-center gap-2">
+                <p v-else class="text-xs text-warning-600 flex items-center gap-2">
                   <FontAwesomeIcon :icon="faTriangleExclamation" />
                   Impossible de détecter automatiquement le nom de la machine. Saisissez-le manuellement.
                 </p>
@@ -70,7 +70,7 @@
                 <select
                   id="cash-register"
                   v-model="printer.cash_register_id"
-                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
                   required
                 >
                   <option :value="null" disabled>Choisir une caisse</option>
@@ -88,7 +88,7 @@
                 <select
                   id="printer-type"
                   v-model="printer.printer_type_id"
-                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
                   required
                 >
                   <option :value="null" disabled>Choisir un type d'imprimante</option>
@@ -105,7 +105,7 @@
                     v-model.number="printer.timeout"
                     type="number"
                     min="1"
-                    class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm transition focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-200"
                   />
                 </label>
 
@@ -124,7 +124,7 @@
 
             <footer class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-200">
               <div class="text-sm">
-                <p v-if="saveError" class="text-rose-600">{{ saveError }}</p>
+                <p v-if="saveError" class="text-danger-600">{{ saveError }}</p>
                 <p v-else class="text-slate-500">Assurez-vous que l'imprimante est installée sur la machine locale.</p>
               </div>
               <div class="flex gap-3">
@@ -137,7 +137,7 @@
                 </button>
                 <button
                   type="submit"
-                  class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold shadow-sm transition hover:bg-indigo-700 disabled:opacity-60"
+                  class="ui-btn ui-btn-primary"
                   :disabled="isSaving || !isFormValid"
                 >
                   <FontAwesomeIcon v-if="isSaving" :icon="faSpinner" class="animate-spin" />

@@ -17,7 +17,7 @@
             v-if="loading"
             class="flex h-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-6 text-center text-xs text-slate-500"
           >
-            <span class="h-8 w-8 animate-spin rounded-full border-3 border-slate-200 border-t-indigo-500"></span>
+            <span class="h-8 w-8 animate-spin rounded-full border-3 border-slate-200 border-t-primary-500"></span>
             <p class="mt-2 font-medium">Chargement...</p>
           </div>
 
@@ -47,9 +47,9 @@
                       :key="sale.id"
                       @click="selectSale(sale)"
                       :class="[
-                        'cursor-pointer transition-all duration-150 hover:bg-indigo-50/60',
+                        'cursor-pointer transition-all duration-150 hover:bg-primary-50/60',
                         selectedSale?.id === sale.id
-                          ? 'bg-indigo-100 shadow-inner ring-1 ring-indigo-200'
+                          ? 'bg-primary-100 shadow-inner ring-1 ring-primary-200'
                           : 'bg-white',
                       ]"
                     >
@@ -73,7 +73,7 @@
                         <div class="flex items-center justify-end gap-1">
                           <button
                             type="button"
-                            class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                            class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary-200 hover:text-primary-600"
                             @click.stop="printDuplicateSale(sale)"
                             aria-label="Réimprimer"
                           >
@@ -81,7 +81,7 @@
                           </button>
                           <button
                             type="button"
-                            class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                            class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary-200 hover:text-primary-600"
                             @click.stop="openEditModal(sale)"
                             aria-label="Modifier"
                             v-if="isAdmin"
@@ -90,7 +90,7 @@
                           </button>
                           <button
                             type="button"
-                            class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
+                            class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-danger-200 hover:text-danger-600"
                             @click.stop="confirmDeleteSale(sale)"
                             aria-label="Supprimer"
                             v-if="isAdmin"
@@ -135,7 +135,7 @@
 
       <!-- Détails de la vente (compact) -->
       <aside
-        class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"
+        class="ui-card flex min-h-0 flex-col overflow-hidden p-2"
       >
         <div class="border-b border-slate-100 pb-1">
           <h2 class="text-sm font-semibold text-slate-800">Détails de la vente</h2>
@@ -158,11 +158,11 @@
             <div class="rounded-xl border border-slate-100 bg-slate-50/60 p-2 text-xs text-slate-600">
               <div class="flex items-center justify-between">
                 <span class="font-semibold text-slate-800">Total payé</span>
-                <span class="font-bold text-indigo-600">{{ formatPrice(selectedSale.final_amount) }}</span>
+                <span class="font-bold text-primary-600">{{ formatPrice(selectedSale.final_amount) }}</span>
               </div>
               <div class="mt-1 flex items-center justify-between text-[10px]">
                 <span class="text-slate-400">Statut</span>
-                <span class="rounded-full bg-indigo-50 px-1.5 py-0.5 font-semibold text-indigo-600">
+                <span class="rounded-full bg-primary-50 px-1.5 py-0.5 font-semibold text-primary-600">
                   {{ formatStatus(selectedSale.status) }}
                 </span>
               </div>
@@ -204,7 +204,7 @@
                       {{ line.product?.name || 'Supprimé' }}
                     </div>
                     <div class="text-center text-slate-500">{{ line.quantity }}</div>
-                    <div class="text-right font-semibold text-indigo-600">
+                    <div class="text-right font-semibold text-primary-600">
                       {{ formatPrice(line.total) }}
                     </div>
                   </div>
@@ -475,8 +475,8 @@ const getStatusIcon = (status) => {
 }
 const statusClass = (status) => {
   switch ((status || '').toLowerCase()) {
-    case 'completed': case 'paid': return 'bg-emerald-50 text-emerald-600'
-    case 'cancelled': case 'refund': return 'bg-rose-50 text-rose-600'
+    case 'completed': case 'paid': return 'bg-success-50 text-success-600'
+    case 'cancelled': case 'refund': return 'bg-danger-50 text-danger-600'
     default: return 'bg-slate-100 text-slate-500'
   }
 }
@@ -508,7 +508,7 @@ onMounted(async () => {
 .user-sales-view {
   min-height: 1000vh;
   padding: 1.5rem 1rem;
-  background: linear-gradient(160deg, #eef2ff 0%, #f8fafc 100%);
+  background: linear-gradient(160deg, theme('colors.primary.50') 0%, #f8fafc 100%);
   display: flex;
   flex-direction: column;
   gap: 1rem;
