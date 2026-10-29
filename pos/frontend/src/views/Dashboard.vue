@@ -593,7 +593,7 @@ const menuItems = filterAdminItems([
     ],
   },
 
-  { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked, adminOnly: true },
+  { label: 'Produits', name: 'dashboard-product', icon: faBoxesStacked, gerantOrAdmin: true },
   { label: 'Catégories', name: 'dashboard-categories', icon: faLayerGroup, adminOnly: true },
   { label: 'Ventes', name: 'dashboard-ventes', icon: faChartLine, gerantOrAdminOrCaissier: true },
   {
