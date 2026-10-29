@@ -202,17 +202,17 @@
               Votre prix restera appliqué même si le Central change le sien.
             </p>
           </div>
+          <button
+            v-if="priceTarget.is_local_override"
+            type="button"
+            class="text-sm font-semibold text-primary-600 hover:text-primary-700 disabled:opacity-60"
+            :disabled="priceSaving"
+            @click="resetPrice"
+          >
+            Revenir au prix du Central
+          </button>
           <p v-if="priceError" class="rounded-xl bg-danger-50 px-3 py-2 text-sm text-danger-700">{{ priceError }}</p>
-          <div class="flex flex-wrap justify-end gap-2">
-            <button
-              v-if="priceTarget.is_local_override"
-              type="button"
-              class="ui-btn ui-btn-secondary mr-auto"
-              :disabled="priceSaving"
-              @click="resetPrice"
-            >
-              Revenir au prix du Central
-            </button>
+          <div class="flex justify-end gap-2">
             <button type="button" class="ui-btn ui-btn-secondary" :disabled="priceSaving" @click="closePriceModal">
               Annuler
             </button>
