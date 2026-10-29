@@ -101,6 +101,10 @@ class CatalogSyncService
                 || (float) ($existingPricing->central_price ?? $existingPricing->price ?? -1) !== (float) $row['price']
             );
 
+            if ($existingProduct && (int) $existingProduct->category_id !== $category->id) {
+                $this->inheritPrinter($category, $existingProduct);
+            }
+
             $product = Product::updateOrCreate(
                 ['ref' => $row['ref']],
                 ['name' => $row['name'], 'category_id' => $category->id]
@@ -119,7 +123,49 @@ class CatalogSyncService
             }
         }
 
+        $this->removeObsoleteCategories($response->json('categories'));
+
         return $result;
+    }
+
+    /**
+     * Un produit qui change de catégorie au Central garde son imprimante
+     * (cuisine, bar…) : sans ça, une catégorie nouvellement créée ici n'a
+     * aucun réglage et tout part par défaut en cuisine. Seule une catégorie
+     * encore sans imprimante est complétée — un réglage local n'est jamais
+     * écrasé.
+     */
+    private function inheritPrinter(Category $category, Product $product): void
+    {
+        if ($category->printer !== null) {
+            return;
+        }
+
+        $printer = Category::whereKey($product->category_id)->value('printer');
+        if ($printer !== null) {
+            $category->update(['printer' => $printer]);
+        }
+    }
+
+    /**
+     * Retire les catégories locales devenues vides et absentes du Central
+     * (recatégorisation). Une catégorie qui contient encore un produit —
+     * créée localement par exemple — est toujours conservée.
+     */
+    private function removeObsoleteCategories($centralNames): void
+    {
+        // Liste absente ou vide = réponse incomplète : ne rien supprimer.
+        if (!is_array($centralNames) || empty($centralNames)) {
+            return;
+        }
+
+        Category::whereNotIn('name', $centralNames)
+            ->whereDoesntHave('products')
+            ->get()
+            ->each(function (Category $category) {
+                Log::info('CatalogSyncService: catégorie vide retirée', ['name' => $category->name]);
+                $category->delete();
+            });
     }
 
     /**
