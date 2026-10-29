@@ -26,6 +26,25 @@ class Product extends Model
     }
 
     /**
+     * Prix imposé par le Central : la caisse est reliée à un Central et la
+     * catégorie n'est pas ouverte à la modification par les gérants. Une
+     * caisse autonome (sans Central) garde la main sur tous ses prix.
+     */
+    public function isPriceLocked(): bool
+    {
+        if (!$this->category) {
+            return !empty(config('sync.central_url'));
+        }
+
+        return $this->category->price_locked;
+    }
+
+    public function getPriceLockedAttribute(): bool
+    {
+        return $this->isPriceLocked();
+    }
+
+    /**
      * Get the pricings for the product.
      */
     public function pricings()

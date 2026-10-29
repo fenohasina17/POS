@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pricing;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
@@ -135,6 +136,13 @@ class PricingController extends Controller
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
+            // Les prix se gèrent depuis l'écran Produits (ProductController),
+            // qui applique la règle prix fixe / modifiable. Cette API brute
+            // reste réservée à l'admin.
+            if (!$isAdmin) {
+                return response()->json(['message' => 'Accès refusé.'], 403);
+            }
+
             $validated = $request->validate([
                 'product_id' => 'required|exists:products,id', // Changed from product to products for table name
                 'price'      => 'required|numeric',
@@ -159,6 +167,10 @@ class PricingController extends Controller
             }
 
             $validated['point_of_sale_id'] = $targetPosId;
+
+            if (Product::find($validated['product_id'])?->isPriceLocked()) {
+                return response()->json(['message' => 'Le prix de ce produit est fixé par le Central.'], 403);
+            }
 
             // Check for unique pricing entry for product and POS
             if (Pricing::where('product_id', $validated['product_id'])
@@ -197,11 +209,8 @@ class PricingController extends Controller
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
-            if (!$isAdmin && !$activePosId) {
-                return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
-            }
-            if (!$isAdmin && !$user->pointsOfSale->contains($activePosId)) {
-                return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+            if (!$isAdmin) {
+                return response()->json(['message' => 'Accès refusé.'], 403);
             }
 
             $validated = $request->validate([
@@ -226,6 +235,10 @@ class PricingController extends Controller
 
             if (!$pricing) {
                 return response()->json(['error' => 'Pricing introuvable ou accès refusé.'], 404);
+            }
+
+            if ($pricing->product?->isPriceLocked()) {
+                return response()->json(['message' => 'Le prix de ce produit est fixé par le Central.'], 403);
             }
 
             $pricing->update([
@@ -262,17 +275,11 @@ class PricingController extends Controller
             $isAdmin = $user->isAdmin();
             $activePosId = $request->attributes->get('activePosId');
 
-            $pricing = Pricing::query();
-
             if (!$isAdmin) {
-                if (!$activePosId) {
-                    return response()->json(['message' => 'Point de vente actif non défini pour l\'utilisateur.'], 403);
-                }
-                if (!$user->pointsOfSale->contains($activePosId)) {
-                    return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
-                }
-                $pricing->where('point_of_sale_id', $activePosId);
+                return response()->json(['message' => 'Accès refusé.'], 403);
             }
+
+            $pricing = Pricing::query();
 
             $pricing = $pricing->findOrFail($id);
             $pricing->delete();

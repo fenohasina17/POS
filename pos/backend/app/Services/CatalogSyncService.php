@@ -77,7 +77,15 @@ class CatalogSyncService
             if (!isset($categoryCache[$categoryName])) {
                 // "printer" (routage cuisine/bar) est une donnée purement locale,
                 // jamais fournie par le Central — jamais touchée ici.
-                $categoryCache[$categoryName] = Category::firstOrCreate(['name' => $categoryName]);
+                $category = Category::firstOrCreate(['name' => $categoryName]);
+
+                // Règle de prix décidée au Central. Clé absente (Central plus
+                // ancien) = prix imposé, comme avant cette règle.
+                $category->price_editable = (bool) ($row['price_editable'] ?? false);
+                if ($category->isDirty('price_editable')) {
+                    $category->save();
+                }
+                $categoryCache[$categoryName] = $category;
             }
             $category = $categoryCache[$categoryName];
 
@@ -90,7 +98,7 @@ class CatalogSyncService
             $isChanged = $existingProduct && (
                 $existingProduct->name !== $row['name']
                 || (int) $existingProduct->category_id !== $category->id
-                || (float) ($existingPricing->price ?? -1) !== (float) $row['price']
+                || (float) ($existingPricing->central_price ?? $existingPricing->price ?? -1) !== (float) $row['price']
             );
 
             $product = Product::updateOrCreate(
@@ -102,13 +110,7 @@ class CatalogSyncService
             // pour le gérant/caissier, qui filtrent strictement par ce pivot.
             $pos->products()->syncWithoutDetaching([$product->id]);
 
-            // Pricing::boot() met déjà à jour un tarif existant au lieu de le
-            // dupliquer (hook "creating") — pas besoin de vérifier ici.
-            Pricing::create([
-                'product_id'       => $product->id,
-                'point_of_sale_id' => $pos->id,
-                'price'            => $row['price'],
-            ]);
+            $this->applyCentralPrice($existingPricing, $product, $pos, $category, $row['price']);
 
             if ($isNew) {
                 $result['created'][] = $row['ref'];
@@ -118,5 +120,88 @@ class CatalogSyncService
         }
 
         return $result;
+    }
+
+    /**
+     * Prix reçu du Central. Dans une catégorie ouverte à la modification, un
+     * prix fixé par le gérant est conservé : seul le prix de référence est
+     * mis à jour. Sinon le prix du Central s'applique et efface tout prix
+     * local (catégorie refermée entre-temps au Central).
+     */
+    private function applyCentralPrice(?Pricing $pricing, Product $product, PointOfSale $pos, Category $category, $centralPrice): void
+    {
+        if (!$pricing) {
+            Pricing::create([
+                'product_id'        => $product->id,
+                'point_of_sale_id'  => $pos->id,
+                'price'             => $centralPrice,
+                'central_price'     => $centralPrice,
+                'is_local_override' => false,
+            ]);
+            return;
+        }
+
+        if ($category->price_editable && $pricing->is_local_override) {
+            $pricing->update(['central_price' => $centralPrice]);
+            return;
+        }
+
+        $pricing->update([
+            'price'             => $centralPrice,
+            'central_price'     => $centralPrice,
+            'is_local_override' => false,
+        ]);
+    }
+
+    /**
+     * Envoie au Central l'état complet des prix de ce point de vente, pour le
+     * tableau « Prix par point de vente ». Jamais bloquant : un échec est
+     * simplement retenté à la synchronisation suivante.
+     */
+    public function pushPrices(): bool
+    {
+        if (empty($this->centralUrl)) {
+            return false;
+        }
+
+        $pos = PointOfSale::where('name', $this->restaurantId)->first();
+        if (!$pos) {
+            return false;
+        }
+
+        $prices = Pricing::where('point_of_sale_id', $pos->id)
+            ->join('products', 'products.id', '=', 'pricing.product_id')
+            ->get(['products.ref', 'pricing.price', 'pricing.is_local_override'])
+            ->map(fn ($p) => [
+                'ref'               => $p->ref,
+                'price'             => (float) $p->price,
+                'is_local_override' => (bool) $p->is_local_override,
+            ])
+            ->values()
+            ->all();
+
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(30)
+                ->post("{$this->centralUrl}/api/sync/prices", [
+                    'terminal_id'   => config('sync.terminal_id', 'unknown'),
+                    'restaurant_id' => $this->restaurantId,
+                    'prices'        => $prices,
+                ]);
+        } catch (\Throwable $e) {
+            Log::warning('CatalogSyncService: erreur réseau lors de l\'envoi des prix', [
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+
+        if (!$response->successful()) {
+            Log::warning('CatalogSyncService: échec de l\'envoi des prix', [
+                'status' => $response->status(),
+            ]);
+            return false;
+        }
+
+        return true;
     }
 }

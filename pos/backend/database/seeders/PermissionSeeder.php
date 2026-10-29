@@ -56,6 +56,13 @@ class PermissionSeeder extends Seeder
             'guard_name' => 'api',
         ]);
 
+        // Prix local d'un produit, uniquement dans une catégorie dont le
+        // Central autorise la modification (Product::isPriceLocked()).
+        Permission::firstOrCreate([
+            'name' => 'update.products.price',
+            'guard_name' => 'api',
+        ]);
+
         // Create admin role with all permissions
         $adminRole = Role::firstOrCreate([
             'name' => 'admin',

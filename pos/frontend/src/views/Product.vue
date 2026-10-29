@@ -122,7 +122,18 @@
                     </div>
 
                     <div class="text-sm font-semibold text-slate-800 sm:text-base">
-                      {{ formatPrice(product.price) }}
+                      <span class="inline-flex items-center gap-1.5">
+                        {{ formatPrice(product.price) }}
+                        <FontAwesomeIcon
+                          v-if="product.price_locked"
+                          icon="fa-solid fa-lock"
+                          class="text-xs text-slate-300"
+                          title="Prix fixé par le Central"
+                        />
+                      </span>
+                      <span v-if="product.is_local_override" class="block text-xs font-medium text-warning-600">
+                        Prix local · Central : {{ formatPrice(product.central_price) }}
+                      </span>
                     </div>
 
                     <div>
@@ -132,6 +143,15 @@
                     </div>
 
                     <div class="flex justify-end gap-2">
+                      <button
+                        v-if="canEditPrice(product)"
+                        type="button"
+                        class="ui-btn ui-btn-secondary ui-btn-sm"
+                        @click.stop="openPriceModal(product)"
+                      >
+                        <FontAwesomeIcon icon="fa-solid fa-tag" />
+                        Modifier le prix
+                      </button>
                       <button
                         v-if="isAdmin"
                         type="button"
@@ -166,6 +186,42 @@
         @save="handleSave"
       />
       <AddProductModal :isOpen="isAddModalOpen" @close="closeAddModal" @added="handleAdd" />
+    </div>
+
+    <div v-if="priceTarget" class="ui-modal-overlay" @click.self="closePriceModal">
+      <form class="ui-modal-panel max-w-md" @submit.prevent="savePrice">
+        <div class="ui-modal-header">
+          <h2 class="ui-modal-title">Prix de {{ priceTarget.name }}</h2>
+        </div>
+        <div class="space-y-4 px-6 py-5">
+          <div>
+            <label class="ui-label mb-2">Prix pour ce point de vente (Ar)</label>
+            <input v-model.number="priceValue" type="number" min="0" step="1" required class="ui-input" />
+            <p class="mt-2 text-xs text-slate-500">
+              Prix du Central : {{ formatPrice(priceTarget.central_price ?? priceTarget.price) }}.
+              Votre prix restera appliqué même si le Central change le sien.
+            </p>
+          </div>
+          <p v-if="priceError" class="rounded-xl bg-danger-50 px-3 py-2 text-sm text-danger-700">{{ priceError }}</p>
+          <div class="flex flex-wrap justify-end gap-2">
+            <button
+              v-if="priceTarget.is_local_override"
+              type="button"
+              class="ui-btn ui-btn-secondary mr-auto"
+              :disabled="priceSaving"
+              @click="resetPrice"
+            >
+              Revenir au prix du Central
+            </button>
+            <button type="button" class="ui-btn ui-btn-secondary" :disabled="priceSaving" @click="closePriceModal">
+              Annuler
+            </button>
+            <button type="submit" class="ui-btn ui-btn-primary" :disabled="priceSaving">
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
 
     <div v-if="isDeleteConfirmOpen" class="fixed inset-0 z-50 flex items-center justify-center">
@@ -209,7 +265,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import placeholderImage from '@/assets/avatar.png'
 import { useAuth } from '@/composables/useAuth'
 
-const { isAdmin, activePos } = useAuth()
+const { isAdmin, activePos, hasPermission } = useAuth()
 
 const products = ref([])
 const categories = ref([])
@@ -254,11 +310,15 @@ const fetchData = async () => {
       for (const product of category.products) {
         let price = 0
         let pricing_id = null
+        let central_price = null
+        let is_local_override = false
         if (Array.isArray(product.pricings)) {
           const pricing = product.pricings.find(p => p.point_of_sale_id === posId)
           if (pricing) {
             price = parseFloat(pricing.price)
             pricing_id = pricing.id
+            central_price = pricing.central_price !== null ? parseFloat(pricing.central_price) : null
+            is_local_override = !!pricing.is_local_override
           }
         }
         allProducts.push({
@@ -267,6 +327,9 @@ const fetchData = async () => {
           category_name: category.name,
           price,
           pricing_id,
+          central_price,
+          is_local_override,
+          price_locked: !!category.price_locked,
         })
       }
     }
@@ -280,6 +343,50 @@ const fetchData = async () => {
 }
 
 onMounted(fetchData)
+
+// Le gérant ne règle que le prix des catégories que le Central a ouvertes ;
+// l'admin passe par la fenêtre d'édition complète.
+const canEditPrice = (product) =>
+  !isAdmin.value && hasPermission('update.products.price') && !product.price_locked
+
+const priceTarget = ref(null)
+const priceValue = ref(0)
+const priceSaving = ref(false)
+const priceError = ref('')
+
+const openPriceModal = (product) => {
+  priceTarget.value = product
+  priceValue.value = product.price
+  priceError.value = ''
+}
+
+const closePriceModal = () => {
+  if (!priceSaving.value) priceTarget.value = null
+}
+
+const submitPrice = async (request) => {
+  priceSaving.value = true
+  priceError.value = ''
+  try {
+    await request()
+    priceTarget.value = null
+    await fetchData()
+  } catch (e) {
+    priceError.value = e.response?.data?.message || 'Impossible de modifier le prix.'
+  } finally {
+    priceSaving.value = false
+  }
+}
+
+const posHeaders = () => ({ ...getAuthHeaders(), 'X-Active-POS-ID': String(activePos.value?.id ?? '') })
+
+const savePrice = () => submitPrice(() =>
+  axios.put(`${API_BASE_URL}/products/${priceTarget.value.id}`, { price: priceValue.value }, { headers: posHeaders() })
+)
+
+const resetPrice = () => submitPrice(() =>
+  axios.post(`${API_BASE_URL}/products/${priceTarget.value.id}/reset-price`, {}, { headers: posHeaders() })
+)
 
 const selectCategory = (catId) => { selectedCategory.value = catId }
 const formatPrice = (price) => {

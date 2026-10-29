@@ -54,7 +54,11 @@
             step="0.01"
             required
             placeholder="Prix"
+            :disabled="props.product?.price_locked"
           />
+          <p v-if="props.product?.price_locked" class="mt-1 text-xs text-slate-500">
+            Prix fixé par le Central : modifiable uniquement depuis le Central.
+          </p>
         </div>
 
         <!-- Statut actif -->

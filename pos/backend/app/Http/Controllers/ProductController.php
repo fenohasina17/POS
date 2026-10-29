@@ -72,6 +72,7 @@ class ProductController extends Controller
             }
 
             $products = $query->with([
+                'category:id,price_editable',
                 'pricings' => function ($q) use ($activePosId, $request, $isAdmin) {
                     $requestedPosId = $request->query('point_of_sale_id');
                     // Filter pricing by active POS or requested POS if admin
@@ -82,6 +83,9 @@ class ProductController extends Controller
                     }
                 }
             ])->get();
+
+            // L'écran Produits affiche un cadenas ou le bouton « Modifier le prix ».
+            $products->each->append('price_locked');
 
             return response()->json($products, 200);
         } catch (\Exception $e) {
@@ -188,13 +192,18 @@ class ProductController extends Controller
             // requête), ce qui ferait échouer ce contrôle à tort si on le
             // testait après validation.
             if (!$isAdmin) {
-                if (!$user->hasPermissionTo('update.products.status', 'api')) {
+                $keys = array_keys($request->all());
+                if (array_diff($keys, ['status', 'price'])) {
+                    return response()->json(['message' => 'Seuls le statut de disponibilité et le prix peuvent être modifiés.'], 403);
+                }
+                if (in_array('status', $keys, true) && !$user->hasPermissionTo('update.products.status', 'api')) {
                     return response()->json(['message' => 'Accès refusé.'], 403);
                 }
-                if (array_diff(array_keys($request->all()), ['status'])) {
-                    return response()->json(['message' => 'Seul le statut de disponibilité peut être modifié.'], 403);
+                if (in_array('price', $keys, true) && !$user->hasPermissionTo('update.products.price', 'api')) {
+                    return response()->json(['message' => 'Accès refusé.'], 403);
                 }
             }
+
 
             $validated = $request->validate([
                 'name'        => 'sometimes|required|string|max:255',
@@ -228,6 +237,20 @@ class ProductController extends Controller
                 $targetPosId = $activePosId;
             }
 
+            // Prix réellement modifié (l'écran d'édition renvoie toujours le
+            // prix, même inchangé).
+            $currentPricing = Pricing::where('product_id', $product->id)
+                ->where('point_of_sale_id', $targetPosId)
+                ->first();
+            $priceChanged = isset($validated['price'])
+                && (!$currentPricing || (float) $currentPricing->price !== (float) $validated['price']);
+
+            // Prix imposé par le Central : refusé pour tout le monde, admin
+            // compris — la prochaine synchro l'écraserait de toute façon.
+            if ($priceChanged && $product->isPriceLocked()) {
+                return response()->json(['message' => 'Le prix de ce produit est fixé par le Central.'], 403);
+            }
+
             if (!empty($validated['image'])) {
                 $imagePath = $this->storeBase64Image($validated['image']);
                 if ($product->image !== 'default-product-image.jpg') {
@@ -240,7 +263,7 @@ class ProductController extends Controller
             }
 
             // Mise à jour du produit
-            return DB::transaction(function () use ($request, $product, $validated, $targetPosId) {
+            return DB::transaction(function () use ($request, $product, $validated, $targetPosId, $priceChanged) {
                 $product->update($validated);
 
                 // Attach product to the target point of sale pivot table (ensuring it's still attached)
@@ -248,18 +271,23 @@ class ProductController extends Controller
                 $pos->products()->syncWithoutDetaching([$product->id]); // Ensure product is associated with this POS
 
                 // Mise à jour ou création du tarif associé
-                if (isset($validated['price'])) {
+                if ($priceChanged) {
                     $pricing = Pricing::where('product_id', $product->id)
                         ->where('point_of_sale_id', $targetPosId)
                         ->first();
 
+                    // Relié à un Central : prix local à conserver lors des
+                    // synchros (CatalogSyncService::applyCentralPrice).
+                    $isOverride = !empty(config('sync.central_url'));
+
                     if ($pricing) {
-                        $pricing->update(['price' => $validated['price']]);
+                        $pricing->update(['price' => $validated['price'], 'is_local_override' => $isOverride]);
                     } else {
                         Pricing::create([
-                            'product_id'       => $product->id,
-                            'point_of_sale_id' => $targetPosId,
-                            'price'            => $validated['price'],
+                            'product_id'        => $product->id,
+                            'point_of_sale_id'  => $targetPosId,
+                            'price'             => $validated['price'],
+                            'is_local_override' => $isOverride,
                         ]);
                     }
                 }
@@ -274,6 +302,39 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => 'Erreur de mise à jour : ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Revient au prix du Central pour le point de vente actif.
+     * POST /api/products/{product}/reset-price
+     */
+    public function resetPrice(Request $request, Product $product)
+    {
+        $user = Auth::user();
+        $isAdmin = $user->isAdmin();
+        $activePosId = $request->attributes->get('activePosId');
+
+        if (!$isAdmin && !$user->hasPermissionTo('update.products.price', 'api')) {
+            return response()->json(['message' => 'Accès refusé.'], 403);
+        }
+        if (!$activePosId || (!$isAdmin && !$user->pointsOfSale->contains($activePosId))) {
+            return response()->json(['message' => 'Accès refusé pour ce point de vente.'], 403);
+        }
+
+        $pricing = Pricing::where('product_id', $product->id)
+            ->where('point_of_sale_id', $activePosId)
+            ->first();
+
+        if (!$pricing || $pricing->central_price === null) {
+            return response()->json(['message' => 'Aucun prix du Central connu pour ce produit.'], 422);
+        }
+
+        $pricing->update([
+            'price'             => $pricing->central_price,
+            'is_local_override' => false,
+        ]);
+
+        return response()->json(['pricing' => $pricing->fresh()]);
     }
 
     /**
