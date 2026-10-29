@@ -6,6 +6,7 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PosPriceController;
 use App\Http\Controllers\ProductReportController;
 use App\Http\Controllers\RestaurantController;
 use App\Http\Controllers\SellerReportController;
@@ -59,6 +60,7 @@ Route::middleware(ValidateCentralApiKey::class)->group(function () {
     Route::post('/sync/heartbeat',        [SyncController::class, 'heartbeat']);
     Route::post('/sync/import-historical',[SyncController::class, 'importHistorical']);
     Route::get('/catalog',                [CatalogController::class, 'index']);
+    Route::post('/sync/prices',           [PosPriceController::class, 'receive']);
 });
 
 // ── Endpoints pour le dashboard siège ────────────────────────────────────────
@@ -85,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products/report',      [ProductReportController::class,'index']);
     Route::get('/restaurants',          [RestaurantController::class,   'index']);
     Route::get('/sellers/report',       [SellerReportController::class, 'index']);
+    Route::get('/pos-prices',           [PosPriceController::class,     'index']);
 
     // Gestion utilisateurs + catalogue produits — admin uniquement
     Route::middleware(RequireAdmin::class)->group(function () {

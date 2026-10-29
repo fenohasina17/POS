@@ -15,6 +15,12 @@ class Pricing extends Model
         'point_of_sale_id',
         'product_id',
         'price',
+        'central_price',
+        'is_local_override',
+    ];
+
+    protected $casts = [
+        'is_local_override' => 'boolean',
     ];
 
     /**

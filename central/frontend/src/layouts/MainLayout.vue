@@ -196,6 +196,7 @@ const navSections = computed(() => {
         { label: 'Ventes',          route: 'sales',             icon: IconReceipt },
         { label: 'Sessions',        route: 'sessions',          icon: IconSession },
         { label: 'Produits',        route: 'product-report',    icon: IconChart   },
+        { label: 'Prix par PDV',    route: 'pos-prices',        icon: IconBox     },
         { label: 'Vendeurs',        route: 'seller-report',     icon: IconPerson  },
         { label: 'Alertes',         route: 'alerts',            icon: IconBell, badge: alerts.counts.total || null },
       ],

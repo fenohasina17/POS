@@ -38,6 +38,10 @@ class SyncCatalog extends Command
             }
         }
 
+        $this->line($catalogSyncService->pushPrices()
+            ? '  Prix envoyés au Central.'
+            : '  Prix non envoyés (Central injoignable ou point de vente introuvable).');
+
         return self::SUCCESS;
     }
 }

@@ -13,6 +13,7 @@ import Alerts         from '@/views/Alerts.vue'
 import Restaurants    from '@/views/Restaurants.vue'
 import Users          from '@/views/Users.vue'
 import Catalog        from '@/views/Catalog.vue'
+import PosPrices      from '@/views/PosPrices.vue'
 import Login          from '@/views/Login.vue'
 
 const routes = [
@@ -34,6 +35,7 @@ const routes = [
       { path: 'restaurants',        component: Restaurants,    name: 'restaurants'     },
       { path: 'users',              component: Users,          name: 'users'           },
       { path: 'catalog',            component: Catalog,        name: 'catalog'         },
+      { path: 'pos-prices',         component: PosPrices,      name: 'pos-prices'      },
     ],
   },
 ]

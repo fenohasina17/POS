@@ -103,6 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ========== CATÉGORIES ET PRODUITS ==========
     Route::apiResource('categories', CategoryController::class);
+    Route::post('products/{product}/reset-price', [ProductController::class, 'resetPrice']);
     Route::apiResource('products', ProductController::class);
     Route::apiResource('pricings', PricingController::class);
     // ========== PRODUITS PAR CATÉGORIE ==========

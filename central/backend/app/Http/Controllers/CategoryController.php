@@ -11,14 +11,15 @@ class CategoryController extends Controller
     public function index(): JsonResponse
     {
         return response()->json(
-            Category::orderBy('name')->get(['id', 'name', 'created_at'])
+            Category::orderBy('name')->get(['id', 'name', 'price_editable', 'created_at'])
         );
     }
 
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'name' => 'required|string|max:100|unique:categories,name',
+            'name'           => 'required|string|max:100|unique:categories,name',
+            'price_editable' => 'sometimes|boolean',
         ]);
 
         $category = Category::create($data);
@@ -29,7 +30,8 @@ class CategoryController extends Controller
     public function update(Request $request, Category $category): JsonResponse
     {
         $data = $request->validate([
-            'name' => "required|string|max:100|unique:categories,name,{$category->id}",
+            'name'           => "sometimes|required|string|max:100|unique:categories,name,{$category->id}",
+            'price_editable' => 'sometimes|boolean',
         ]);
 
         $category->update($data);
