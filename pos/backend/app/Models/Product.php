@@ -14,6 +14,7 @@ class Product extends Model
         'category_id',
         'status',
         'image',
+        'central_image_hash',
     ];
     protected $guarded = [];
 

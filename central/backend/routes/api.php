@@ -60,6 +60,7 @@ Route::middleware(ValidateCentralApiKey::class)->group(function () {
     Route::post('/sync/heartbeat',        [SyncController::class, 'heartbeat']);
     Route::post('/sync/import-historical',[SyncController::class, 'importHistorical']);
     Route::get('/catalog',                [CatalogController::class, 'index']);
+    Route::get('/catalog/images/{ref}',   [CatalogController::class, 'image']);
     Route::post('/sync/prices',           [PosPriceController::class, 'receive']);
 });
 
@@ -106,5 +107,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/catalog-products/{product}', [ProductController::class, 'update']);
         Route::delete('/catalog-products/{product}',[ProductController::class, 'destroy']);
         Route::post('/catalog-products/import',   [ProductController::class, 'import']);
+        Route::get('/catalog-products/{product}/image',    [ProductController::class, 'showImage']);
+        Route::post('/catalog-products/{product}/image',   [ProductController::class, 'uploadImage']);
+        Route::delete('/catalog-products/{product}/image', [ProductController::class, 'deleteImage']);
     });
 });

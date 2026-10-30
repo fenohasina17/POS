@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CatalogController extends Controller
 {
@@ -29,11 +31,31 @@ class CatalogController extends Controller
                 // Règle portée par la catégorie, recopiée sur chaque produit :
                 // une caisse d'une version antérieure ignore simplement la clé.
                 'price_editable' => (bool) $p->category?->price_editable,
+                // Empreinte de la photo : la caisse ne la retélécharge
+                // (GET /api/catalog/images/{ref}) que si elle a changé.
+                'image_hash'     => $p->image_hash,
             ]);
 
         return response()->json([
             'categories' => Category::orderBy('name')->pluck('name'),
             'products'   => $products,
+        ]);
+    }
+
+    /**
+     * Photo d'un produit, téléchargée par les caisses.
+     * GET /api/catalog/images/{ref}
+     */
+    public function image(string $ref): StreamedResponse|JsonResponse
+    {
+        $product = Product::where('ref', $ref)->first();
+
+        if (!$product?->image || !Storage::disk('local')->exists($product->image)) {
+            return response()->json(['message' => 'Aucune photo pour ce produit.'], 404);
+        }
+
+        return Storage::disk('local')->response($product->image, null, [
+            'X-Image-Hash' => $product->image_hash,
         ]);
     }
 }

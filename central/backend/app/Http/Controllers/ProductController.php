@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use App\Services\ProductImageService;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ProductController extends Controller
@@ -111,5 +113,43 @@ class ProductController extends Controller
         }
 
         return response()->json(['created' => $created, 'updated' => $updated]);
+    }
+
+    /**
+     * Ajoute ou remplace la photo d'un produit.
+     * POST /api/catalog-products/{product}/image
+     */
+    public function uploadImage(Request $request, Product $product, ProductImageService $images): JsonResponse
+    {
+        $request->validate([
+            'image' => 'required|file|mimes:jpg,jpeg,png,webp|max:5120',
+        ]);
+
+        $file = $request->file('image');
+        $images->store($product, $file->get(), $file->extension());
+
+        return response()->json($product->fresh()->load('category:id,name'));
+    }
+
+    /**
+     * GET /api/catalog-products/{product}/image — aperçu dans l'écran Catalogue.
+     */
+    public function showImage(Product $product)
+    {
+        if (!$product->image || !Storage::disk('local')->exists($product->image)) {
+            return response()->json(['message' => 'Aucune photo pour ce produit.'], 404);
+        }
+
+        return Storage::disk('local')->response($product->image);
+    }
+
+    /**
+     * DELETE /api/catalog-products/{product}/image
+     */
+    public function deleteImage(Product $product, ProductImageService $images): JsonResponse
+    {
+        $images->remove($product);
+
+        return response()->json($product->fresh()->load('category:id,name'));
     }
 }

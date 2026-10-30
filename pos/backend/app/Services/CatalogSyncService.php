@@ -8,6 +8,7 @@ use App\Models\Pricing;
 use App\Models\Product;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class CatalogSyncService
 {
@@ -116,6 +117,11 @@ class CatalogSyncService
 
             $this->applyCentralPrice($existingPricing, $product, $pos, $category, $row['price']);
 
+            // Clé absente = Central sans gestion des photos : rien à faire.
+            if (array_key_exists('image_hash', $row)) {
+                $this->syncImage($product, $row['image_hash']);
+            }
+
             if ($isNew) {
                 $result['created'][] = $row['ref'];
             } elseif ($isChanged) {
@@ -126,6 +132,61 @@ class CatalogSyncService
         $this->removeObsoleteCategories($response->json('categories'));
 
         return $result;
+    }
+
+    /**
+     * Photo du produit : le Central fait foi. Téléchargée seulement quand
+     * son empreinte change ; en cas d'échec, l'empreinte n'est pas notée et
+     * la synchro suivante réessaie.
+     */
+    private function syncImage(Product $product, ?string $hash): void
+    {
+        if ($hash === $product->central_image_hash) {
+            return;
+        }
+
+        if ($hash === null) {
+            $this->deleteCentralImage($product);
+            $product->update(['image' => 'default-product-image.jpg', 'central_image_hash' => null]);
+            return;
+        }
+
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(30)
+                ->get("{$this->centralUrl}/api/catalog/images/" . rawurlencode($product->ref));
+        } catch (\Throwable $e) {
+            Log::warning('CatalogSyncService: photo non téléchargée', ['ref' => $product->ref, 'error' => $e->getMessage()]);
+            return;
+        }
+
+        $extension = match (strtok((string) $response->header('Content-Type'), ';')) {
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            default      => null,
+        };
+
+        if (!$response->successful() || !$extension) {
+            Log::warning('CatalogSyncService: photo non téléchargée', ['ref' => $product->ref, 'status' => $response->status()]);
+            return;
+        }
+
+        $path = "products/central/{$product->ref}-" . substr($hash, 0, 8) . ".{$extension}";
+        Storage::disk('public')->put($path, $response->body());
+        if ($product->image !== $path) {
+            $this->deleteCentralImage($product);
+        }
+        $product->update(['image' => $path, 'central_image_hash' => $hash]);
+    }
+
+    // Seules les photos venues du Central sont effacées, jamais une photo
+    // ajoutée à la main sur la caisse.
+    private function deleteCentralImage(Product $product): void
+    {
+        if ($product->image && str_starts_with($product->image, 'products/central/')) {
+            Storage::disk('public')->delete($product->image);
+        }
     }
 
     /**
