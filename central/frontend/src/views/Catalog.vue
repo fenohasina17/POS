@@ -75,7 +75,10 @@
         <tbody class="divide-y divide-slate-50">
           <tr v-for="p in filteredProducts" :key="p.id" class="hover:bg-slate-50 transition">
             <td class="px-5 py-3 font-mono text-xs text-slate-400">{{ p.ref }}</td>
-            <td class="px-5 py-3 font-semibold text-slate-900">{{ p.name }}</td>
+            <td class="px-5 py-3 font-semibold text-slate-900">
+              {{ p.name }}
+              <span v-if="!p.has_image" class="ml-1 text-[10px] font-semibold text-amber-600">sans photo</span>
+            </td>
             <td class="px-5 py-3">
               <span class="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-600">
                 {{ p.category?.name ?? '—' }}
@@ -146,6 +149,22 @@
             </div>
           </div>
           <p class="text-[10px] text-slate-400">La taille est une métadonnée d'affichage Central — elle n'est jamais transmise aux caisses POS.</p>
+          <div v-if="editing">
+            <label class="mb-1 block text-xs font-semibold text-slate-600">Photo (diffusée à toutes les caisses)</label>
+            <div class="flex items-center gap-3">
+              <img v-if="imagePreview" :src="imagePreview" alt="" class="h-16 w-16 rounded-lg object-cover ring-1 ring-slate-200" />
+              <div v-else class="flex h-16 w-16 items-center justify-center rounded-lg bg-slate-100 text-[10px] text-slate-400">Aucune</div>
+              <input ref="imageInput" type="file" accept=".jpg,.jpeg,.png,.webp" class="hidden" @change="uploadImage" />
+              <button type="button" @click="imageInput.click()" :disabled="imageBusy"
+                      class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-50 transition">
+                {{ editing.has_image ? 'Remplacer' : 'Ajouter' }}
+              </button>
+              <button v-if="editing.has_image" type="button" @click="deleteImage" :disabled="imageBusy"
+                      class="rounded-lg border border-red-100 px-3 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:opacity-50 transition">
+                Retirer
+              </button>
+            </div>
+          </div>
           <p v-if="error" class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{{ error }}</p>
           <div class="flex justify-end gap-2 pt-2">
             <button type="button" @click="modal = false" class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition">
@@ -257,6 +276,60 @@ function openEdit(p) {
   newCategoryName.value = ''
   error.value = ''
   modal.value = true
+  loadImagePreview(p)
+}
+
+// L'API exige le jeton : l'aperçu passe par un blob, pas par un <img src> direct.
+const imageInput   = ref(null)
+const imagePreview = ref(null)
+const imageBusy    = ref(false)
+
+async function loadImagePreview(p) {
+  if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
+  imagePreview.value = null
+  if (!p.has_image) return
+  try {
+    const res = await api.get(`/catalog-products/${p.id}/image`, { responseType: 'blob' })
+    imagePreview.value = URL.createObjectURL(res.data)
+  } catch {
+    imagePreview.value = null
+  }
+}
+
+async function replaceEditing(data) {
+  const i = products.value.findIndex(x => x.id === data.id)
+  if (i !== -1) products.value[i] = data
+  editing.value = data
+  await loadImagePreview(data)
+}
+
+async function uploadImage(event) {
+  const file = event.target.files[0]
+  event.target.value = ''
+  if (!file) return
+  imageBusy.value = true
+  error.value = ''
+  try {
+    const body = new FormData()
+    body.append('image', file)
+    const res = await api.post(`/catalog-products/${editing.value.id}/image`, body)
+    await replaceEditing(res.data)
+  } catch (e) {
+    const errs = e.response?.data?.errors
+    error.value = errs ? Object.values(errs).flat().join(' ') : (e.response?.data?.message ?? 'Envoi de la photo impossible.')
+  } finally {
+    imageBusy.value = false
+  }
+}
+
+async function deleteImage() {
+  imageBusy.value = true
+  try {
+    const res = await api.delete(`/catalog-products/${editing.value.id}/image`)
+    await replaceEditing(res.data)
+  } finally {
+    imageBusy.value = false
+  }
 }
 
 async function save() {
