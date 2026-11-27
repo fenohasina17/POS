@@ -74,7 +74,11 @@ class SaleController extends Controller
             $validated = $request->validate([
                 'payment_id' => 'required_without:payments|exists:payments,id',
                 'discount_percentage' => 'nullable|numeric|min:0|max:100',
-                'service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
+                'service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)], // tout sur place / tout à emporter
+                // Répartition par article : quantité à emporter de chaque ligne (le reste sur place)
+                'line_splits' => 'nullable|array',
+                'line_splits.*.order_line_id' => 'required|integer',
+                'line_splits.*.a_emporter_quantity' => 'required|integer|min:0',
                 'amount_received' => 'nullable|numeric|min:0',
                 'change_amount' => 'nullable|numeric|min:0',
                 'payments' => 'nullable|array',
@@ -732,6 +736,8 @@ class SaleController extends Controller
                 'items.*.quantity' => 'required|integer|min:1',
                 'items.*.unit_price' => 'required|numeric|min:0',
                 'items.*.total' => 'required|numeric|min:0',
+                // Sur place / à emporter par article (sinon le choix global service_type)
+                'items.*.service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
             ];
 
             if ($request->has('payments')) {
@@ -919,6 +925,7 @@ class SaleController extends Controller
                 ],
                 'order_lines.*.quantity' => 'required|integer|min:1',
                 'order_lines.*.price' => 'required|numeric|min:0',
+                'order_lines.*.service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             \Log::error('Validation failed for createPendingOrder: ' . json_encode($e->errors()));
@@ -1260,6 +1267,7 @@ class SaleController extends Controller
                 ],
                 'order_lines.*.quantity' => 'required|integer|min:1',
                 'order_lines.*.price' => 'required|numeric|min:0',
+                'order_lines.*.service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
             ]);
 
             $sale = Sale::findOrFail($saleId);

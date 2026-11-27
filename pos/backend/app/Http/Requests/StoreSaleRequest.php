@@ -46,6 +46,7 @@ class StoreSaleRequest extends FormRequest
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
         ];
     }
 

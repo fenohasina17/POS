@@ -13,9 +13,13 @@ class Sale extends Model
 
     protected $table = 'sales';
 
-    // « Sur place » / « À emporter » (null pour les ventes antérieures à ce choix)
+    // « Sur place » / « À emporter » : choisi par article (order_lines.service_type).
+    // sales.service_type résume la commande ; « mixte » quand elle mélange les deux.
+    // Null pour les ventes antérieures à ce choix.
     public const SERVICE_SUR_PLACE = 'sur_place';
     public const SERVICE_A_EMPORTER = 'a_emporter';
+    public const SERVICE_MIXTE = 'mixte';
+    /** Valeurs acceptées pour un article */
     public const SERVICE_TYPES = [self::SERVICE_SUR_PLACE, self::SERVICE_A_EMPORTER];
 
     protected $fillable = [

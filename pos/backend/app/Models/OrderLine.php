@@ -15,6 +15,7 @@ class OrderLine extends Model
         'quantity',
         'price',
         'total',
+        'service_type', // sur_place | a_emporter (Sale::SERVICE_TYPES)
     ];
 
     // Relation avec le modèle Sale
