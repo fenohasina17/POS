@@ -14,7 +14,7 @@
 
     <InvoiceModal
       :isOpen="isInvoiceModalOpen"
-      :items="cart"
+      :items="invoiceItems.length ? invoiceItems : cart"
       :total="totalPrice"
       :clientName="'Client'"
       :invoiceNumber="currentInvoiceNumber"
@@ -298,6 +298,8 @@ const currentInvoiceNumber = ref('')
 const currentPaymentMethod = ref('')
 const paymentsList = ref([])
 const lastSaleInfo = ref(null) // Données de vente renvoyées par l'API (ticket client)
+// Lignes enregistrées (un article peut être coupé en sur place / à emporter) pour le ticket et les bons
+const invoiceItems = ref([])
 
 import { useCart } from '@/composables/useCart'
 import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
@@ -618,6 +620,19 @@ const handlePaymentSuccess = (data) => {
 
   currentSaleId.value = saleId
   lastSaleInfo.value = data
+  invoiceItems.value = (data.categories || []).flatMap((category) =>
+    (category.items || []).map((item) => {
+      const cartItem = cart.value.find((c) => String(c.id) === String(item.product_id))
+      return {
+        id: item.product_id,
+        name: item.product_name,
+        quantity: Number(item.quantity) || 1,
+        price: Number(item.unit_price) || 0,
+        service_type: item.service_type || null,
+        printer: cartItem?.printer // imprimante cuisine / bar de la catégorie
+      }
+    })
+  )
   const ticketNumber = data.sale_number || data.sale?.sale_number || data.ticket_number || data.sale?.ticket_number
   currentInvoiceNumber.value = ticketNumber ? `Vente #${ticketNumber}` : `INV-${saleId.toString().padStart(6, '0')}`
   currentPaymentMethod.value = paymentsList.value[0]?.payment_method_name || 'Espèces'
@@ -640,6 +655,7 @@ const closeInvoiceModal = () => {
   isInvoiceModalOpen.value = false
   paymentsList.value = []
   lastSaleInfo.value = null
+  invoiceItems.value = []
   currentSaleId.value = null
   currentInvoiceNumber.value = ''
   currentPaymentMethod.value = ''

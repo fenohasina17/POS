@@ -54,6 +54,64 @@
 
         <!-- COL 1 : Montants + détails paiement -->
         <div class="payment-col col-1">
+          <!-- Sur place / À emporter : à demander au client pour chaque article, obligatoire avant de valider -->
+          <div class="panel service-type-panel" :class="{ missing: !allServiceDecided }">
+            <div class="flex items-center justify-between mb-2">
+              <div class="section-title !mb-0">Sur place ou à emporter ?</div>
+              <span v-if="serviceSummary === SERVICE_TYPES.MIXTE" class="service-mixed">Commande mixte</span>
+            </div>
+            <div class="service-type-buttons" role="group" aria-label="Tout sur place ou tout à emporter">
+              <button
+                type="button"
+                class="service-btn"
+                :class="{ active: serviceSummary === SERVICE_TYPES.SUR_PLACE }"
+                @click="applyServiceToAll(SERVICE_TYPES.SUR_PLACE)"
+              >
+                <FontAwesomeIcon icon="fa-solid fa-utensils" />
+                <span>Tout sur place</span>
+              </button>
+              <button
+                type="button"
+                class="service-btn"
+                :class="{ active: serviceSummary === SERVICE_TYPES.A_EMPORTER }"
+                @click="applyServiceToAll(SERVICE_TYPES.A_EMPORTER)"
+              >
+                <FontAwesomeIcon icon="fa-solid fa-bag-shopping" />
+                <span>Tout à emporter</span>
+              </button>
+            </div>
+
+            <!-- Détail par article : un clic sur l'autre mode y déplace une unité -->
+            <ul v-if="serviceRows.length > 1 || serviceRows[0]?.quantity > 1" class="service-rows">
+              <li v-for="row in serviceRows" :key="row.key" class="service-row">
+                <span class="service-row-name">{{ row.name }} <em>×{{ row.quantity }}</em></span>
+                <span class="service-row-chips">
+                  <button
+                    type="button"
+                    class="service-chip"
+                    :class="{ active: row.decided && row.quantity - row.takeaway > 0 }"
+                    :aria-label="`${row.name} : un de plus sur place`"
+                    @click="chooseRowService(row, SERVICE_TYPES.SUR_PLACE)"
+                  >
+                    <FontAwesomeIcon icon="fa-solid fa-utensils" />
+                    {{ row.decided ? row.quantity - row.takeaway : '' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="service-chip"
+                    :class="{ active: row.decided && row.takeaway > 0 }"
+                    :aria-label="`${row.name} : un de plus à emporter`"
+                    @click="chooseRowService(row, SERVICE_TYPES.A_EMPORTER)"
+                  >
+                    <FontAwesomeIcon icon="fa-solid fa-bag-shopping" />
+                    {{ row.decided ? row.takeaway : '' }}
+                  </button>
+                </span>
+              </li>
+            </ul>
+            <p v-if="!allServiceDecided" class="service-hint">Demandez au client avant de confirmer.</p>
+          </div>
+
           <div class="panel">
             <div class="solde-row">
               <label>Total de la vente</label>
@@ -260,6 +318,7 @@
           type="button"
           class="btn primary"
           :disabled="!canConfirmPayment || isProcessing"
+          :title="!allServiceDecided ? 'Choisissez « Sur place » ou « À emporter »' : ''"
           @click="confirmPayment"
         >
           <FontAwesomeIcon
@@ -278,13 +337,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import NumericKeypad from '@/components/NumericKeypad.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck, faUtensils, faBagShopping } from '@fortawesome/free-solid-svg-icons'
 import { saleService } from '@/services/saleService'
 import { storage } from '@/utils/storage'
 import apiClient from '@/services/apiClient'
 import { useAuth } from '@/composables/useAuth'
+import { SERVICE_TYPES } from '@/services/printing/receiptTemplate'
 
-library.add(faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck)
+library.add(faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck, faUtensils, faBagShopping)
 
 const { activePos } = useAuth()
 
@@ -311,6 +371,99 @@ const selectedDiscount = ref(0)
 const paymentsList = ref([])
 const activeInput = ref('amountReceived')
 const isProcessing = ref(false)
+// ── Sur place / à emporter, par article ──
+// Une ligne par produit : quantity, takeaway (unités à emporter, le reste sur place),
+// decided (choix fait). Vente directe : rien n'est choisi d'avance, le caissier doit
+// demander ; commande à table : choix déjà enregistré (« sur place » par défaut), modifiable.
+const serviceRows = ref([])
+
+const buildServiceRows = () => {
+  const map = new Map()
+  for (const item of props.saleData?.items || []) {
+    const unitPrice = Number(item.unit_price ?? item.price ?? 0)
+    const key = `${item.product_id || item.id}-${unitPrice}`
+    const qty = Number(item.quantity) || 0
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        product_id: item.product_id || item.id,
+        name: item.name || 'Produit',
+        unit_price: unitPrice,
+        quantity: 0,
+        takeaway: 0,
+        decided: true,
+        lines: [], // lignes déjà enregistrées (commande à table)
+      })
+    }
+    const row = map.get(key)
+    row.quantity += qty
+    if (item.service_type === SERVICE_TYPES.A_EMPORTER) row.takeaway += qty
+    if (!item.service_type) row.decided = false
+    if (item.order_line_id) row.lines.push({ id: item.order_line_id, quantity: qty })
+  }
+  // Un article sans choix : on repart de zéro pour lui
+  serviceRows.value = [...map.values()].map((r) => (r.decided ? r : { ...r, takeaway: 0 }))
+}
+
+const applyServiceToAll = (type) => {
+  serviceRows.value.forEach((row) => {
+    row.takeaway = type === SERVICE_TYPES.A_EMPORTER ? row.quantity : 0
+    row.decided = true
+  })
+}
+
+// Premier clic : tout l'article dans ce mode ; ensuite chaque clic y déplace une unité
+const chooseRowService = (row, type) => {
+  if (!row.decided) {
+    row.takeaway = type === SERVICE_TYPES.A_EMPORTER ? row.quantity : 0
+    row.decided = true
+  } else if (type === SERVICE_TYPES.A_EMPORTER && row.takeaway < row.quantity) {
+    row.takeaway++
+  } else if (type === SERVICE_TYPES.SUR_PLACE && row.takeaway > 0) {
+    row.takeaway--
+  }
+}
+
+const allServiceDecided = computed(() => serviceRows.value.every((r) => r.decided))
+
+const serviceSummary = computed(() => {
+  if (!serviceRows.value.length || !allServiceDecided.value) return null
+  const takeaway = serviceRows.value.reduce((n, r) => n + r.takeaway, 0)
+  const total = serviceRows.value.reduce((n, r) => n + r.quantity, 0)
+  if (takeaway === 0) return SERVICE_TYPES.SUR_PLACE
+  if (takeaway === total) return SERVICE_TYPES.A_EMPORTER
+  return SERVICE_TYPES.MIXTE
+})
+
+// Vente directe : articles envoyés coupés en deux lignes si besoin
+const itemsWithServiceType = () =>
+  serviceRows.value.flatMap((row) => {
+    const parts = [
+      [row.quantity - row.takeaway, SERVICE_TYPES.SUR_PLACE],
+      [row.takeaway, SERVICE_TYPES.A_EMPORTER],
+    ]
+    return parts
+      .filter(([qty]) => qty > 0)
+      .map(([qty, type]) => ({
+        product_id: row.product_id,
+        quantity: qty,
+        unit_price: row.unit_price,
+        price: row.unit_price,
+        total: row.unit_price * qty,
+        service_type: type,
+      }))
+  })
+
+// Commande à table : quantité à emporter de chaque ligne enregistrée
+const lineSplits = () =>
+  serviceRows.value.flatMap((row) => {
+    let remaining = row.takeaway
+    return row.lines.map((line) => {
+      const takeaway = Math.min(line.quantity, remaining)
+      remaining -= takeaway
+      return { order_line_id: line.id, a_emporter_quantity: takeaway }
+    })
+  })
 
 // ... rest of computed properties ...
 
@@ -406,6 +559,7 @@ const addButtonText = computed(() => {
 })
 
 const canConfirmPayment = computed(() => {
+  if (!allServiceDecided.value) return false;
   if (discountedTotal.value === 0) return true;
   return paymentsList.value.length > 0 && remainingToPay.value <= 0;
 });
@@ -524,16 +678,7 @@ const confirmPayment = async () => {
     const auth = storage.getAuth()
     const session = storage.getSession()
 
-    const items = (props.saleData?.items || []).map((item) => {
-      const unitPrice = item.unit_price ?? item.price ?? 0
-      return {
-        product_id: item.product_id || item.id,
-        quantity: Number(item.quantity) || 0,
-        unit_price: Number(unitPrice),
-        price: Number(unitPrice),
-        total: Number(unitPrice) * (Number(item.quantity) || 0),
-      }
-    })
+    const items = itemsWithServiceType()
 
     const payload = {
       point_of_sale_id: props.saleData?.point_of_sale_id || activePos.value?.id,
@@ -563,6 +708,7 @@ const confirmPayment = async () => {
         discount_percentage: selectedDiscount.value,
         amount_received: totalPaymentsAmount.value,
         change_amount: Math.max(0, totalPaymentsAmount.value - discountedTotal.value),
+        line_splits: lineSplits(),
         payments: payload.payments
       }
       response = await saleService.validatePending(existingSaleId, validatePayload)
@@ -583,6 +729,7 @@ const confirmPayment = async () => {
 
 const closeModal = () => {
   paymentsList.value = []
+  serviceRows.value = []
   selectedPayment.value = ''
   selectedDiscount.value = 0
   amountReceived.value = ''
@@ -592,6 +739,15 @@ const closeModal = () => {
   isProcessing.value = false
   emit('close-modal')
 }
+
+// À chaque ouverture : reprendre les choix déjà faits (commande à table), sinon rien
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) buildServiceRows()
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   fetchPayments()
@@ -754,6 +910,113 @@ watch(
 }
 .value.warning {
   color: theme('colors.warning.600');
+}
+
+/* ── Sur place / À emporter ── */
+.service-type-panel {
+  border-width: 2px;
+}
+.service-type-panel.missing {
+  border-color: theme('colors.warning.400');
+  background: theme('colors.warning.50');
+}
+.service-type-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.service-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  border-radius: 0.875rem;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.service-btn:hover {
+  border-color: theme('colors.primary.300');
+}
+.service-btn.active {
+  background: theme('colors.primary.600');
+  border-color: theme('colors.primary.600');
+  color: #fff;
+  box-shadow: 0 6px 16px -6px theme('colors.primary.600');
+}
+.service-mixed {
+  border-radius: 9999px;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: theme('colors.primary.50');
+  color: theme('colors.primary.700');
+}
+.service-rows {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+.service-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+.service-row-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: #334155;
+}
+.service-row-name em {
+  font-style: normal;
+  color: #94a3b8;
+}
+.service-row-chips {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.service-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 3.25rem;
+  justify-content: center;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.6rem;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  color: #94a3b8;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.service-chip.active {
+  border-color: theme('colors.primary.600');
+  background: theme('colors.primary.50');
+  color: theme('colors.primary.700');
+}
+.service-hint {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: theme('colors.warning.700');
 }
 
 /* ── Chip remise ── */

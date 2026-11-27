@@ -207,6 +207,71 @@ class SaleService
     }
 
     /**
+     * « Sur place / à emporter » d'un article : son propre choix, sinon le choix
+     * global de la commande, sinon $fallback.
+     */
+    protected function lineServiceType(array $line, array $data, ?string $fallback = null): ?string
+    {
+        return $line['service_type'] ?? $data['service_type'] ?? $fallback;
+    }
+
+    /**
+     * Recalcule le résumé de la commande à partir de ses lignes :
+     * sur_place / a_emporter si toutes identiques, mixte sinon (inchangé si aucune ligne n'a l'info).
+     */
+    protected function refreshServiceType(Sale $sale): void
+    {
+        $types = $sale->orderLines()->whereNotNull('service_type')->distinct()->pluck('service_type');
+
+        if ($types->isEmpty()) {
+            return;
+        }
+
+        $sale->update(['service_type' => $types->count() > 1 ? Sale::SERVICE_MIXTE : $types->first()]);
+    }
+
+    /**
+     * Encaissement d'une table : le caissier peut changer le choix.
+     *  - $data['service_type'] : tout passe en sur place / à emporter ;
+     *  - $data['line_splits']  : [{order_line_id, a_emporter_quantity}] — la ligne est
+     *    coupée en deux si une partie seulement de la quantité est à emporter.
+     */
+    protected function applyServiceTypeChanges(Sale $sale, array $data): void
+    {
+        if (!empty($data['service_type'])) {
+            $sale->orderLines()->update(['service_type' => $data['service_type']]);
+        }
+
+        foreach ($data['line_splits'] ?? [] as $split) {
+            $line = $sale->orderLines()->whereKey($split['order_line_id'])->first();
+            if (!$line) {
+                continue;
+            }
+
+            $takeaway = max(0, min((int) $split['a_emporter_quantity'], (int) $line->quantity));
+            $onSite = $line->quantity - $takeaway;
+
+            if ($takeaway === 0 || $onSite === 0) {
+                $line->update(['service_type' => $takeaway ? Sale::SERVICE_A_EMPORTER : Sale::SERVICE_SUR_PLACE]);
+                continue;
+            }
+
+            $line->update([
+                'quantity' => $onSite,
+                'total' => $onSite * $line->price,
+                'service_type' => Sale::SERVICE_SUR_PLACE,
+            ]);
+            $sale->orderLines()->create([
+                'product_id' => $line->product_id,
+                'quantity' => $takeaway,
+                'price' => $line->price,
+                'total' => $takeaway * $line->price,
+                'service_type' => Sale::SERVICE_A_EMPORTER,
+            ]);
+        }
+    }
+
+    /**
      * Crée une vente complète (payée immédiatement)
      *
      * @param array $data Données de la vente
@@ -244,6 +309,7 @@ class SaleService
                     'point_of_sale_id' => $data['point_of_sale_id'],
                     'cash_register_session_id' => $data['cash_register_session_id'],
                     'table_id' => $data['table_id'] ?? null,
+                    'service_type' => $data['service_type'] ?? null, // recalculé d'après les articles plus bas
                     'total_amount' => $amounts['total_amount'],
                     'discount_percentage' => $amounts['discount'],
                     'final_amount' => $amounts['final_amount'],
@@ -259,8 +325,10 @@ class SaleService
                         'unit_price' => $item['unit_price'],
                         'price' => $item['unit_price'],
                         'total' => $item['quantity'] * $item['unit_price'],
+                        'service_type' => $this->lineServiceType($item, $data),
                     ]);
                 }
+                $this->refreshServiceType($sale);
 
                 $paymentData = $this->processPayments($data, $sale, $amounts['final_amount']);
                 $sale->update(['amount_received' => $paymentData['amount_received'], 'change_amount' => $paymentData['change_amount']]);
@@ -321,6 +389,7 @@ class SaleService
                     'point_of_sale_id' => $data['point_of_sale_id'],
                     'cash_register_session_id' => $data['cash_register_session_id'],
                     'table_id' => $data['table_id'],
+                    'service_type' => $data['service_type'] ?? Sale::SERVICE_SUR_PLACE, // recalculé plus bas
                     'total_amount' => $totalAmount,
                     'discount_percentage' => $discount,
                     'final_amount' => $finalAmount,
@@ -334,8 +403,11 @@ class SaleService
                         'quantity' => $line['quantity'],
                         'price' => $line['price'],
                         'total' => $line['quantity'] * $line['price'],
+                        // Commande à table : « sur place » sauf choix contraire du caissier
+                        'service_type' => $this->lineServiceType($line, $data, Sale::SERVICE_SUR_PLACE),
                     ]);
                 }
+                $this->refreshServiceType($sale);
 
                 $table = \App\Models\Table::find($data['table_id']);
                 if ($table) {
@@ -369,10 +441,13 @@ class SaleService
                 }
 
                 foreach ($orderLines as $line) {
-                    // Chercher si le produit existe déjà dans cette commande
+                    $serviceType = $line['service_type'] ?? Sale::SERVICE_SUR_PLACE;
+
+                    // Chercher si le produit existe déjà dans cette commande (même prix, même sur place / à emporter)
                     $existingLine = $sale->orderLines()
                         ->where('product_id', $line['product_id'])
                         ->where('price', $line['price']) // On vérifie aussi le prix au cas où il aurait changé
+                        ->where('service_type', $serviceType)
                         ->first();
 
                     if ($existingLine) {
@@ -387,9 +462,11 @@ class SaleService
                             'quantity' => $line['quantity'],
                             'price' => $line['price'],
                             'total' => $line['quantity'] * $line['price'],
+                            'service_type' => $serviceType,
                         ]);
                     }
                 }
+                $this->refreshServiceType($sale);
 
                 $totalAmount = $sale->orderLines()->sum('total');
                 $finalAmount = $totalAmount * (1 - ($sale->discount_percentage / 100));
@@ -469,6 +546,9 @@ class SaleService
                     throw new SaleServiceException("La commande ne contient aucun produit.");
                 }
 
+                // Le caissier peut corriger « sur place / à emporter » à l'encaissement
+                $this->applyServiceTypeChanges($sale, $data);
+
                 $totalAmount = $sale->orderLines()->sum('total');
                 $discount = $data['discount_percentage'] ?? $sale->discount_percentage;
                 $finalAmount = $totalAmount * (1 - ($discount / 100));
@@ -503,6 +583,8 @@ class SaleService
                     'amount_received' => $amountReceived,
                     'change_amount' => $changeAmount,
                 ]);
+
+                $this->refreshServiceType($sale);
 
                 $session = $sale->cashRegisterSession;
                 if ($session) {
@@ -611,7 +693,8 @@ class SaleService
                 'quantity' => $line->quantity,
                 'unit_price' => $line->price,
                 'total' => $line->total,
-                'notes' => $line->notes ?? null
+                'notes' => $line->notes ?? null,
+                'service_type' => $line->service_type,
             ];
 
             $categoriesWithItems[$categoryName]['subtotal'] += $line->total;
@@ -631,6 +714,7 @@ class SaleService
                 'date_raw' => $sale->created_at,
                 'table_id' => $sale->table_id,
                 'table_number' => $sale->table?->table_number ?? 'Emporter',
+                'service_type' => $sale->service_type,
                 'cashier_id' => $sale->user_id,
                 'cashier_name' => $sale->user?->name ?? 'Inconnu',
                 'point_of_sale_id' => $sale->point_of_sale_id,

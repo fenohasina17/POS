@@ -34,6 +34,85 @@ export const formatTicketDate = (value) => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
+// ── « Sur place » / « À emporter » ──
+// Choisi par article (order_lines.service_type) ; la vente le résume
+// (sales.service_type), « mixte » quand la commande mélange les deux.
+export const SERVICE_TYPES = Object.freeze({ SUR_PLACE: 'sur_place', A_EMPORTER: 'a_emporter', MIXTE: 'mixte' })
+
+/** Libellé du ticket (graphie du modèle : « A emporter ») */
+export const serviceTypeText = (serviceType) =>
+  serviceType === SERVICE_TYPES.SUR_PLACE ? 'Sur place'
+    : serviceType === SERVICE_TYPES.A_EMPORTER ? 'A emporter'
+      : '' // « mixte » : pas de libellé global, les articles à emporter sont signalés ligne par ligne
+
+/** Mention en gros en tête des bons de préparation cuisine / bar */
+export const serviceTypeBanner = (serviceType) =>
+  serviceType === SERVICE_TYPES.SUR_PLACE ? 'SUR PLACE'
+    : serviceType === SERVICE_TYPES.A_EMPORTER ? 'À EMPORTER'
+      : ''
+
+/** Résumé d'une liste d'articles : sur_place, a_emporter, mixte ou null si aucun n'a l'info */
+export function summarizeServiceType(items = []) {
+  const types = new Set((items || []).map((i) => i?.serviceType).filter(Boolean))
+  if (types.size === 0) return null
+  return types.size > 1 ? SERVICE_TYPES.MIXTE : [...types][0]
+}
+
+/**
+ * Bons de préparation : articles regroupés par mode, « SUR PLACE » d'abord.
+ * Un article sans mode prend celui de la commande ($fallback).
+ * @returns {Array<{serviceType, banner, items}>}
+ */
+export function splitItemsByServiceType(items = [], fallback = null) {
+  const order = [SERVICE_TYPES.SUR_PLACE, SERVICE_TYPES.A_EMPORTER, null]
+  const groups = new Map(order.map((t) => [t, []]))
+  for (const item of items || []) {
+    const t = item?.serviceType || (fallback !== SERVICE_TYPES.MIXTE ? fallback : null) || null
+    groups.get(order.includes(t) ? t : null).push(item)
+  }
+  return order
+    .filter((t) => groups.get(t).length)
+    .map((t) => ({ serviceType: t, banner: serviceTypeBanner(t), items: groups.get(t) }))
+}
+
+/**
+ * Libellé du ticket client : « Sur place – Table 4 », « A emporter »…
+ * Commande mixte : aucun libellé global (seulement « Table 4 » s'il y a une table).
+ * Ventes enregistrées avant le choix (serviceType vide) : déduit de la table comme avant.
+ */
+export function formatServiceLabel({ serviceType, tableNumber } = {}) {
+  const hasTable = tableNumber !== null && tableNumber !== undefined && tableNumber !== '' && tableNumber !== 'Emporter'
+  const table = hasTable ? `Table ${tableNumber}` : ''
+  if (serviceType === SERVICE_TYPES.MIXTE) return table
+  const text = serviceTypeText(serviceType)
+  if (text) return table ? `${text} – ${table}` : text
+  return table || 'A emporter'
+}
+
+// ── Postes de préparation (categories.printer) ──
+export const STATION_LABELS = Object.freeze({ kitchen: 'Cuisine', cook: 'Cuisine', fastfood: 'Fast food', pizza: 'Pizza', bar: 'Bar', receipt: 'Caisse' })
+const STATION_ORDER = ['kitchen', 'cook', 'fastfood', 'pizza', 'bar', 'receipt']
+
+/** Nom lisible d'un poste : 'kitchen' -> « Cuisine » (inconnu : nom brut) */
+export const stationLabel = (printer) => STATION_LABELS[printer] || String(printer || '')
+
+/**
+ * « Suite de commande » : quand un même ticket part sur plusieurs postes, chaque bon
+ * cite les autres. Renvoie « Pizza + Bar » (sans doublon ni le poste courant), '' sinon.
+ */
+export function otherStationsText(stations = [], current = null) {
+  const labels = []
+  const sorted = [...new Set(stations || [])].sort((a, b) => {
+    const ia = STATION_ORDER.indexOf(a), ib = STATION_ORDER.indexOf(b)
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+  })
+  for (const s of sorted) {
+    const label = stationLabel(s)
+    if (s !== current && label && label !== stationLabel(current) && !labels.includes(label)) labels.push(label)
+  }
+  return labels.join(' + ')
+}
+
 export const RECEIPT_STYLES = `
   * { margin: 0; padding: 0; box-sizing: border-box; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: 80mm auto; margin: 0; }
@@ -52,6 +131,8 @@ export const RECEIPT_STYLES = `
   .infos .right { text-align: left; padding-left: 4mm; }
   .infos .label { font-weight: 700; }
   .infos div { word-break: break-word; }
+  .infos .service { font-weight: 700; }
+  td .tag { font-size: 10px; font-weight: 700; font-style: italic; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2mm; }
   th { font-weight: 700; text-decoration: underline; text-align: left; padding: 0 0 1.5mm; font-size: 11px; }
   td { padding: 0.6mm 0; vertical-align: top; word-break: break-word; font-size: 11px; }
@@ -76,9 +157,9 @@ export const RECEIPT_STYLES = `
  * @param {string} [data.serverName]      Serveur de la table (ligne masquée si absent)
  * @param {string|Date} [data.date]
  * @param {string} [data.cashRegisterName]
- * @param {string} [data.serviceLabel]    « A emporter » / « Table 4 »
+ * @param {string} [data.serviceLabel]    « A emporter » / « Sur place – Table 4 » (cf. formatServiceLabel)
  * @param {Array<{method,amount}>} [data.payments]  Détail des règlements (une ligne chacun en bas)
- * @param {Array<{name,price,quantity}>} data.items
+ * @param {Array<{name,price,quantity,serviceType}>} data.items  serviceType : sur_place | a_emporter (marqué si commande mixte)
  * @param {number} [data.discount]        Montant de la remise (déjà calculé)
  * @param {number} data.total             Net à payer (déjà calculé)
  * @param {number|null} [data.amountReceived]  Utilisé seulement sans détail des paiements
@@ -89,12 +170,16 @@ export function buildReceiptBody(data = {}) {
   const items = Array.isArray(data.items) ? data.items : []
   const has = (v) => v !== null && v !== undefined && v !== ''
 
+  // Commande mixte : les articles à emporter sont signalés sous leur nom
+  const markTakeaway = summarizeServiceType(items) === SERVICE_TYPES.MIXTE
+
   const rows = items
     .map((item) => {
       const qty = Number(item.quantity) || 0
       const price = Number(item.price) || 0
+      const tag = markTakeaway && item.serviceType === SERVICE_TYPES.A_EMPORTER ? '<div class="tag">› à emporter</div>' : ''
       return `<tr>
-        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.name)}${tag}</td>
         <td class="num">${formatTicketAmount(price)}</td>
         <td class="qty">${qty}</td>
         <td class="num">${formatTicketAmount(price * qty)}</td>
@@ -134,7 +219,7 @@ export function buildReceiptBody(data = {}) {
       <div class="col right">
         <div>${escapeHtml(formatTicketDate(data.date))}</div>
         ${has(data.cashRegisterName) ? `<div>${escapeHtml(data.cashRegisterName)}</div>` : ''}
-        ${has(data.serviceLabel) ? `<div>${escapeHtml(data.serviceLabel)}</div>` : ''}
+        ${has(data.serviceLabel) ? `<div class="service">${escapeHtml(data.serviceLabel)}</div>` : ''}
       </div>
     </div>
     <table>

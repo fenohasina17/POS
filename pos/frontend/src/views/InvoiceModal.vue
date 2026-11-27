@@ -160,7 +160,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { printingService } from '@/services/printing/PrintingService'
-import { buildReceiptHTML } from '@/services/printing/receiptTemplate'
+import { buildReceiptHTML, formatServiceLabel } from '@/services/printing/receiptTemplate'
 import { storage } from '@/utils/storage'
 import logoUrl from '@/assets/logo-ticket-nb.png' // Logo noir et blanc pour l'imprimante thermique
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -271,6 +271,14 @@ const ticketNumber = computed(() =>
   props.saleInfo?.sale?.ticket_number ?? String(props.invoiceNumber || '').replace(/^vente\s*#\s*/i, '')
 )
 
+// Sur place / à emporter d'un article : le sien, sinon celui de la commande (sauf « mixte »)
+const itemServiceType = (item) => {
+  const own = item.service_type || item.serviceType
+  if (own) return own
+  const sale = props.saleInfo?.sale?.service_type
+  return sale && sale !== 'mixte' ? sale : null
+}
+
 const receiptData = computed(() => {
   const sale = props.saleInfo?.sale || {}
   const totals = props.saleInfo?.totals || {}
@@ -280,7 +288,10 @@ const receiptData = computed(() => {
 
   let serviceLabel = ''
   if (props.saleInfo?.sale) {
-    serviceLabel = sale.table_id ? `Table ${sale.table_number}` : 'A emporter'
+    serviceLabel = formatServiceLabel({
+      serviceType: sale.service_type,
+      tableNumber: sale.table_id ? sale.table_number : null
+    })
   } else if (props.clientName && props.clientName.startsWith('Table')) {
     serviceLabel = props.clientName
   }
@@ -313,7 +324,8 @@ const ticketPreviewHtml = computed(() => buildReceiptHTML({
   items: props.items.map(item => ({
     name: item.name || item.product?.name || 'Article',
     price: Number(item.price) || 0,
-    quantity: Number(item.quantity) || 1
+    quantity: Number(item.quantity) || 1,
+    serviceType: itemServiceType(item)
   })),
   discount: discountAmount.value,
   total: finalTotal.value
@@ -337,7 +349,8 @@ const prepareInvoiceData = () => {
     items: props.items.map(item => ({
       name: item.name || item.product?.name || 'Article',
       price: Number(item.price) || 0,
-      quantity: Number(item.quantity) || 1
+      quantity: Number(item.quantity) || 1,
+      serviceType: itemServiceType(item)
     })),
     subtotal: props.total,
     discount: discountAmount.value,
@@ -359,12 +372,17 @@ const printInvoiceDirect = async () => {
     const invoiceData = prepareInvoiceData()
     await printingService.printInvoice(invoiceData)
 
-    const tableInfo = { name: props.tableName || 'Vente Directe', ticketNumber: invoiceData.number }
+    const tableInfo = {
+      name: props.tableName || 'Vente Directe',
+      ticketNumber: invoiceData.number,
+      serviceType: props.saleInfo?.sale?.service_type || null
+    }
     const orderItems = props.items.map(item => ({
       ...item,
       name: item.name || item.product?.name || 'Article',
       quantity: Number(item.quantity) || 1,
-      price: Number(item.price) || 0
+      price: Number(item.price) || 0,
+      serviceType: itemServiceType(item)
     }))
     await printingService.printOrder(tableInfo, orderItems)
 
@@ -410,7 +428,8 @@ const printInvoicePDF = async () => {
 
       const tableInfo = {
         name: props.tableName || 'Vente Directe',
-        ticketNumber: invoiceData.number
+        ticketNumber: invoiceData.number,
+        serviceType: props.saleInfo?.sale?.service_type || null // « SUR PLACE » / « À EMPORTER » en tête du bon
       };
 
       // Regroupement dynamique basé STRICTEMENT sur item.printer (ex: 'bar', 'kitchen')
@@ -425,13 +444,17 @@ const printInvoicePDF = async () => {
         acc[targetPrinter].push({
           name: item.name || item.product?.name || 'Article',
           quantity: Number(item.quantity) || 1,
-          price: Number(item.price) || 0
+          price: Number(item.price) || 0,
+          serviceType: itemServiceType(item)
         });
 
         return acc;
       }, {});
 
       console.log('[DEBUG_PRINT] Groupes d’impression détectés :', Object.keys(itemsByPrinter));
+
+      // Tous les postes de ce ticket : chaque bon cite les autres (« suite de commande »)
+      tableInfo.stations = Object.keys(itemsByPrinter);
 
       // Envoi de chaque bon de préparation vers son imprimante dédiée
       for (const [printerName, printerItems] of Object.entries(itemsByPrinter)) {

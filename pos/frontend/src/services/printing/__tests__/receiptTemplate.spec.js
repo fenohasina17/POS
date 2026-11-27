@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildReceiptHTML, formatTicketAmount, formatTicketDate } from '../receiptTemplate'
+import {
+  buildReceiptHTML, formatTicketAmount, formatTicketDate, formatServiceLabel, serviceTypeBanner,
+  summarizeServiceType, splitItemsByServiceType, SERVICE_TYPES, otherStationsText, stationLabel
+} from '../receiptTemplate'
 
 const base = {
   ticketNumber: 1146,
@@ -66,3 +69,101 @@ describe('receiptTemplate', () => {
     expect(html).toContain('&lt;b&gt;x&lt;/b&gt;')
   })
 })
+
+describe('sur place / à emporter', () => {
+  it('affiche le choix du client, suivi de la table s\'il y en a une', () => {
+    expect(formatServiceLabel({ serviceType: 'a_emporter' })).toBe('A emporter')
+    expect(formatServiceLabel({ serviceType: 'sur_place' })).toBe('Sur place')
+    expect(formatServiceLabel({ serviceType: 'sur_place', tableNumber: 4 })).toBe('Sur place – Table 4')
+    expect(formatServiceLabel({ serviceType: 'a_emporter', tableNumber: '12' })).toBe('A emporter – Table 12')
+  })
+
+  it('ventes antérieures sans choix : déduit de la table comme avant', () => {
+    expect(formatServiceLabel({ serviceType: null, tableNumber: 4 })).toBe('Table 4')
+    expect(formatServiceLabel({ serviceType: null })).toBe('A emporter')
+    // l'API renvoie table_number « Emporter » quand il n'y a pas de table
+    expect(formatServiceLabel({ serviceType: 'sur_place', tableNumber: 'Emporter' })).toBe('Sur place')
+  })
+
+  it('donne la mention en gros des bons de préparation', () => {
+    expect(serviceTypeBanner(SERVICE_TYPES.SUR_PLACE)).toBe('SUR PLACE')
+    expect(serviceTypeBanner(SERVICE_TYPES.A_EMPORTER)).toBe('À EMPORTER')
+    expect(serviceTypeBanner(null)).toBe('')
+  })
+
+  it('imprime le libellé sur le ticket client', () => {
+    const html = buildReceiptHTML({ ...base, serviceLabel: formatServiceLabel({ serviceType: 'sur_place', tableNumber: 4 }) })
+    expect(html).toContain('Sur place – Table 4')
+  })
+
+  it('commande mixte : pas de libellé global, seulement la table', () => {
+    expect(formatServiceLabel({ serviceType: 'mixte', tableNumber: 4 })).toBe('Table 4')
+    expect(formatServiceLabel({ serviceType: 'mixte' })).toBe('')
+  })
+
+  it('résume les articles : sur place, à emporter ou mixte', () => {
+    expect(summarizeServiceType([{ serviceType: 'sur_place' }, { serviceType: 'sur_place' }])).toBe('sur_place')
+    expect(summarizeServiceType([{ serviceType: 'sur_place' }, { serviceType: 'a_emporter' }])).toBe('mixte')
+    expect(summarizeServiceType([{}])).toBeNull()
+  })
+
+  it('découpe les bons de préparation en « SUR PLACE » puis « À EMPORTER »', () => {
+    const sections = splitItemsByServiceType([
+      { name: 'Pizza Reine', serviceType: 'a_emporter' },
+      { name: 'Mojito', serviceType: 'sur_place' },
+      { name: 'Coca' } // sans mode : celui de la commande
+    ], 'sur_place')
+    expect(sections.map((s) => s.banner)).toEqual(['SUR PLACE', 'À EMPORTER'])
+    expect(sections[0].items.map((i) => i.name)).toEqual(['Mojito', 'Coca'])
+    expect(sections[1].items.map((i) => i.name)).toEqual(['Pizza Reine'])
+  })
+
+  it('bon sans aucune information (ancienne caisse) : une seule section sans mention', () => {
+    const sections = splitItemsByServiceType([{ name: 'Mojito' }], null)
+    expect(sections).toHaveLength(1)
+    expect(sections[0].banner).toBe('')
+  })
+
+  it('ticket d\'une commande mixte : les articles à emporter sont signalés', () => {
+    const html = buildReceiptHTML({
+      ...base,
+      items: [
+        { name: 'Mojito', price: 3000, quantity: 1, serviceType: 'sur_place' },
+        { name: 'Pizza Reine', price: 20000, quantity: 1, serviceType: 'a_emporter' }
+      ]
+    })
+    expect(html.match(/› à emporter/g)).toHaveLength(1)
+    expect(html.indexOf('› à emporter')).toBeGreaterThan(html.indexOf('Pizza Reine'))
+  })
+
+  it('ticket tout à emporter : pas de mention ligne par ligne', () => {
+    const html = buildReceiptHTML({ ...base, items: [{ name: 'Mojito', price: 3000, quantity: 1, serviceType: 'a_emporter' }] })
+    expect(html).not.toContain('› à emporter')
+  })
+})
+
+describe('suite de commande (ticket réparti sur plusieurs postes)', () => {
+  it('chaque bon cite les autres postes du même ticket', () => {
+    const stations = ['bar', 'kitchen', 'pizza']
+    expect(otherStationsText(stations, 'bar')).toBe('Cuisine + Pizza')
+    expect(otherStationsText(stations, 'kitchen')).toBe('Pizza + Bar')
+    expect(otherStationsText(stations, 'pizza')).toBe('Cuisine + Bar')
+  })
+
+  it('un seul poste : pas de mention', () => {
+    expect(otherStationsText(['bar'], 'bar')).toBe('')
+    expect(otherStationsText([], 'bar')).toBe('')
+    expect(otherStationsText(undefined, 'bar')).toBe('')
+  })
+
+  it('le fast food est un poste à part entière', () => {
+    expect(otherStationsText(['fastfood', 'kitchen', 'bar'], 'bar')).toBe('Cuisine + Fast food')
+    expect(otherStationsText(['fastfood', 'kitchen', 'bar'], 'fastfood')).toBe('Cuisine + Bar')
+  })
+
+  it('les articles sans imprimante sont cités comme « Caisse », un poste inconnu par son nom', () => {
+    expect(otherStationsText(['kitchen', 'receipt', 'friteuse'], 'kitchen')).toBe('Caisse + friteuse')
+    expect(stationLabel('cook')).toBe('Cuisine')
+  })
+})
+

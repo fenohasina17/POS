@@ -122,6 +122,32 @@ function getPrintStyles() {
         margin-top: 8px;
         font-size: 9px;
       }
+      /* Bon de préparation : « SUR PLACE » / « À EMPORTER » lisible d'un coup d'œil */
+      .service-banner {
+        margin: 8px 0 4px;
+        padding: 4px 0;
+        border: 3px solid #000;
+        text-align: center;
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        width: 100%;
+      }
+      /* Ticket réparti sur plusieurs postes : les autres postes sont cités */
+      .shared-order {
+        margin: 6px 0 2px;
+        padding: 4px;
+        border: 4px double #000;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 700;
+        width: 100%;
+      }
+      .shared-order-title {
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 1px;
+      }
       .payment-method {
         margin: 1px 0;
         display: flex;
@@ -221,6 +247,8 @@ function generateHTML(arg, type) {
     const titles = {
       kitchen: 'BON DE CUISINE',
       cook: 'BON DE CUISINE',
+      fastfood: 'BON FAST FOOD',
+      pizza: 'BON PIZZA',
       bar: 'BON DE BAR'
     };
     const currentTitle = titles[arg.printerName] || 'BON DE PRÉPARATION';
@@ -244,6 +272,14 @@ function generateHTML(arg, type) {
       </div>
       <div class="double-divider"></div>
 
+      ${arg.otherStations ? `
+      <div class="shared-order">
+        <div class="shared-order-title">SUITE DE COMMANDE</div>
+        <div>Aussi en : ${arg.otherStations}</div>
+      </div>` : ''}
+
+      ${(arg.serviceSections || [{ banner: '', items: arg.items }]).map(section => `
+      ${section.banner ? `<div class="service-banner">${section.banner}</div>` : ''}
       <table class="table">
         <thead>
           <tr>
@@ -252,7 +288,7 @@ function generateHTML(arg, type) {
           </tr>
         </thead>
         <tbody>
-          ${arg.items.map(item => `
+          ${section.items.map(item => `
             <tr>
               <td class="text-center" style="font-size: 11px;">${item.quantity} x</td>
               <td class="text-left" style="font-size: 11px;">${item.name}</td>
@@ -260,6 +296,7 @@ function generateHTML(arg, type) {
           `).join('')}
         </tbody>
       </table>
+      `).join('')}
 
       <div class="footer">
         <div>--- À préparer ---</div>
@@ -303,9 +340,15 @@ async function handlePrint(arg, type) {
     if (!target) {
       console.warn(`[PRINT] Imprimante "${requestedPrinter}" introuvable.`);
 
-      const isPrepPrinter = ['kitchen', 'bar', 'cook'].includes(requestedPrinter);
+      const isPrepPrinter = ['kitchen', 'fastfood', 'pizza', 'bar', 'cook'].includes(requestedPrinter);
 
-      if (isPrepPrinter) {
+      // Fast food : sans imprimante dédiée, le bon part sur l'imprimante cuisine
+      if (requestedPrinter === 'fastfood') {
+        target = printers.find(p => p.name === 'kitchen');
+        if (target) console.log('[PRINT] Redirection du bon (fastfood) vers "kitchen"');
+      }
+
+      if (!target && isPrepPrinter) {
         console.log(`[PRINT] Redirection automatique du bon (${requestedPrinter}) vers "receipt"`);
         target = findReceiptPrinter();
       } else if (requestedPrinter === 'receipt') {
@@ -320,9 +363,21 @@ async function handlePrint(arg, type) {
     finalPrinterName = target.name;
     console.log(`[PRINT] Envoi vers : "${finalPrinterName}" (Cible originale : "${requestedPrinter}")`);
 
-    let htmlContent = type === 'facture'
-      ? (await loadReceiptTemplate()).buildReceiptHTML(arg)
-      : generateHTML(arg, type);
+    let htmlContent;
+    if (type === 'facture') {
+      htmlContent = (await loadReceiptTemplate()).buildReceiptHTML(arg);
+    } else if (type === 'bon_cuisine') {
+      // Articles regroupés en « SUR PLACE » / « À EMPORTER » (modèle partagé avec le ticket client)
+      const { splitItemsByServiceType, otherStationsText } = await loadReceiptTemplate();
+      htmlContent = generateHTML({
+        ...arg,
+        serviceSections: splitItemsByServiceType(arg.items, arg.tableInfo?.serviceType),
+        // Même ticket aussi envoyé à d'autres postes : « Pizza + Bar »
+        otherStations: otherStationsText(arg.tableInfo?.stations, arg.printerName)
+      }, type);
+    } else {
+      htmlContent = generateHTML(arg, type);
+    }
 
     printWindow = new BrowserWindow({
       show: false,

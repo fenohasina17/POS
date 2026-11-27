@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Validation\Rule;
+
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -370,7 +372,7 @@ class CategoryController extends Controller
         try {
             $validated = $request->validate([
                 'name' => 'required|string|max:255|unique:categories,name',
-                'printer' => 'nullable|in:kitchen,bar,receipt,cook',
+                'printer' => ['nullable', Rule::in(Category::PRINTERS)],
             ]);
 
             $category = Category::create($validated);
@@ -417,7 +419,7 @@ class CategoryController extends Controller
         try {
             $validated = $request->validate([
                 'name' => 'sometimes|string|max:255|unique:categories,name,' . $category->id,
-                'printer' => 'sometimes|nullable|in:kitchen,bar,receipt,cook',
+                'printer' => ['sometimes', 'nullable', Rule::in(Category::PRINTERS)],
             ]);
 
             $category->update($validated);
@@ -484,7 +486,7 @@ class CategoryController extends Controller
     {
         try {
             $validated = $request->validate([
-                'printer' => 'required|in:kitchen,bar,receipt,cook',
+                'printer' => ['required', Rule::in(Category::PRINTERS)],
             ]);
 
             $category->update(['printer' => $validated['printer']]);
@@ -511,10 +513,10 @@ class CategoryController extends Controller
      */
     public function getCategoriesByPrinter($printerType)
     {
-        if (!in_array($printerType, ['kitchen', 'bar', 'receipt', 'cook'])) {
+        if (!in_array($printerType, Category::PRINTERS, true)) {
             return response()->json([
                 'message' => 'Invalid printer type',
-                'allowed' => ['kitchen', 'bar', 'receipt', 'cook']
+                'allowed' => Category::PRINTERS
             ], 422);
         }
 

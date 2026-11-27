@@ -198,6 +198,12 @@
             >
               <span class="text-xs font-bold text-warning-900 leading-tight">
                 <span class="text-warning-500">{{ line.quantity }}x</span> {{ line.product?.name }}
+                <span
+                  v-if="line.service_type === SERVICE_TYPES.A_EMPORTER"
+                  class="ml-1 rounded-md bg-primary-600 px-1.5 py-0.5 text-[9px] font-black uppercase text-white"
+                >
+                  <FontAwesomeIcon icon="fa-solid fa-bag-shopping" /> À emporter
+                </span>
               </span>
               <span class="text-xs font-black text-warning-700 whitespace-nowrap ml-2">
                 {{ formatPrice(getLinePrice(line) * line.quantity) }}
@@ -229,10 +235,23 @@
           <div class="flex-1 space-y-1 overflow-y-auto pr-1 scrollbar-hide">
             <div
               v-for="item in cart"
-              :key="item.id"
+              :key="`${item.id}-${item.service_type}`"
               class="group relative rounded-xl border border-slate-100 bg-slate-50/50 p-2 transition-all hover:bg-white hover:shadow-md"
             >
               <div class="flex items-center gap-2">
+                <!-- Sur place / à emporter de cet article : un clic bascule -->
+                <button
+                  type="button"
+                  @click="toggleItemServiceType(item)"
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 text-[10px] transition-all active:scale-95"
+                  :class="item.service_type === SERVICE_TYPES.A_EMPORTER
+                    ? 'border-primary-600 bg-primary-600 text-white'
+                    : 'border-slate-200 bg-white text-slate-500'"
+                  :title="item.service_type === SERVICE_TYPES.A_EMPORTER ? 'À emporter (cliquer : sur place)' : 'Sur place (cliquer : à emporter)'"
+                  :aria-label="`${item.name} : ${item.service_type === SERVICE_TYPES.A_EMPORTER ? 'à emporter' : 'sur place'}`"
+                >
+                  <FontAwesomeIcon :icon="item.service_type === SERVICE_TYPES.A_EMPORTER ? 'fa-solid fa-bag-shopping' : 'fa-solid fa-utensils'" />
+                </button>
                 <div class="flex-1 min-w-0">
                   <p class="truncate text-xs font-black text-slate-950 leading-none">
                     {{ item.name }}
@@ -294,6 +313,26 @@
               <span class="text-xl font-black text-slate-900 tracking-tight">{{
                 formatPrice(displayTotal)
               }}</span>
+            </div>
+
+            <!-- Sur place (par défaut) / À emporter : appliqué à tout le panier et aux prochains
+                 articles ; chaque article reste modifiable. Figure sur les bons et le ticket. -->
+            <div class="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Sur place ou à emporter">
+              <button
+                v-for="opt in serviceTypeOptions"
+                :key="opt.value"
+                type="button"
+                role="radio"
+                :aria-checked="serviceType === opt.value"
+                @click="setServiceType(opt.value)"
+                class="flex items-center justify-center gap-1.5 rounded-xl border-2 py-2 text-[11px] font-black uppercase tracking-wide transition-all active:scale-95"
+                :class="serviceType === opt.value
+                  ? 'border-primary-600 bg-primary-600 text-white shadow-md shadow-primary-100'
+                  : 'border-slate-200 bg-white text-slate-500 hover:border-primary-300'"
+              >
+                <FontAwesomeIcon :icon="opt.icon" />
+                {{ opt.label }}
+              </button>
             </div>
 
             <div class="grid gap-2">
@@ -384,6 +423,9 @@ import { useCategories } from '@/composables/useCategories'
 import { tableService } from '@/services/tableService'
 import { printingService } from '@/services/printing/PrintingService'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faUtensils, faBagShopping } from '@fortawesome/free-solid-svg-icons'
+import { SERVICE_TYPES } from '@/services/printing/receiptTemplate'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 
 const props = defineProps({
@@ -413,6 +455,39 @@ const isAddingToPending = ref(false)
 const isProcessing = ref(false)
 const loadingProducts = ref(false)
 const tableSelectorModal = ref(null)
+
+// ========== SUR PLACE / À EMPORTER ==========
+library.add(faUtensils, faBagShopping)
+const serviceTypeOptions = [
+  { value: SERVICE_TYPES.SUR_PLACE, label: 'Sur place', icon: 'fa-solid fa-utensils' },
+  { value: SERVICE_TYPES.A_EMPORTER, label: 'À emporter', icon: 'fa-solid fa-bag-shopping' },
+]
+// Vente à table : les articles ajoutés sont « sur place » par défaut ; le caissier peut changer
+const serviceType = ref(SERVICE_TYPES.SUR_PLACE)
+// Le sélecteur fixe le mode des prochains articles et l'applique à tout le panier
+const setServiceType = (value) => {
+  serviceType.value = value
+  const merged = []
+  for (const item of cart.value) {
+    const same = merged.find((m) => m.id === item.id)
+    if (same) same.quantity += item.quantity
+    else merged.push({ ...item, service_type: value })
+  }
+  cart.value = merged
+}
+// Un article seul : bascule (fusionné avec la même ligne de l'autre mode s'il y en a une)
+const toggleItemServiceType = (item) => {
+  const next = item.service_type === SERVICE_TYPES.A_EMPORTER ? SERVICE_TYPES.SUR_PLACE : SERVICE_TYPES.A_EMPORTER
+  const other = cart.value.find((i) => i !== item && i.id === item.id && i.service_type === next)
+  if (other) {
+    other.quantity += item.quantity
+    cart.value = cart.value.filter((i) => i !== item)
+  } else {
+    item.service_type = next
+  }
+}
+// Informations transmises aux bons de préparation (cuisine / bar) ; chaque article porte son mode
+const orderTicketInfo = () => ({ ...selectedTable.value, serviceType: SERVICE_TYPES.SUR_PLACE })
 
 
 // ========== FONCTIONS UTILITAIRES ==========
@@ -588,7 +663,7 @@ const addToCart = (product) => {
   if (isInteractionLocked.value) return
 
   const id = String(product.id || product.product_id)
-  const existing = cart.value.find((p) => String(p.id) === id)
+  const existing = cart.value.find((p) => String(p.id) === id && p.service_type === serviceType.value)
   const productPrice = getProductPrice(product)
 
   if (existing) {
@@ -601,6 +676,7 @@ const addToCart = (product) => {
       price: productPrice,
       category: product.category || { name: product.category_name },
       printer: product.printer || product.category?.printer || null,
+      service_type: serviceType.value,
     })
   }
 }
@@ -618,7 +694,7 @@ const decrementQuantity = (item) => {
 }
 
 const removeItem = (item) => {
-  cart.value = cart.value.filter((i) => i.id !== item.id)
+  cart.value = cart.value.filter((i) => i !== item)
 }
 
 const clearCart = () => {
@@ -695,6 +771,7 @@ const holdOrder = async () => {
         product_id: item.id,
         quantity: item.quantity,
         price: getItemPrice(item),
+        service_type: item.service_type || SERVICE_TYPES.SUR_PLACE,
       })),
     }
 
@@ -708,7 +785,7 @@ const holdOrder = async () => {
     await loadTableAndData(selectedTable.value.id)
 
     try {
-      await printingService.printOrder(selectedTable.value, [...cart.value])
+      await printingService.printOrder(orderTicketInfo(), [...cart.value])
     } catch (printError) {
       console.warn('Print error:', printError)
     }
@@ -742,7 +819,7 @@ const confirmAddToPending = async () => {
     // ✅ CORRECTION: Utiliser la bonne route POST /sales/{saleId}/add-products
     await tableService.addProductsToPendingOrder(saleId, cart.value, selectedTable.value.id)
 
-    await printingService.printOrder(selectedTable.value, [...cart.value])
+    await printingService.printOrder(orderTicketInfo(), [...cart.value])
 
     // Explicitly reload to get updated status from server
     await loadTableAndData(selectedTable.value.id)
@@ -807,6 +884,7 @@ const onPaymentSuccess = async (formattedSaleData) => {
       name: item.product_name,
       quantity: item.quantity,
       price: item.unit_price,
+      service_type: item.service_type || null,
     })),
   )
 
@@ -865,10 +943,12 @@ const paymentSaleData = computed(() => {
   if (currentPendingOrder.value?.order_lines) {
     items.push(
       ...currentPendingOrder.value.order_lines.map((l) => ({
+        order_line_id: l.id,
         product_id: l.product_id,
         quantity: l.quantity,
         unit_price: getLinePrice(l),
         name: l.product?.name || l.name || 'Produit',
+        service_type: l.service_type || SERVICE_TYPES.SUR_PLACE,
       })),
     )
   }
@@ -880,6 +960,7 @@ const paymentSaleData = computed(() => {
         quantity: i.quantity,
         unit_price: getItemPrice(i),
         name: i.name || 'Produit',
+        service_type: i.service_type || SERVICE_TYPES.SUR_PLACE,
       })),
     )
   }

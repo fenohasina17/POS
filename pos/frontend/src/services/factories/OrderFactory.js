@@ -9,7 +9,8 @@ class OrderFactory {
             order_lines: cart.map(item => ({
                 product_id: item.id,
                 quantity: item.quantity,
-                price: item.price
+                price: item.price,
+                service_type: item.service_type || 'sur_place' // sur place / à emporter de l'article
             }))
         };
     }
@@ -19,7 +20,8 @@ class OrderFactory {
             order_lines: cart.map(item => ({
                 product_id: item.id,
                 quantity: item.quantity,
-                price: item.price
+                price: item.price,
+                service_type: item.service_type || 'sur_place' // sur place / à emporter de l'article
             }))
         };
     }
