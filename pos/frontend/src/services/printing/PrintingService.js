@@ -51,7 +51,8 @@ class PrintingService {
           name: item.name,
           quantity: Number(item.quantity) || 1,
           price: Number(item.price) || 0,
-          total: (Number(item.quantity) || 1) * (Number(item.price) || 0)
+          total: (Number(item.quantity) || 1) * (Number(item.price) || 0),
+          serviceType: item.serviceType || null
         })),
         subtotal: subtotal,
         discount: invoiceData.discount || 0,
@@ -85,7 +86,7 @@ class PrintingService {
         printerName: finalPrinter,
         savePDF: false,
         tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber, serviceType: tableInfo.serviceType || null },
-        items: items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price }))
+        items: items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price, serviceType: item.serviceType || item.service_type || null }))
       });
     } catch (err) {
       console.error('[DEBUG_PRINT] Erreur dans printOrderPDF :', err);
@@ -107,7 +108,7 @@ class PrintingService {
         phone: invoiceData.phone || '034 00 000 00',
         number: invoiceData.number || `FACT-${Date.now()}`,
         date: invoiceData.date || new Date().toLocaleString('fr-FR'),
-        items: invoiceData.items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price, total: item.price * item.quantity })),
+        items: invoiceData.items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price, total: item.price * item.quantity, serviceType: item.serviceType || null })),
         subtotal: invoiceData.subtotal || invoiceData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
         discount: invoiceData.discount || 0,
         total: invoiceData.total || invoiceData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
@@ -141,7 +142,8 @@ class PrintingService {
       printerGroups[printerName].push({
         name: item.name,
         quantity: item.quantity,
-        price: item.price
+        price: item.price,
+        serviceType: item.serviceType || item.service_type || null
       });
     });
 
@@ -180,7 +182,8 @@ class PrintingService {
           name: item.name,
           quantity: Number(item.quantity) || 1,
           price: Number(item.price) || 0,
-          total: (Number(item.quantity) || 1) * (Number(item.price) || 0)
+          total: (Number(item.quantity) || 1) * (Number(item.price) || 0),
+          serviceType: item.serviceType || null
         })),
         subtotal: subtotal,
         discount: invoiceData.discount || 0,

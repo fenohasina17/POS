@@ -34,14 +34,17 @@ export const formatTicketDate = (value) => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
-// ── « Sur place » / « À emporter » (sales.service_type) ──
-export const SERVICE_TYPES = Object.freeze({ SUR_PLACE: 'sur_place', A_EMPORTER: 'a_emporter' })
+// ── « Sur place » / « À emporter » ──
+// Choisi par article (order_lines.service_type) ; la vente le résume
+// (sales.service_type), « mixte » quand la commande mélange les deux.
+export const SERVICE_TYPES = Object.freeze({ SUR_PLACE: 'sur_place', A_EMPORTER: 'a_emporter', MIXTE: 'mixte' })
 
-/** 'sur_place' -> « Sur place », 'a_emporter' -> « A emporter » (graphie du ticket), sinon '' */
+/** Libellé du ticket (graphie du modèle : « A emporter ») */
 export const serviceTypeText = (serviceType) =>
   serviceType === SERVICE_TYPES.SUR_PLACE ? 'Sur place'
     : serviceType === SERVICE_TYPES.A_EMPORTER ? 'A emporter'
-      : ''
+      : serviceType === SERVICE_TYPES.MIXTE ? 'Sur place + à emporter'
+        : ''
 
 /** Mention en gros en tête des bons de préparation cuisine / bar */
 export const serviceTypeBanner = (serviceType) =>
@@ -49,8 +52,32 @@ export const serviceTypeBanner = (serviceType) =>
     : serviceType === SERVICE_TYPES.A_EMPORTER ? 'À EMPORTER'
       : ''
 
+/** Résumé d'une liste d'articles : sur_place, a_emporter, mixte ou null si aucun n'a l'info */
+export function summarizeServiceType(items = []) {
+  const types = new Set((items || []).map((i) => i?.serviceType).filter(Boolean))
+  if (types.size === 0) return null
+  return types.size > 1 ? SERVICE_TYPES.MIXTE : [...types][0]
+}
+
 /**
- * Libellé du ticket client : « Sur place – Table 4 », « A emporter »…
+ * Bons de préparation : articles regroupés par mode, « SUR PLACE » d'abord.
+ * Un article sans mode prend celui de la commande ($fallback).
+ * @returns {Array<{serviceType, banner, items}>}
+ */
+export function splitItemsByServiceType(items = [], fallback = null) {
+  const order = [SERVICE_TYPES.SUR_PLACE, SERVICE_TYPES.A_EMPORTER, null]
+  const groups = new Map(order.map((t) => [t, []]))
+  for (const item of items || []) {
+    const t = item?.serviceType || (fallback !== SERVICE_TYPES.MIXTE ? fallback : null) || null
+    groups.get(order.includes(t) ? t : null).push(item)
+  }
+  return order
+    .filter((t) => groups.get(t).length)
+    .map((t) => ({ serviceType: t, banner: serviceTypeBanner(t), items: groups.get(t) }))
+}
+
+/**
+ * Libellé du ticket client : « Sur place – Table 4 », « A emporter », « Sur place + à emporter »…
  * Ventes enregistrées avant le choix (serviceType vide) : déduit de la table comme avant.
  */
 export function formatServiceLabel({ serviceType, tableNumber } = {}) {
@@ -80,6 +107,7 @@ export const RECEIPT_STYLES = `
   .infos .label { font-weight: 700; }
   .infos div { word-break: break-word; }
   .infos .service { font-weight: 700; }
+  td .tag { font-size: 10px; font-weight: 700; font-style: italic; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2mm; }
   th { font-weight: 700; text-decoration: underline; text-align: left; padding: 0 0 1.5mm; font-size: 11px; }
   td { padding: 0.6mm 0; vertical-align: top; word-break: break-word; font-size: 11px; }
@@ -106,7 +134,7 @@ export const RECEIPT_STYLES = `
  * @param {string} [data.cashRegisterName]
  * @param {string} [data.serviceLabel]    « A emporter » / « Sur place – Table 4 » (cf. formatServiceLabel)
  * @param {Array<{method,amount}>} [data.payments]  Détail des règlements (une ligne chacun en bas)
- * @param {Array<{name,price,quantity}>} data.items
+ * @param {Array<{name,price,quantity,serviceType}>} data.items  serviceType : sur_place | a_emporter (marqué si commande mixte)
  * @param {number} [data.discount]        Montant de la remise (déjà calculé)
  * @param {number} data.total             Net à payer (déjà calculé)
  * @param {number|null} [data.amountReceived]  Utilisé seulement sans détail des paiements
@@ -117,12 +145,16 @@ export function buildReceiptBody(data = {}) {
   const items = Array.isArray(data.items) ? data.items : []
   const has = (v) => v !== null && v !== undefined && v !== ''
 
+  // Commande mixte : les articles à emporter sont signalés sous leur nom
+  const markTakeaway = summarizeServiceType(items) === SERVICE_TYPES.MIXTE
+
   const rows = items
     .map((item) => {
       const qty = Number(item.quantity) || 0
       const price = Number(item.price) || 0
+      const tag = markTakeaway && item.serviceType === SERVICE_TYPES.A_EMPORTER ? '<div class="tag">› à emporter</div>' : ''
       return `<tr>
-        <td>${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.name)}${tag}</td>
         <td class="num">${formatTicketAmount(price)}</td>
         <td class="qty">${qty}</td>
         <td class="num">${formatTicketAmount(price * qty)}</td>

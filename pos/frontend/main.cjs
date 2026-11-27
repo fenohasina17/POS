@@ -124,7 +124,7 @@ function getPrintStyles() {
       }
       /* Bon de préparation : « SUR PLACE » / « À EMPORTER » lisible d'un coup d'œil */
       .service-banner {
-        margin: 4px 0 6px;
+        margin: 8px 0 4px;
         padding: 4px 0;
         border: 3px solid #000;
         text-align: center;
@@ -245,7 +245,6 @@ function generateHTML(arg, type) {
     <body>
       <div class="header">
         <div class="company-name">${currentTitle}</div>
-        ${arg.serviceBanner ? `<div class="service-banner">${arg.serviceBanner}</div>` : ''}
         <div class="info-line">
           <span>Table: ${arg.tableInfo?.name || 'N/A'}</span>
           <span>${new Date().toLocaleTimeString('fr-FR')}</span>
@@ -256,6 +255,8 @@ function generateHTML(arg, type) {
       </div>
       <div class="double-divider"></div>
 
+      ${(arg.serviceSections || [{ banner: '', items: arg.items }]).map(section => `
+      ${section.banner ? `<div class="service-banner">${section.banner}</div>` : ''}
       <table class="table">
         <thead>
           <tr>
@@ -264,7 +265,7 @@ function generateHTML(arg, type) {
           </tr>
         </thead>
         <tbody>
-          ${arg.items.map(item => `
+          ${section.items.map(item => `
             <tr>
               <td class="text-center" style="font-size: 11px;">${item.quantity} x</td>
               <td class="text-left" style="font-size: 11px;">${item.name}</td>
@@ -272,6 +273,7 @@ function generateHTML(arg, type) {
           `).join('')}
         </tbody>
       </table>
+      `).join('')}
 
       <div class="footer">
         <div>--- À préparer ---</div>
@@ -336,9 +338,9 @@ async function handlePrint(arg, type) {
     if (type === 'facture') {
       htmlContent = (await loadReceiptTemplate()).buildReceiptHTML(arg);
     } else if (type === 'bon_cuisine') {
-      // « SUR PLACE » / « À EMPORTER » : libellé partagé avec le ticket client
-      const { serviceTypeBanner } = await loadReceiptTemplate();
-      htmlContent = generateHTML({ ...arg, serviceBanner: serviceTypeBanner(arg.tableInfo?.serviceType) }, type);
+      // Articles regroupés en « SUR PLACE » / « À EMPORTER » (modèle partagé avec le ticket client)
+      const { splitItemsByServiceType } = await loadReceiptTemplate();
+      htmlContent = generateHTML({ ...arg, serviceSections: splitItemsByServiceType(arg.items, arg.tableInfo?.serviceType) }, type);
     } else {
       htmlContent = generateHTML(arg, type);
     }

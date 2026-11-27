@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildReceiptHTML, formatTicketAmount, formatTicketDate, formatServiceLabel, serviceTypeBanner, SERVICE_TYPES } from '../receiptTemplate'
+import {
+  buildReceiptHTML, formatTicketAmount, formatTicketDate, formatServiceLabel, serviceTypeBanner,
+  summarizeServiceType, splitItemsByServiceType, SERVICE_TYPES
+} from '../receiptTemplate'
 
 const base = {
   ticketNumber: 1146,
@@ -91,5 +94,49 @@ describe('sur place / à emporter', () => {
   it('imprime le libellé sur le ticket client', () => {
     const html = buildReceiptHTML({ ...base, serviceLabel: formatServiceLabel({ serviceType: 'sur_place', tableNumber: 4 }) })
     expect(html).toContain('Sur place – Table 4')
+  })
+
+  it('commande mixte : libellé dédié', () => {
+    expect(formatServiceLabel({ serviceType: 'mixte', tableNumber: 4 })).toBe('Sur place + à emporter – Table 4')
+  })
+
+  it('résume les articles : sur place, à emporter ou mixte', () => {
+    expect(summarizeServiceType([{ serviceType: 'sur_place' }, { serviceType: 'sur_place' }])).toBe('sur_place')
+    expect(summarizeServiceType([{ serviceType: 'sur_place' }, { serviceType: 'a_emporter' }])).toBe('mixte')
+    expect(summarizeServiceType([{}])).toBeNull()
+  })
+
+  it('découpe les bons de préparation en « SUR PLACE » puis « À EMPORTER »', () => {
+    const sections = splitItemsByServiceType([
+      { name: 'Pizza Reine', serviceType: 'a_emporter' },
+      { name: 'Mojito', serviceType: 'sur_place' },
+      { name: 'Coca' } // sans mode : celui de la commande
+    ], 'sur_place')
+    expect(sections.map((s) => s.banner)).toEqual(['SUR PLACE', 'À EMPORTER'])
+    expect(sections[0].items.map((i) => i.name)).toEqual(['Mojito', 'Coca'])
+    expect(sections[1].items.map((i) => i.name)).toEqual(['Pizza Reine'])
+  })
+
+  it('bon sans aucune information (ancienne caisse) : une seule section sans mention', () => {
+    const sections = splitItemsByServiceType([{ name: 'Mojito' }], null)
+    expect(sections).toHaveLength(1)
+    expect(sections[0].banner).toBe('')
+  })
+
+  it('ticket d\'une commande mixte : les articles à emporter sont signalés', () => {
+    const html = buildReceiptHTML({
+      ...base,
+      items: [
+        { name: 'Mojito', price: 3000, quantity: 1, serviceType: 'sur_place' },
+        { name: 'Pizza Reine', price: 20000, quantity: 1, serviceType: 'a_emporter' }
+      ]
+    })
+    expect(html.match(/› à emporter/g)).toHaveLength(1)
+    expect(html.indexOf('› à emporter')).toBeGreaterThan(html.indexOf('Pizza Reine'))
+  })
+
+  it('ticket tout à emporter : pas de mention ligne par ligne', () => {
+    const html = buildReceiptHTML({ ...base, items: [{ name: 'Mojito', price: 3000, quantity: 1, serviceType: 'a_emporter' }] })
+    expect(html).not.toContain('› à emporter')
   })
 })

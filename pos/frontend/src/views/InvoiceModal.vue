@@ -271,6 +271,14 @@ const ticketNumber = computed(() =>
   props.saleInfo?.sale?.ticket_number ?? String(props.invoiceNumber || '').replace(/^vente\s*#\s*/i, '')
 )
 
+// Sur place / à emporter d'un article : le sien, sinon celui de la commande (sauf « mixte »)
+const itemServiceType = (item) => {
+  const own = item.service_type || item.serviceType
+  if (own) return own
+  const sale = props.saleInfo?.sale?.service_type
+  return sale && sale !== 'mixte' ? sale : null
+}
+
 const receiptData = computed(() => {
   const sale = props.saleInfo?.sale || {}
   const totals = props.saleInfo?.totals || {}
@@ -316,7 +324,8 @@ const ticketPreviewHtml = computed(() => buildReceiptHTML({
   items: props.items.map(item => ({
     name: item.name || item.product?.name || 'Article',
     price: Number(item.price) || 0,
-    quantity: Number(item.quantity) || 1
+    quantity: Number(item.quantity) || 1,
+    serviceType: itemServiceType(item)
   })),
   discount: discountAmount.value,
   total: finalTotal.value
@@ -340,7 +349,8 @@ const prepareInvoiceData = () => {
     items: props.items.map(item => ({
       name: item.name || item.product?.name || 'Article',
       price: Number(item.price) || 0,
-      quantity: Number(item.quantity) || 1
+      quantity: Number(item.quantity) || 1,
+      serviceType: itemServiceType(item)
     })),
     subtotal: props.total,
     discount: discountAmount.value,
@@ -371,7 +381,8 @@ const printInvoiceDirect = async () => {
       ...item,
       name: item.name || item.product?.name || 'Article',
       quantity: Number(item.quantity) || 1,
-      price: Number(item.price) || 0
+      price: Number(item.price) || 0,
+      serviceType: itemServiceType(item)
     }))
     await printingService.printOrder(tableInfo, orderItems)
 
@@ -433,7 +444,8 @@ const printInvoicePDF = async () => {
         acc[targetPrinter].push({
           name: item.name || item.product?.name || 'Article',
           quantity: Number(item.quantity) || 1,
-          price: Number(item.price) || 0
+          price: Number(item.price) || 0,
+          serviceType: itemServiceType(item)
         });
 
         return acc;
