@@ -89,6 +89,30 @@ export function formatServiceLabel({ serviceType, tableNumber } = {}) {
   return table || 'A emporter'
 }
 
+// ── Postes de préparation (categories.printer) ──
+export const STATION_LABELS = Object.freeze({ kitchen: 'Cuisine', cook: 'Cuisine', pizza: 'Pizza', bar: 'Bar', receipt: 'Caisse' })
+const STATION_ORDER = ['kitchen', 'cook', 'pizza', 'bar', 'receipt']
+
+/** Nom lisible d'un poste : 'kitchen' -> « Cuisine » (inconnu : nom brut) */
+export const stationLabel = (printer) => STATION_LABELS[printer] || String(printer || '')
+
+/**
+ * « Suite de commande » : quand un même ticket part sur plusieurs postes, chaque bon
+ * cite les autres. Renvoie « Pizza + Bar » (sans doublon ni le poste courant), '' sinon.
+ */
+export function otherStationsText(stations = [], current = null) {
+  const labels = []
+  const sorted = [...new Set(stations || [])].sort((a, b) => {
+    const ia = STATION_ORDER.indexOf(a), ib = STATION_ORDER.indexOf(b)
+    return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
+  })
+  for (const s of sorted) {
+    const label = stationLabel(s)
+    if (s !== current && label && label !== stationLabel(current) && !labels.includes(label)) labels.push(label)
+  }
+  return labels.join(' + ')
+}
+
 export const RECEIPT_STYLES = `
   * { margin: 0; padding: 0; box-sizing: border-box; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: 80mm auto; margin: 0; }

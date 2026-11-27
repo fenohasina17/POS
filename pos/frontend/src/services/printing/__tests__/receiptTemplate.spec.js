@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildReceiptHTML, formatTicketAmount, formatTicketDate, formatServiceLabel, serviceTypeBanner,
-  summarizeServiceType, splitItemsByServiceType, SERVICE_TYPES
+  summarizeServiceType, splitItemsByServiceType, SERVICE_TYPES, otherStationsText, stationLabel
 } from '../receiptTemplate'
 
 const base = {
@@ -141,3 +141,24 @@ describe('sur place / à emporter', () => {
     expect(html).not.toContain('› à emporter')
   })
 })
+
+describe('suite de commande (ticket réparti sur plusieurs postes)', () => {
+  it('chaque bon cite les autres postes du même ticket', () => {
+    const stations = ['bar', 'kitchen', 'pizza']
+    expect(otherStationsText(stations, 'bar')).toBe('Cuisine + Pizza')
+    expect(otherStationsText(stations, 'kitchen')).toBe('Pizza + Bar')
+    expect(otherStationsText(stations, 'pizza')).toBe('Cuisine + Bar')
+  })
+
+  it('un seul poste : pas de mention', () => {
+    expect(otherStationsText(['bar'], 'bar')).toBe('')
+    expect(otherStationsText([], 'bar')).toBe('')
+    expect(otherStationsText(undefined, 'bar')).toBe('')
+  })
+
+  it('les articles sans imprimante sont cités comme « Caisse », un poste inconnu par son nom', () => {
+    expect(otherStationsText(['kitchen', 'receipt', 'fastfood'], 'kitchen')).toBe('Caisse + fastfood')
+    expect(stationLabel('cook')).toBe('Cuisine')
+  })
+})
+

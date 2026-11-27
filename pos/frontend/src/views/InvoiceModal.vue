@@ -453,6 +453,9 @@ const printInvoicePDF = async () => {
 
       console.log('[DEBUG_PRINT] Groupes d’impression détectés :', Object.keys(itemsByPrinter));
 
+      // Tous les postes de ce ticket : chaque bon cite les autres (« suite de commande »)
+      tableInfo.stations = Object.keys(itemsByPrinter);
+
       // Envoi de chaque bon de préparation vers son imprimante dédiée
       for (const [printerName, printerItems] of Object.entries(itemsByPrinter)) {
         console.log(`[DEBUG_PRINT] Envoi du bon de préparation vers -> "${printerName}" (${printerItems.length} articles)`);

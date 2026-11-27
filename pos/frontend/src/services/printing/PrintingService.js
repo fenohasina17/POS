@@ -85,7 +85,7 @@ class PrintingService {
       return await window.electronAPI.printPDFOrder({
         printerName: finalPrinter,
         savePDF: false,
-        tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber, serviceType: tableInfo.serviceType || null },
+        tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber, serviceType: tableInfo.serviceType || null, stations: tableInfo.stations || [] },
         items: items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price, serviceType: item.serviceType || item.service_type || null }))
       });
     } catch (err) {
@@ -151,7 +151,8 @@ class PrintingService {
       try {
         return await window.electronAPI.printOrder({
           printerName: printerName,
-          tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber, serviceType: tableInfo.serviceType || null },
+          // Tous les postes de ce ticket : chaque bon cite les autres (« suite de commande »)
+          tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber, serviceType: tableInfo.serviceType || null, stations: Object.keys(printerGroups) },
           items: groupItems
         });
       } catch (err) {
