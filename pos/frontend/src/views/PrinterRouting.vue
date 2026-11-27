@@ -9,7 +9,7 @@
           tout peut sortir sur une seule.
         </p>
       </div>
-      <button type="button" class="ui-btn rounded-full" @click="router.push({ name: 'dashboard-printers' })">
+      <button type="button" class="ui-btn rounded-full" @click="router.back()">
         <FontAwesomeIcon icon="fa-solid fa-arrow-left" /> Retour
       </button>
     </header>

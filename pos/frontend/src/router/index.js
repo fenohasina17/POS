@@ -168,6 +168,7 @@ const router = createRouter({
           path: 'printers/routing',
           name: 'dashboard-printer-routing',
           component: () => import('../views/PrinterRouting.vue'),
+          meta: { requiresManagerOrAdmin: true },
         },
 
         // --- GESTION DES ROLES ---
