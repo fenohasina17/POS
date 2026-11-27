@@ -28,7 +28,7 @@
             <div class="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 text-primary-600 shadow-inner">
               <FontAwesomeIcon icon="fa-solid fa-receipt" class="text-xl" />
             </div>
-            <p class="text-base font-black text-primary-900 leading-tight">Ticket N°{{ invoiceNumber }}</p>
+            <p class="text-base font-black text-primary-900 leading-tight">Ticket N° {{ ticketNumber }}</p>
             <p class="text-[10px] font-bold text-primary-500 mt-1 uppercase tracking-widest">{{ currentDateTime }}</p>
           </div>
 
@@ -87,12 +87,31 @@
         <!-- Colonne Droite : Liste des Produits -->
         <div class="bg-slate-50/30 p-6 overflow-y-auto scrollbar-hide flex flex-col min-h-0">
           <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-            Articles
+            {{ showTicketPreview ? 'Aperçu du ticket' : 'Articles' }}
             <span class="h-px flex-1 bg-slate-100"></span>
-            <span class="bg-slate-100 px-2 py-0.5 rounded text-[9px]">{{ items.length }}</span>
+            <button
+              type="button"
+              data-testid="toggle-ticket-preview"
+              @click="showTicketPreview = !showTicketPreview"
+              class="rounded-lg bg-white border border-slate-200 px-2 py-0.5 text-[9px] font-black text-slate-500 hover:text-primary-600 hover:border-primary-200"
+            >
+              {{ showTicketPreview ? 'Articles' : 'Aperçu ticket' }}
+            </button>
           </h4>
 
-          <div class="space-y-2 flex-1 overflow-y-auto pr-1">
+          <!-- Aperçu fidèle du ticket imprimé (même modèle qu'Electron, largeur 80 mm) -->
+          <div v-if="showTicketPreview" class="flex-1 overflow-y-auto flex justify-center">
+            <iframe
+              title="Aperçu du ticket"
+              :srcdoc="ticketPreviewHtml"
+              class="bg-white shadow-sm border border-slate-200"
+              style="width: 80mm; border-radius: 4px;"
+              :style="{ height: previewHeight + 'px' }"
+              @load="onPreviewLoad"
+            ></iframe>
+          </div>
+
+          <div v-else class="space-y-2 flex-1 overflow-y-auto pr-1">
             <div v-for="(item, index) in groupedItems" :key="index" class="flex items-center justify-between rounded-xl bg-white p-3 border border-slate-100 shadow-sm transition-all hover:border-primary-100">
               <div class="flex-1 min-w-0 pr-2">
                 <p class="text-xs font-black text-slate-950 truncate leading-tight">{{ item.name }}</p>
@@ -139,8 +158,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { printingService } from '@/services/printing/PrintingService'
+import { buildReceiptHTML } from '@/services/printing/receiptTemplate'
+import { storage } from '@/utils/storage'
+import logoUrl from '@/assets/logo-ticket-nb.png' // Logo noir et blanc pour l'imprimante thermique
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import {
@@ -160,7 +182,9 @@ const props = defineProps({
   paymentMethod: { type: String, default: '' },
   payments: { type: Array, default: () => [] },
   discountPercentage: { type: Number, default: 0 },
-  tableName: { type: String, default: 'Vente Directe' }
+  tableName: { type: String, default: 'Vente Directe' },
+  // Réponse formatée de l'API vente ({ sale, totals, payments }) : alimente le ticket client
+  saleInfo: { type: Object, default: null }
 })
 const emit = defineEmits(['close-modal', 'clear-cart'])
 
@@ -220,6 +244,88 @@ const formatPrice = (price) => {
 
 const closeModal = () => emit('close-modal')
 
+// ================= Ticket client (modèle « LA GASTRONOMIE PIZZA ») =================
+const showTicketPreview = ref(false)
+const previewHeight = ref(600)
+const logoDataUrl = ref('')
+
+// Le logo est transmis en data URL : la fenêtre d'impression Electron est une page data: isolée
+const loadLogo = async () => {
+  if (logoDataUrl.value) return logoDataUrl.value
+  try {
+    const blob = await (await fetch(logoUrl)).blob()
+    logoDataUrl.value = await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result)
+      reader.onerror = reject
+      reader.readAsDataURL(blob)
+    })
+  } catch (e) {
+    console.warn('[TICKET] Logo indisponible :', e)
+  }
+  return logoDataUrl.value
+}
+
+// Numéro de ticket seul (le parent passe parfois « Vente #1001 »)
+const ticketNumber = computed(() =>
+  props.saleInfo?.sale?.ticket_number ?? String(props.invoiceNumber || '').replace(/^vente\s*#\s*/i, '')
+)
+
+const receiptData = computed(() => {
+  const sale = props.saleInfo?.sale || {}
+  const totals = props.saleInfo?.totals || {}
+  const session = storage.getSession() || {}
+  const activePos = storage.getActivePos() || {}
+  const auth = storage.getAuth()
+
+  let serviceLabel = ''
+  if (props.saleInfo?.sale) {
+    serviceLabel = sale.table_id ? `Table ${sale.table_number}` : 'A emporter'
+  } else if (props.clientName && props.clientName.startsWith('Table')) {
+    serviceLabel = props.clientName
+  }
+
+  const amountReceived = totals.paid_amount ?? (props.payments?.length ? totalPaymentsAmount.value : null)
+  const changeAmount = totals.change_amount ?? (amountReceived !== null ? Math.max(0, amountReceived - finalTotal.value) : null)
+
+  return {
+    title: 'LA GASTRONOMIE PIZZA',
+    logoSrc: logoDataUrl.value || logoUrl,
+    ticketNumber: ticketNumber.value,
+    posCode: sale.point_of_sale_name ?? activePos.name ?? '',
+    cashierName: sale.cashier_name ?? auth.user?.name ?? '',
+    serverName: '', // Pas encore de serveur affecté aux tables : ligne « Serveur » masquée
+    cashRegisterName: session.cash_register?.name || localStorage.getItem('cashRegisterMachineName') || '',
+    date: sale.date_raw || new Date().toISOString(),
+    serviceLabel,
+    payments: (props.payments || []).map(p => ({
+      method: p.payment_method_name || p.method || p.payment_name || '',
+      amount: Number(p.amount) || 0
+    })),
+    amountReceived: amountReceived !== null && amountReceived !== undefined ? Number(amountReceived) : null,
+    changeAmount: changeAmount !== null && changeAmount !== undefined ? Number(changeAmount) : null,
+    beeper: null // Pas encore de numéro de beeper côté vente : ligne masquée
+  }
+})
+
+const ticketPreviewHtml = computed(() => buildReceiptHTML({
+  ...receiptData.value,
+  items: props.items.map(item => ({
+    name: item.name || item.product?.name || 'Article',
+    price: Number(item.price) || 0,
+    quantity: Number(item.quantity) || 1
+  })),
+  discount: discountAmount.value,
+  total: finalTotal.value
+}))
+
+const onPreviewLoad = (event) => {
+  const body = event.target?.contentDocument?.body
+  if (body) previewHeight.value = Math.max(200, body.scrollHeight + 8)
+}
+
+watch(() => props.isOpen, (open) => { if (open) loadLogo() }, { immediate: true })
+
 // Préparer les données d'impression
 const prepareInvoiceData = () => {
   const invoiceData = {
@@ -237,8 +343,9 @@ const prepareInvoiceData = () => {
     discount: discountAmount.value,
     total: finalTotal.value,
     client: props.clientName || 'Client',
+    ...receiptData.value,
     payments: props.payments?.map(p => ({
-      method: p.method || 'Espèces',
+      method: p.payment_method_name || p.method || 'Espèces',
       amount: Number(p.amount) || 0,
       reference: p.reference || null
     })) || [{ method: 'Espèces', amount: finalTotal.value }]
@@ -268,6 +375,7 @@ const printInvoiceDirect = async () => {
   }
 }
 const printAndClose = async () => {
+  await loadLogo()
   await printInvoicePDF()
   closeModal()
 }

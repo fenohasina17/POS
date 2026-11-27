@@ -1,6 +1,21 @@
 /**
  * PrintingService - Gestion des impressions et PDF (VERSION SANS LOCALSTORAGE)
  */
+// Champs propres au modèle de ticket client (voir receiptTemplate.js)
+const receiptFields = (d) => ({
+  title: d.title,
+  logoSrc: d.logoSrc,
+  ticketNumber: d.ticketNumber ?? d.number,
+  posCode: d.posCode,
+  cashierName: d.cashierName,
+  serverName: d.serverName,
+  cashRegisterName: d.cashRegisterName,
+  serviceLabel: d.serviceLabel,
+  amountReceived: d.amountReceived ?? null,
+  changeAmount: d.changeAmount ?? null,
+  beeper: d.beeper ?? null
+})
+
 class PrintingService {
   constructor() {
     this.detectEnvironment();
@@ -42,7 +57,8 @@ class PrintingService {
         discount: invoiceData.discount || 0,
         total: total,
         client: invoiceData.client || '',
-        payments: invoiceData.payments || [{ method: 'Espèces', amount: total }]
+        payments: invoiceData.payments || [{ method: 'Espèces', amount: total }],
+        ...receiptFields(invoiceData)
       };
 
       console.log(`[DEBUG_PRINT] Envoi de la facture finale à la caisse (receipt)`);
@@ -97,7 +113,8 @@ class PrintingService {
         total: invoiceData.total || invoiceData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0),
         client: invoiceData.client || '',
         payments: invoiceData.payments || [{ method: 'Espèces', amount: invoiceData.total || 0 }],
-        printerName: 'receipt'
+        printerName: 'receipt',
+        ...receiptFields(invoiceData)
       };
 
       return await window.electronAPI.printReceipt(printData);
@@ -169,7 +186,8 @@ class PrintingService {
         discount: invoiceData.discount || 0,
         total: total,
         client: invoiceData.client || '',
-        payments: invoiceData.payments || [{ method: 'Espèces', amount: total }]
+        payments: invoiceData.payments || [{ method: 'Espèces', amount: total }],
+        ...receiptFields(invoiceData)
       };
 
       return await window.electronAPI.generateAndPrintPDFReceipt(printData);

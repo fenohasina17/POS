@@ -21,6 +21,7 @@
       :paymentMethod="currentPaymentMethod"
       :payments="paymentsList"
       :discountPercentage="selectedDiscount"
+      :saleInfo="lastSaleInfo"
       @close-modal="closeInvoiceModal"
     />
 
@@ -296,6 +297,7 @@ const currentSaleId = ref(null)
 const currentInvoiceNumber = ref('')
 const currentPaymentMethod = ref('')
 const paymentsList = ref([])
+const lastSaleInfo = ref(null) // Données de vente renvoyées par l'API (ticket client)
 
 import { useCart } from '@/composables/useCart'
 import { useCashRegisterSession } from '@/composables/useCashRegisterSession'
@@ -615,6 +617,7 @@ const handlePaymentSuccess = (data) => {
   }))
 
   currentSaleId.value = saleId
+  lastSaleInfo.value = data
   const ticketNumber = data.sale_number || data.sale?.sale_number || data.ticket_number || data.sale?.ticket_number
   currentInvoiceNumber.value = ticketNumber ? `Vente #${ticketNumber}` : `INV-${saleId.toString().padStart(6, '0')}`
   currentPaymentMethod.value = paymentsList.value[0]?.payment_method_name || 'Espèces'
@@ -636,6 +639,7 @@ const handleClearCart = () => {
 const closeInvoiceModal = () => {
   isInvoiceModalOpen.value = false
   paymentsList.value = []
+  lastSaleInfo.value = null
   currentSaleId.value = null
   currentInvoiceNumber.value = ''
   currentPaymentMethod.value = ''

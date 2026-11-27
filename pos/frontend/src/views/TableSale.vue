@@ -365,6 +365,7 @@
       :invoice-number="currentInvoiceNumber"
       :payment-method="currentPaymentMethod"
       :payments="invoicePayments"
+      :sale-info="lastSaleInfo"
       @close-modal="closeInvoiceModal"
     />
   </div>
@@ -404,6 +405,7 @@ const isInvoiceModalOpen = ref(false)
 const invoiceItems = ref([])
 const invoiceTotal = ref(0)
 const invoicePayments = ref([])
+const lastSaleInfo = ref(null) // Données de vente renvoyées par l'API (ticket client)
 const currentInvoiceNumber = ref('')
 const currentPaymentMethod = ref('')
 const currentPendingOrder = ref(null)
@@ -811,6 +813,7 @@ const onPaymentSuccess = async (formattedSaleData) => {
   invoiceItems.value = allItems
   invoiceTotal.value = Number(formattedSaleData.totals.final_amount)
   invoicePayments.value = formattedSaleData.payments || []
+  lastSaleInfo.value = formattedSaleData
 
   isPaymentModalOpen.value = false
   isInvoiceModalOpen.value = true
