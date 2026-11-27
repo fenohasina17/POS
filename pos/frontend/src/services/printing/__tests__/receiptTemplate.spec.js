@@ -96,8 +96,9 @@ describe('sur place / à emporter', () => {
     expect(html).toContain('Sur place – Table 4')
   })
 
-  it('commande mixte : libellé dédié', () => {
-    expect(formatServiceLabel({ serviceType: 'mixte', tableNumber: 4 })).toBe('Sur place + à emporter – Table 4')
+  it('commande mixte : pas de libellé global, seulement la table', () => {
+    expect(formatServiceLabel({ serviceType: 'mixte', tableNumber: 4 })).toBe('Table 4')
+    expect(formatServiceLabel({ serviceType: 'mixte' })).toBe('')
   })
 
   it('résume les articles : sur place, à emporter ou mixte', () => {

@@ -43,8 +43,7 @@ export const SERVICE_TYPES = Object.freeze({ SUR_PLACE: 'sur_place', A_EMPORTER:
 export const serviceTypeText = (serviceType) =>
   serviceType === SERVICE_TYPES.SUR_PLACE ? 'Sur place'
     : serviceType === SERVICE_TYPES.A_EMPORTER ? 'A emporter'
-      : serviceType === SERVICE_TYPES.MIXTE ? 'Sur place + à emporter'
-        : ''
+      : '' // « mixte » : pas de libellé global, les articles à emporter sont signalés ligne par ligne
 
 /** Mention en gros en tête des bons de préparation cuisine / bar */
 export const serviceTypeBanner = (serviceType) =>
@@ -77,12 +76,14 @@ export function splitItemsByServiceType(items = [], fallback = null) {
 }
 
 /**
- * Libellé du ticket client : « Sur place – Table 4 », « A emporter », « Sur place + à emporter »…
+ * Libellé du ticket client : « Sur place – Table 4 », « A emporter »…
+ * Commande mixte : aucun libellé global (seulement « Table 4 » s'il y a une table).
  * Ventes enregistrées avant le choix (serviceType vide) : déduit de la table comme avant.
  */
 export function formatServiceLabel({ serviceType, tableNumber } = {}) {
   const hasTable = tableNumber !== null && tableNumber !== undefined && tableNumber !== '' && tableNumber !== 'Emporter'
   const table = hasTable ? `Table ${tableNumber}` : ''
+  if (serviceType === SERVICE_TYPES.MIXTE) return table
   const text = serviceTypeText(serviceType)
   if (text) return table ? `${text} – ${table}` : text
   return table || 'A emporter'
