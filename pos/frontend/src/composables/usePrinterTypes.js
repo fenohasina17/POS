@@ -3,7 +3,7 @@ import axios from 'axios'
 import { API_BASE_URL } from '@/utils/api'
 
 const getPrinterTypeLabel = (type) => {
-  const labels = { cash: 'Caisse', kitchen: 'Cuisine', bar: 'Bar', invoice: 'Facture' }
+  const labels = { cash: 'Caisse', kitchen: 'Cuisine', fastfood: 'Fast food', pizza: 'Pizza', bar: 'Bar', invoice: 'Facture' }
   return labels[type] || type
 }
 

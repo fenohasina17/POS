@@ -247,6 +247,7 @@ function generateHTML(arg, type) {
     const titles = {
       kitchen: 'BON DE CUISINE',
       cook: 'BON DE CUISINE',
+      fastfood: 'BON FAST FOOD',
       pizza: 'BON PIZZA',
       bar: 'BON DE BAR'
     };
@@ -339,9 +340,15 @@ async function handlePrint(arg, type) {
     if (!target) {
       console.warn(`[PRINT] Imprimante "${requestedPrinter}" introuvable.`);
 
-      const isPrepPrinter = ['kitchen', 'bar', 'cook'].includes(requestedPrinter);
+      const isPrepPrinter = ['kitchen', 'fastfood', 'pizza', 'bar', 'cook'].includes(requestedPrinter);
 
-      if (isPrepPrinter) {
+      // Fast food : sans imprimante dédiée, le bon part sur l'imprimante cuisine
+      if (requestedPrinter === 'fastfood') {
+        target = printers.find(p => p.name === 'kitchen');
+        if (target) console.log('[PRINT] Redirection du bon (fastfood) vers "kitchen"');
+      }
+
+      if (!target && isPrepPrinter) {
         console.log(`[PRINT] Redirection automatique du bon (${requestedPrinter}) vers "receipt"`);
         target = findReceiptPrinter();
       } else if (requestedPrinter === 'receipt') {

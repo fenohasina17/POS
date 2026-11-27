@@ -25,6 +25,8 @@ class CategoryPrinterSeeder extends Seeder
             'PATISSERIE' => 'kitchen',
             'DESSERT' => 'kitchen',
             'SNACK' => 'kitchen',
+            'Fast food avec porc' => 'fastfood',
+            'Fast food sans porc' => 'fastfood',
         ];
 
         foreach ($mapping as $categoryName => $printerType) {

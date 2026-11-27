@@ -156,8 +156,13 @@ describe('suite de commande (ticket réparti sur plusieurs postes)', () => {
     expect(otherStationsText(undefined, 'bar')).toBe('')
   })
 
+  it('le fast food est un poste à part entière', () => {
+    expect(otherStationsText(['fastfood', 'kitchen', 'bar'], 'bar')).toBe('Cuisine + Fast food')
+    expect(otherStationsText(['fastfood', 'kitchen', 'bar'], 'fastfood')).toBe('Cuisine + Bar')
+  })
+
   it('les articles sans imprimante sont cités comme « Caisse », un poste inconnu par son nom', () => {
-    expect(otherStationsText(['kitchen', 'receipt', 'fastfood'], 'kitchen')).toBe('Caisse + fastfood')
+    expect(otherStationsText(['kitchen', 'receipt', 'friteuse'], 'kitchen')).toBe('Caisse + friteuse')
     expect(stationLabel('cook')).toBe('Cuisine')
   })
 })

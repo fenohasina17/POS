@@ -90,8 +90,8 @@ export function formatServiceLabel({ serviceType, tableNumber } = {}) {
 }
 
 // ── Postes de préparation (categories.printer) ──
-export const STATION_LABELS = Object.freeze({ kitchen: 'Cuisine', cook: 'Cuisine', pizza: 'Pizza', bar: 'Bar', receipt: 'Caisse' })
-const STATION_ORDER = ['kitchen', 'cook', 'pizza', 'bar', 'receipt']
+export const STATION_LABELS = Object.freeze({ kitchen: 'Cuisine', cook: 'Cuisine', fastfood: 'Fast food', pizza: 'Pizza', bar: 'Bar', receipt: 'Caisse' })
+const STATION_ORDER = ['kitchen', 'cook', 'fastfood', 'pizza', 'bar', 'receipt']
 
 /** Nom lisible d'un poste : 'kitchen' -> « Cuisine » (inconnu : nom brut) */
 export const stationLabel = (printer) => STATION_LABELS[printer] || String(printer || '')

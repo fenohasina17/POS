@@ -15,6 +15,7 @@ class PrintGroupingService
     {
         $groups = [
             'kitchen' => [],
+            'fastfood' => [],
             'bar' => [],
             'pizza' => [],
             'receipt' => []
@@ -29,6 +30,9 @@ class PrintGroupingService
                     break;
                 case 'pizza':
                     $groups['pizza'][] = $line;
+                    break;
+                case 'fastfood':
+                    $groups['fastfood'][] = $line;
                     break;
                 case 'receipt':
                     $groups['receipt'][] = $line;
@@ -79,6 +83,7 @@ class PrintGroupingService
             'kitchen' => 'COMMANDE CUISINE',
             'bar' => 'COMMANDE BAR',
             'pizza' => 'COMMANDE PIZZA',
+            'fastfood' => 'COMMANDE FAST FOOD',
             'receipt' => 'FACTURE',
             default => 'COMMANDE',
         };

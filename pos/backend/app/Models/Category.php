@@ -9,6 +9,9 @@ class Category extends Model
 {
     use HasFactory, \App\Models\Traits\ScopeByPos;
     
+    /** Postes de préparation (categories.printer) — nom de l'imprimante côté Electron */
+    public const PRINTERS = ['kitchen', 'fastfood', 'pizza', 'bar', 'receipt'];
+
     protected $fillable = [
         "name",
         'printer' ,
