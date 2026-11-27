@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Sale;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -28,6 +30,7 @@ class StoreSaleRequest extends FormRequest
             'point_of_sale_id' => 'required|exists:point_of_sales,id',
             'cash_register_session_id' => 'required|exists:cash_register_sessions,id',
             'table_id' => 'nullable|exists:tables,id',
+            'service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
 
             // Montants
             'total_amount' => 'required|numeric|min:0',

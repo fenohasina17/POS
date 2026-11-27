@@ -74,6 +74,7 @@ class SaleController extends Controller
             $validated = $request->validate([
                 'payment_id' => 'required_without:payments|exists:payments,id',
                 'discount_percentage' => 'nullable|numeric|min:0|max:100',
+                'service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
                 'amount_received' => 'nullable|numeric|min:0',
                 'change_amount' => 'nullable|numeric|min:0',
                 'payments' => 'nullable|array',
@@ -683,6 +684,7 @@ class SaleController extends Controller
                         }
                     }),
                 ],
+                'service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
                 'user_id' => 'required|exists:users,id',
                 'point_of_sale_id' => [
                     'required',
@@ -898,6 +900,7 @@ class SaleController extends Controller
                         }
                     }),
                 ],
+                'service_type' => ['nullable', Rule::in(Sale::SERVICE_TYPES)],
                 'discount_percentage' => 'nullable|numeric|min:0|max:100',
                 'order_lines' => 'required|array|min:1',
                 'order_lines.*.product_id' => [

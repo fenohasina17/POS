@@ -244,6 +244,7 @@ class SaleService
                     'point_of_sale_id' => $data['point_of_sale_id'],
                     'cash_register_session_id' => $data['cash_register_session_id'],
                     'table_id' => $data['table_id'] ?? null,
+                    'service_type' => $data['service_type'] ?? null,
                     'total_amount' => $amounts['total_amount'],
                     'discount_percentage' => $amounts['discount'],
                     'final_amount' => $amounts['final_amount'],
@@ -321,6 +322,8 @@ class SaleService
                     'point_of_sale_id' => $data['point_of_sale_id'],
                     'cash_register_session_id' => $data['cash_register_session_id'],
                     'table_id' => $data['table_id'],
+                    // Commande à table : « sur place » sauf choix contraire du caissier
+                    'service_type' => $data['service_type'] ?? Sale::SERVICE_SUR_PLACE,
                     'total_amount' => $totalAmount,
                     'discount_percentage' => $discount,
                     'final_amount' => $finalAmount,
@@ -497,6 +500,8 @@ class SaleService
 
                 $sale->update([
                     'status' => 'completed',
+                    // Le caissier peut corriger « sur place / à emporter » à l'encaissement
+                    'service_type' => $data['service_type'] ?? $sale->service_type,
                     'total_amount' => $totalAmount,
                     'discount_percentage' => $discount,
                     'final_amount' => $finalAmount,
@@ -631,6 +636,7 @@ class SaleService
                 'date_raw' => $sale->created_at,
                 'table_id' => $sale->table_id,
                 'table_number' => $sale->table?->table_number ?? 'Emporter',
+                'service_type' => $sale->service_type,
                 'cashier_id' => $sale->user_id,
                 'cashier_name' => $sale->user?->name ?? 'Inconnu',
                 'point_of_sale_id' => $sale->point_of_sale_id,
