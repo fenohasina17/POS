@@ -23,6 +23,9 @@ export const formatTicketAmount = (value) => {
   return safe.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/** Paiement en espèces → affiché « Billet » comme sur le modèle */
+export const isCashPayment = (name) => /esp[eè]ce|cash|billet/i.test(String(name ?? ''))
+
 /** Date -> "03/11/2026 14:08:51" */
 export const formatTicketDate = (value) => {
   const d = value instanceof Date ? value : new Date(value ?? Date.now())
@@ -73,11 +76,11 @@ export const RECEIPT_STYLES = `
  * @param {string|Date} [data.date]
  * @param {string} [data.cashRegisterName]
  * @param {string} [data.serviceLabel]    « A emporter » / « Table 4 »
- * @param {string} [data.paymentLabel]    « Espèce », « Espèce + MVola »
+ * @param {Array<{method,amount}>} [data.payments]  Détail des règlements (une ligne chacun en bas)
  * @param {Array<{name,price,quantity}>} data.items
  * @param {number} [data.discount]        Montant de la remise (déjà calculé)
  * @param {number} data.total             Net à payer (déjà calculé)
- * @param {number|null} [data.amountReceived]
+ * @param {number|null} [data.amountReceived]  Utilisé seulement sans détail des paiements
  * @param {number|null} [data.changeAmount]
  * @param {string|number|null} [data.beeper]  Ligne masquée si absent
  */
@@ -97,6 +100,19 @@ export function buildReceiptBody(data = {}) {
       </tr>`
     })
     .join('')
+
+  // Une ligne par règlement : « Billet : » pour les espèces, sinon le nom du mode (Airtel Money…)
+  const payments = (Array.isArray(data.payments) ? data.payments : []).filter((p) => Number(p?.amount) > 0)
+  const paymentRows = payments.length
+    ? payments
+        .map((p) => {
+          const label = isCashPayment(p.method) ? 'Billet' : (p.method || 'Paiement')
+          return `<div class="row"><span>${escapeHtml(label)} :</span><span>${formatTicketAmount(p.amount)} Ar</span></div>`
+        })
+        .join('')
+    : has(data.amountReceived)
+      ? `<div class="row"><span>Billet :</span><span>${formatTicketAmount(data.amountReceived)} Ar</span></div>`
+      : ''
 
   return `
     <div class="title">${escapeHtml(data.title || 'LA GASTRONOMIE PIZZA')}</div>
@@ -119,7 +135,6 @@ export function buildReceiptBody(data = {}) {
         <div>${escapeHtml(formatTicketDate(data.date))}</div>
         ${has(data.cashRegisterName) ? `<div>${escapeHtml(data.cashRegisterName)}</div>` : ''}
         ${has(data.serviceLabel) ? `<div>${escapeHtml(data.serviceLabel)}</div>` : ''}
-        ${has(data.paymentLabel) ? `<div>Payé en ${escapeHtml(data.paymentLabel)}</div>` : ''}
       </div>
     </div>
     <table>
@@ -130,7 +145,7 @@ export function buildReceiptBody(data = {}) {
     <div class="totals">
       ${Number(data.discount) > 0 ? `<div class="row"><span>Remise</span><span>-${formatTicketAmount(data.discount)} Ar</span></div>` : ''}
       <div class="row net"><span>Net à payer</span><span>${formatTicketAmount(data.total)} Ar</span></div>
-      ${has(data.amountReceived) ? `<div class="row"><span>Billet :</span><span>${formatTicketAmount(data.amountReceived)} Ar</span></div>` : ''}
+      ${paymentRows}
       ${has(data.changeAmount) ? `<div class="row"><span>Rendu :</span><span>${formatTicketAmount(data.changeAmount)} Ar</span></div>` : ''}
     </div>
     ${has(data.beeper) ? `<div class="beeper">Beeper ${escapeHtml(data.beeper)}</div>` : ''}

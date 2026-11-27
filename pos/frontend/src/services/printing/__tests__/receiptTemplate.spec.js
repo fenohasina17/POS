@@ -8,7 +8,7 @@ const base = {
   cashRegisterName: 'Caisse 5',
   date: new Date(2026, 10, 3, 14, 8, 51),
   serviceLabel: 'A emporter',
-  paymentLabel: 'Espece',
+  payments: [{ method: 'Espèce', amount: 5000 }],
   items: [{ name: 'Mojito', price: 3000, quantity: 1 }],
   total: 3000,
   amountReceived: 5000,
@@ -31,11 +31,24 @@ describe('receiptTemplate', () => {
     for (const text of [
       'LA GASTRONOMIE PIZZA', 'Ticket N°', '1146', 'POINT DE VENTE : 108',
       'Caissier :', 'Safidy', 'Serveur :', '03/11/2026 14:08:51', 'Caisse 5',
-      'A emporter', 'Payé en Espece', 'Désignation', 'P.U', 'Qté', 'Montant',
+      'A emporter', 'Désignation', 'P.U', 'Qté', 'Montant',
       'Mojito', 'Net à payer', '3,000.00 Ar', 'Billet :', '5,000.00 Ar', 'Rendu :', '2,000.00 Ar'
     ]) {
       expect(html).toContain(text)
     }
+  })
+
+  it('détaille chaque paiement en bas et retire « Payé en » en haut', () => {
+    const html = buildReceiptHTML({
+      ...base,
+      total: 20000,
+      payments: [{ method: 'Espèce', amount: 1000 }, { method: 'Airtel Money', amount: 19000 }],
+      changeAmount: 0
+    })
+    expect(html).not.toContain('Payé en')
+    expect(html).toContain('<span>Billet :</span><span>1,000.00 Ar</span>')
+    expect(html).toContain('<span>Airtel Money :</span><span>19,000.00 Ar</span>')
+    expect(html).toContain('<span>Rendu :</span><span>0.00 Ar</span>')
   })
 
   it('masque la ligne Beeper sans donnée et l\'affiche sinon', () => {

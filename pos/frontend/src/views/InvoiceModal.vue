@@ -271,13 +271,6 @@ const ticketNumber = computed(() =>
   props.saleInfo?.sale?.ticket_number ?? String(props.invoiceNumber || '').replace(/^vente\s*#\s*/i, '')
 )
 
-const paymentLabel = computed(() => {
-  const names = (props.payments || [])
-    .map(p => p.payment_method_name || p.method || p.payment_name)
-    .filter(Boolean)
-  return [...new Set(names)].join(' + ') || props.paymentMethod || ''
-})
-
 const receiptData = computed(() => {
   const sale = props.saleInfo?.sale || {}
   const totals = props.saleInfo?.totals || {}
@@ -305,7 +298,10 @@ const receiptData = computed(() => {
     cashRegisterName: session.cash_register?.name || localStorage.getItem('cashRegisterMachineName') || '',
     date: sale.date_raw || new Date().toISOString(),
     serviceLabel,
-    paymentLabel: paymentLabel.value,
+    payments: (props.payments || []).map(p => ({
+      method: p.payment_method_name || p.method || p.payment_name || '',
+      amount: Number(p.amount) || 0
+    })),
     amountReceived: amountReceived !== null && amountReceived !== undefined ? Number(amountReceived) : null,
     changeAmount: changeAmount !== null && changeAmount !== undefined ? Number(changeAmount) : null,
     beeper: null // Pas encore de numéro de beeper côté vente : ligne masquée

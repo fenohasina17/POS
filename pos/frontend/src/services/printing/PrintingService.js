@@ -11,7 +11,6 @@ const receiptFields = (d) => ({
   serverName: d.serverName,
   cashRegisterName: d.cashRegisterName,
   serviceLabel: d.serviceLabel,
-  paymentLabel: d.paymentLabel,
   amountReceived: d.amountReceived ?? null,
   changeAmount: d.changeAmount ?? null,
   beeper: d.beeper ?? null
