@@ -28,7 +28,7 @@
             <div class="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary-100 text-primary-600 shadow-inner">
               <FontAwesomeIcon icon="fa-solid fa-receipt" class="text-xl" />
             </div>
-            <p class="text-base font-black text-primary-900 leading-tight">Ticket N°{{ invoiceNumber }}</p>
+            <p class="text-base font-black text-primary-900 leading-tight">Ticket N° {{ ticketNumber }}</p>
             <p class="text-[10px] font-bold text-primary-500 mt-1 uppercase tracking-widest">{{ currentDateTime }}</p>
           </div>
 
@@ -266,6 +266,11 @@ const loadLogo = async () => {
   return logoDataUrl.value
 }
 
+// Numéro de ticket seul (le parent passe parfois « Vente #1001 »)
+const ticketNumber = computed(() =>
+  props.saleInfo?.sale?.ticket_number ?? String(props.invoiceNumber || '').replace(/^vente\s*#\s*/i, '')
+)
+
 const paymentLabel = computed(() => {
   const names = (props.payments || [])
     .map(p => p.payment_method_name || p.method || p.payment_name)
@@ -293,7 +298,7 @@ const receiptData = computed(() => {
   return {
     title: 'LA GASTRONOMIE PIZZA',
     logoSrc: logoDataUrl.value || logoUrl,
-    ticketNumber: sale.ticket_number ?? props.invoiceNumber,
+    ticketNumber: ticketNumber.value,
     posCode: sale.point_of_sale_name ?? activePos.name ?? '',
     cashierName: sale.cashier_name ?? auth.user?.name ?? '',
     serverName: '', // Aucune donnée « serveur » n'est enregistrée sur la vente
