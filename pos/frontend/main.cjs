@@ -131,84 +131,21 @@ function getPrintStyles() {
     </style>`;
 }
 
+// Ticket client : modèle partagé avec l'aperçu de l'interface (src/services/printing/receiptTemplate.js)
+let receiptTemplatePromise = null;
+function loadReceiptTemplate() {
+  if (!receiptTemplatePromise) {
+    const { pathToFileURL } = require('url');
+    const file = path.join(__dirname, 'src', 'services', 'printing', 'receiptTemplate.js');
+    receiptTemplatePromise = import(pathToFileURL(file).href);
+  }
+  return receiptTemplatePromise;
+}
+
 function generateHTML(arg, type) {
   const styles = getPrintStyles();
 
-  if (type === 'facture') {
-    const subtotal = arg.subtotal || arg.items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    const total = arg.total || subtotal - (arg.discount || 0);
-
-    return `<!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      ${styles}
-    </head>
-    <body>
-      <div class="header">
-        <div class="company-name">${arg.companyName || 'GASTRONOMY PIZZA'}</div>
-        <div>${arg.address || 'Antananarivo, Madagascar'}</div>
-      </div>
-      <div class="divider"></div>
-      <div class="ticket-title">FACTURE</div>
-      <div class="info-line">
-        <span>N°: ${arg.number || `FACT-${Date.now()}`}</span>
-        <span>${arg.date || new Date().toLocaleString('fr-FR')}</span>
-      </div>
-      ${arg.client ? `<div class="info-line"><span>Client:</span><span>${arg.client}</span></div>` : ''}
-      <div class="divider"></div>
-
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="text-center" style="width: 15%">Qté</th>
-            <th class="text-left" style="width: 45%">Article</th>
-            <th class="text-right" style="width: 20%">P.U.</th>
-            <th class="text-right" style="width: 20%">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${arg.items.map(item => `
-            <tr>
-              <td class="text-center">${item.quantity}</td>
-              <td class="text-left">${item.name}</td>
-              <td class="text-right">${(item.price || 0).toLocaleString()}</td>
-              <td class="text-right">${((item.price || 0) * (item.quantity || 1)).toLocaleString()}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-
-      <div class="divider"></div>
-
-      <div class="info-line">
-        <span>SOUS-TOTAL:</span>
-        <span>${subtotal.toLocaleString()} Ar</span>
-      </div>
-      ${arg.discount ? `<div class="info-line"><span>REMISE:</span><span>-${arg.discount.toLocaleString()} Ar</span></div>` : ''}
-
-      <div class="grand-total">
-        <span>TOTAL</span>
-        <span>${total.toLocaleString()} Ar</span>
-      </div>
-
-      ${arg.payments && arg.payments.length > 0 ? `
-      <div class="divider"></div>
-      ${arg.payments.map(p => `
-        <div class="payment-method">
-          <span>${p.method}:</span>
-          <span>${(p.amount || 0).toLocaleString()} Ar</span>
-        </div>
-      `).join('')}
-      ` : ''}
-
-      <div class="footer">
-        <div>MERCI DE VOTRE VISITE</div>
-      </div>
-    </body>
-    </html>`;
-
-  } else if (type === 'resume_session') {
+  if (type === 'resume_session') {
     // Rapport Riche (Billetage)
     console.log('[DEBUG_PRINT] Données complètes reçues par Electron:', JSON.stringify(arg, null, 2));
     const cashSales = (arg.payments || []).find(p => p.payment_name === 'Espèce')?.total || 0;
@@ -383,7 +320,9 @@ async function handlePrint(arg, type) {
     finalPrinterName = target.name;
     console.log(`[PRINT] Envoi vers : "${finalPrinterName}" (Cible originale : "${requestedPrinter}")`);
 
-    let htmlContent = generateHTML(arg, type);
+    let htmlContent = type === 'facture'
+      ? (await loadReceiptTemplate()).buildReceiptHTML(arg)
+      : generateHTML(arg, type);
 
     printWindow = new BrowserWindow({
       show: false,
