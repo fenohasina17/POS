@@ -38,10 +38,11 @@ export const RECEIPT_STYLES = `
   * { margin: 0; padding: 0; box-sizing: border-box; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: 80mm auto; margin: 0; }
   html, body { background: #fff; }
-  body { font-family: Arial, Helvetica, sans-serif; width: 100%; max-width: 72mm; padding: 2mm 1mm 4mm; font-size: 11px; line-height: 1.25; }
-  .title { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2px; margin-bottom: 3mm; }
-  .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5mm; }
-  .logo { width: 22mm; height: auto; display: block; }
+  /* Papier 80 mm : marges intérieures pour rester dans la zone imprimable (~72 mm) avec un blanc sur chaque bord */
+  body { font-family: Arial, Helvetica, sans-serif; width: 80mm; padding: 8mm 6mm 8mm; font-size: 11px; line-height: 1.25; }
+  .title { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.2px; text-align: center; margin-bottom: 3mm; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 2mm; margin-bottom: 3mm; }
+  .logo { width: 38mm; height: auto; display: block; }
   .ticket { text-align: center; flex: 1; }
   .ticket-label { font-size: 12px; }
   .ticket-number { font-size: 26px; font-weight: 900; line-height: 1.05; }

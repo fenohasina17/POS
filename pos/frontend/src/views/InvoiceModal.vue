@@ -162,7 +162,7 @@ import { ref, computed, watch } from 'vue'
 import { printingService } from '@/services/printing/PrintingService'
 import { buildReceiptHTML } from '@/services/printing/receiptTemplate'
 import { storage } from '@/utils/storage'
-import logoUrl from '@/assets/logo.png'
+import logoUrl from '@/assets/logo-ticket-nb.png' // Logo noir et blanc pour l'imprimante thermique
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import {
