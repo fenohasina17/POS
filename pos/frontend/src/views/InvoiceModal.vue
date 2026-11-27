@@ -294,7 +294,7 @@ const receiptData = computed(() => {
     ticketNumber: ticketNumber.value,
     posCode: sale.point_of_sale_name ?? activePos.name ?? '',
     cashierName: sale.cashier_name ?? auth.user?.name ?? '',
-    serverName: '', // Aucune donnée « serveur » n'est enregistrée sur la vente
+    serverName: '', // Pas encore de serveur affecté aux tables : ligne « Serveur » masquée
     cashRegisterName: session.cash_register?.name || localStorage.getItem('cashRegisterMachineName') || '',
     date: sale.date_raw || new Date().toISOString(),
     serviceLabel,

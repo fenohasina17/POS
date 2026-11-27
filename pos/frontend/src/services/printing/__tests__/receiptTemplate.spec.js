@@ -30,7 +30,7 @@ describe('receiptTemplate', () => {
     const html = buildReceiptHTML(base)
     for (const text of [
       'LA GASTRONOMIE PIZZA', 'Ticket N°', '1146', 'POINT DE VENTE : 108',
-      'Caissier :', 'Safidy', 'Serveur :', '03/11/2026 14:08:51', 'Caisse 5',
+      'Caissier :', 'Safidy', '03/11/2026 14:08:51', 'Caisse 5',
       'A emporter', 'Désignation', 'P.U', 'Qté', 'Montant',
       'Mojito', 'Net à payer', '3,000.00 Ar', 'Billet :', '5,000.00 Ar', 'Rendu :', '2,000.00 Ar'
     ]) {
@@ -49,6 +49,11 @@ describe('receiptTemplate', () => {
     expect(html).toContain('<span>Billet :</span><span>1,000.00 Ar</span>')
     expect(html).toContain('<span>Airtel Money :</span><span>19,000.00 Ar</span>')
     expect(html).toContain('<span>Rendu :</span><span>0.00 Ar</span>')
+  })
+
+  it('n\'affiche « Serveur » que si un serveur est fourni', () => {
+    expect(buildReceiptHTML(base)).not.toContain('Serveur')
+    expect(buildReceiptHTML({ ...base, serviceLabel: 'Table 4', serverName: 'Hery' })).toContain('<div class="label">Serveur :</div><div>Hery</div>')
   })
 
   it('masque la ligne Beeper sans donnée et l\'affiche sinon', () => {

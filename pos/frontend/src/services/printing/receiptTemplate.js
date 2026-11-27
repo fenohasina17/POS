@@ -73,7 +73,7 @@ export const RECEIPT_STYLES = `
  * @param {string|number} data.ticketNumber
  * @param {string} [data.posCode]         Code du point de vente
  * @param {string} [data.cashierName]
- * @param {string} [data.serverName]      Serveur (vide si inconnu)
+ * @param {string} [data.serverName]      Serveur de la table (ligne masquée si absent)
  * @param {string|Date} [data.date]
  * @param {string} [data.cashRegisterName]
  * @param {string} [data.serviceLabel]    « A emporter » / « Table 4 »
@@ -129,8 +129,7 @@ export function buildReceiptBody(data = {}) {
       <div class="col">
         <div class="label">Caissier :</div>
         <div>${escapeHtml(data.cashierName ?? '')}</div>
-        <div class="label">Serveur :</div>
-        <div>${escapeHtml(data.serverName ?? '')}</div>
+        ${has(data.serverName) ? `<div class="label">Serveur :</div><div>${escapeHtml(data.serverName)}</div>` : ''}
       </div>
       <div class="col right">
         <div>${escapeHtml(formatTicketDate(data.date))}</div>
