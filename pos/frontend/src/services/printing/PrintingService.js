@@ -84,7 +84,7 @@ class PrintingService {
       return await window.electronAPI.printPDFOrder({
         printerName: finalPrinter,
         savePDF: false,
-        tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber },
+        tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber, serviceType: tableInfo.serviceType || null },
         items: items.map(item => ({ name: item.name, quantity: item.quantity, price: item.price }))
       });
     } catch (err) {
@@ -149,7 +149,7 @@ class PrintingService {
       try {
         return await window.electronAPI.printOrder({
           printerName: printerName,
-          tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber },
+          tableInfo: { name: tableInfo.name, ticketNumber: tableInfo.ticketNumber, serviceType: tableInfo.serviceType || null },
           items: groupItems
         });
       } catch (err) {

@@ -296,6 +296,25 @@
               }}</span>
             </div>
 
+            <!-- Sur place (par défaut) / À emporter : figure sur les bons cuisine/bar et le ticket -->
+            <div class="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Sur place ou à emporter">
+              <button
+                v-for="opt in serviceTypeOptions"
+                :key="opt.value"
+                type="button"
+                role="radio"
+                :aria-checked="serviceType === opt.value"
+                @click="setServiceType(opt.value)"
+                class="flex items-center justify-center gap-1.5 rounded-xl border-2 py-2 text-[11px] font-black uppercase tracking-wide transition-all active:scale-95"
+                :class="serviceType === opt.value
+                  ? 'border-primary-600 bg-primary-600 text-white shadow-md shadow-primary-100'
+                  : 'border-slate-200 bg-white text-slate-500 hover:border-primary-300'"
+              >
+                <FontAwesomeIcon :icon="opt.icon" />
+                {{ opt.label }}
+              </button>
+            </div>
+
             <div class="grid gap-2">
               <button
                 v-if="cart.length > 0 && !currentPendingOrder"
@@ -384,6 +403,9 @@ import { useCategories } from '@/composables/useCategories'
 import { tableService } from '@/services/tableService'
 import { printingService } from '@/services/printing/PrintingService'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faUtensils, faBagShopping } from '@fortawesome/free-solid-svg-icons'
+import { SERVICE_TYPES } from '@/services/printing/receiptTemplate'
 import { API_BASE_URL, API_URL } from '@/utils/api'
 
 const props = defineProps({
@@ -413,6 +435,18 @@ const isAddingToPending = ref(false)
 const isProcessing = ref(false)
 const loadingProducts = ref(false)
 const tableSelectorModal = ref(null)
+
+// ========== SUR PLACE / À EMPORTER ==========
+library.add(faUtensils, faBagShopping)
+const serviceTypeOptions = [
+  { value: SERVICE_TYPES.SUR_PLACE, label: 'Sur place', icon: 'fa-solid fa-utensils' },
+  { value: SERVICE_TYPES.A_EMPORTER, label: 'À emporter', icon: 'fa-solid fa-bag-shopping' },
+]
+// Vente à table : « sur place » par défaut, modifiable par le caissier
+const serviceType = ref(SERVICE_TYPES.SUR_PLACE)
+const setServiceType = (value) => { serviceType.value = value }
+// Informations transmises aux bons de préparation (cuisine / bar)
+const orderTicketInfo = () => ({ ...selectedTable.value, serviceType: serviceType.value })
 
 
 // ========== FONCTIONS UTILITAIRES ==========
@@ -644,8 +678,10 @@ const loadTableAndData = async (tableId) => {
     if (context.pendingOrders?.length) {
       currentPendingOrder.value = context.pendingOrders[0]
       isAddingToPending.value = false
+      serviceType.value = currentPendingOrder.value.service_type || SERVICE_TYPES.SUR_PLACE
     } else {
       currentPendingOrder.value = null
+      serviceType.value = SERVICE_TYPES.SUR_PLACE
     }
   } catch (error) {
     console.error('Erreur chargement table:', error)
@@ -690,6 +726,7 @@ const holdOrder = async () => {
       user_id: user.id,
       point_of_sale_id: pointOfSaleId,
       cash_register_session_id: session.id,
+      service_type: serviceType.value,
       discount_percentage: null,
       order_lines: cart.value.map((item) => ({
         product_id: item.id,
@@ -708,7 +745,7 @@ const holdOrder = async () => {
     await loadTableAndData(selectedTable.value.id)
 
     try {
-      await printingService.printOrder(selectedTable.value, [...cart.value])
+      await printingService.printOrder(orderTicketInfo(), [...cart.value])
     } catch (printError) {
       console.warn('Print error:', printError)
     }
@@ -742,7 +779,7 @@ const confirmAddToPending = async () => {
     // ✅ CORRECTION: Utiliser la bonne route POST /sales/{saleId}/add-products
     await tableService.addProductsToPendingOrder(saleId, cart.value, selectedTable.value.id)
 
-    await printingService.printOrder(selectedTable.value, [...cart.value])
+    await printingService.printOrder(orderTicketInfo(), [...cart.value])
 
     // Explicitly reload to get updated status from server
     await loadTableAndData(selectedTable.value.id)
@@ -888,6 +925,7 @@ const paymentSaleData = computed(() => {
     items,
     total_amount: displayTotal.value,
     table_id: selectedTable.value?.id,
+    service_type: serviceType.value,
     id: currentPendingOrder.value?.id,
   }
 })

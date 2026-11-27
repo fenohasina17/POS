@@ -54,6 +54,36 @@
 
         <!-- COL 1 : Montants + détails paiement -->
         <div class="payment-col col-1">
+          <!-- Sur place / À emporter : à demander au client, obligatoire avant de valider -->
+          <div class="panel service-type-panel" :class="{ missing: !serviceType }">
+            <div class="section-title !mb-2">Sur place ou à emporter ?</div>
+            <div class="service-type-buttons" role="radiogroup" aria-label="Sur place ou à emporter">
+              <button
+                type="button"
+                role="radio"
+                class="service-btn"
+                :class="{ active: serviceType === SERVICE_TYPES.SUR_PLACE }"
+                :aria-checked="serviceType === SERVICE_TYPES.SUR_PLACE"
+                @click="serviceType = SERVICE_TYPES.SUR_PLACE"
+              >
+                <FontAwesomeIcon icon="fa-solid fa-utensils" />
+                <span>Sur place</span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                class="service-btn"
+                :class="{ active: serviceType === SERVICE_TYPES.A_EMPORTER }"
+                :aria-checked="serviceType === SERVICE_TYPES.A_EMPORTER"
+                @click="serviceType = SERVICE_TYPES.A_EMPORTER"
+              >
+                <FontAwesomeIcon icon="fa-solid fa-bag-shopping" />
+                <span>À emporter</span>
+              </button>
+            </div>
+            <p v-if="!serviceType" class="service-hint">Demandez au client avant de confirmer.</p>
+          </div>
+
           <div class="panel">
             <div class="solde-row">
               <label>Total de la vente</label>
@@ -260,6 +290,7 @@
           type="button"
           class="btn primary"
           :disabled="!canConfirmPayment || isProcessing"
+          :title="!serviceType ? 'Choisissez « Sur place » ou « À emporter »' : ''"
           @click="confirmPayment"
         >
           <FontAwesomeIcon
@@ -278,13 +309,14 @@ import { ref, computed, onMounted, watch } from 'vue'
 import NumericKeypad from '@/components/NumericKeypad.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck } from '@fortawesome/free-solid-svg-icons'
+import { faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck, faUtensils, faBagShopping } from '@fortawesome/free-solid-svg-icons'
 import { saleService } from '@/services/saleService'
 import { storage } from '@/utils/storage'
 import apiClient from '@/services/apiClient'
 import { useAuth } from '@/composables/useAuth'
+import { SERVICE_TYPES } from '@/services/printing/receiptTemplate'
 
-library.add(faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck)
+library.add(faDeleteLeft, faCreditCard, faXmark, faHandHoldingDollar, faMobileScreenButton, faSpinner, faCheck, faUtensils, faBagShopping)
 
 const { activePos } = useAuth()
 
@@ -311,6 +343,9 @@ const selectedDiscount = ref(0)
 const paymentsList = ref([])
 const activeInput = ref('amountReceived')
 const isProcessing = ref(false)
+// Vente directe : aucun choix par défaut (le caissier doit demander) ;
+// commande à table : valeur de la commande (« sur place » par défaut), modifiable.
+const serviceType = ref(null)
 
 // ... rest of computed properties ...
 
@@ -406,6 +441,7 @@ const addButtonText = computed(() => {
 })
 
 const canConfirmPayment = computed(() => {
+  if (!serviceType.value) return false;
   if (discountedTotal.value === 0) return true;
   return paymentsList.value.length > 0 && remainingToPay.value <= 0;
 });
@@ -539,6 +575,7 @@ const confirmPayment = async () => {
       point_of_sale_id: props.saleData?.point_of_sale_id || activePos.value?.id,
       cash_register_session_id: session?.id || null,
       table_id: props.saleData?.table_id || null,
+      service_type: serviceType.value,
       // Utiliser l'original_user_id (le caissier) s'il existe, sinon l'utilisateur authentifié
       user_id: session?.original_user_id || auth.user?.id,
       total_amount: props.totalAmount,
@@ -563,6 +600,7 @@ const confirmPayment = async () => {
         discount_percentage: selectedDiscount.value,
         amount_received: totalPaymentsAmount.value,
         change_amount: Math.max(0, totalPaymentsAmount.value - discountedTotal.value),
+        service_type: serviceType.value,
         payments: payload.payments
       }
       response = await saleService.validatePending(existingSaleId, validatePayload)
@@ -583,6 +621,7 @@ const confirmPayment = async () => {
 
 const closeModal = () => {
   paymentsList.value = []
+  serviceType.value = null
   selectedPayment.value = ''
   selectedDiscount.value = 0
   amountReceived.value = ''
@@ -592,6 +631,15 @@ const closeModal = () => {
   isProcessing.value = false
   emit('close-modal')
 }
+
+// À chaque ouverture : reprendre le choix déjà fait (commande à table), sinon rien
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) serviceType.value = props.saleData?.service_type || null
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   fetchPayments()
@@ -754,6 +802,52 @@ watch(
 }
 .value.warning {
   color: theme('colors.warning.600');
+}
+
+/* ── Sur place / À emporter ── */
+.service-type-panel {
+  border-width: 2px;
+}
+.service-type-panel.missing {
+  border-color: theme('colors.warning.400');
+  background: theme('colors.warning.50');
+}
+.service-type-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.service-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.5rem;
+  border-radius: 0.875rem;
+  border: 2px solid #e2e8f0;
+  background: #fff;
+  color: #334155;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.service-btn:hover {
+  border-color: theme('colors.primary.300');
+}
+.service-btn.active {
+  background: theme('colors.primary.600');
+  border-color: theme('colors.primary.600');
+  color: #fff;
+  box-shadow: 0 6px 16px -6px theme('colors.primary.600');
+}
+.service-hint {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: theme('colors.warning.700');
 }
 
 /* ── Chip remise ── */

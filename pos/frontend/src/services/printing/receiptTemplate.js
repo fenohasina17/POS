@@ -34,6 +34,33 @@ export const formatTicketDate = (value) => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
+// ── « Sur place » / « À emporter » (sales.service_type) ──
+export const SERVICE_TYPES = Object.freeze({ SUR_PLACE: 'sur_place', A_EMPORTER: 'a_emporter' })
+
+/** 'sur_place' -> « Sur place », 'a_emporter' -> « A emporter » (graphie du ticket), sinon '' */
+export const serviceTypeText = (serviceType) =>
+  serviceType === SERVICE_TYPES.SUR_PLACE ? 'Sur place'
+    : serviceType === SERVICE_TYPES.A_EMPORTER ? 'A emporter'
+      : ''
+
+/** Mention en gros en tête des bons de préparation cuisine / bar */
+export const serviceTypeBanner = (serviceType) =>
+  serviceType === SERVICE_TYPES.SUR_PLACE ? 'SUR PLACE'
+    : serviceType === SERVICE_TYPES.A_EMPORTER ? 'À EMPORTER'
+      : ''
+
+/**
+ * Libellé du ticket client : « Sur place – Table 4 », « A emporter »…
+ * Ventes enregistrées avant le choix (serviceType vide) : déduit de la table comme avant.
+ */
+export function formatServiceLabel({ serviceType, tableNumber } = {}) {
+  const hasTable = tableNumber !== null && tableNumber !== undefined && tableNumber !== '' && tableNumber !== 'Emporter'
+  const table = hasTable ? `Table ${tableNumber}` : ''
+  const text = serviceTypeText(serviceType)
+  if (text) return table ? `${text} – ${table}` : text
+  return table || 'A emporter'
+}
+
 export const RECEIPT_STYLES = `
   * { margin: 0; padding: 0; box-sizing: border-box; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: 80mm auto; margin: 0; }
@@ -52,6 +79,7 @@ export const RECEIPT_STYLES = `
   .infos .right { text-align: left; padding-left: 4mm; }
   .infos .label { font-weight: 700; }
   .infos div { word-break: break-word; }
+  .infos .service { font-weight: 700; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 2mm; }
   th { font-weight: 700; text-decoration: underline; text-align: left; padding: 0 0 1.5mm; font-size: 11px; }
   td { padding: 0.6mm 0; vertical-align: top; word-break: break-word; font-size: 11px; }
@@ -76,7 +104,7 @@ export const RECEIPT_STYLES = `
  * @param {string} [data.serverName]      Serveur de la table (ligne masquée si absent)
  * @param {string|Date} [data.date]
  * @param {string} [data.cashRegisterName]
- * @param {string} [data.serviceLabel]    « A emporter » / « Table 4 »
+ * @param {string} [data.serviceLabel]    « A emporter » / « Sur place – Table 4 » (cf. formatServiceLabel)
  * @param {Array<{method,amount}>} [data.payments]  Détail des règlements (une ligne chacun en bas)
  * @param {Array<{name,price,quantity}>} data.items
  * @param {number} [data.discount]        Montant de la remise (déjà calculé)
@@ -134,7 +162,7 @@ export function buildReceiptBody(data = {}) {
       <div class="col right">
         <div>${escapeHtml(formatTicketDate(data.date))}</div>
         ${has(data.cashRegisterName) ? `<div>${escapeHtml(data.cashRegisterName)}</div>` : ''}
-        ${has(data.serviceLabel) ? `<div>${escapeHtml(data.serviceLabel)}</div>` : ''}
+        ${has(data.serviceLabel) ? `<div class="service">${escapeHtml(data.serviceLabel)}</div>` : ''}
       </div>
     </div>
     <table>

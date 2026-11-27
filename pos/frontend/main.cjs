@@ -122,6 +122,17 @@ function getPrintStyles() {
         margin-top: 8px;
         font-size: 9px;
       }
+      /* Bon de préparation : « SUR PLACE » / « À EMPORTER » lisible d'un coup d'œil */
+      .service-banner {
+        margin: 4px 0 6px;
+        padding: 4px 0;
+        border: 3px solid #000;
+        text-align: center;
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        width: 100%;
+      }
       .payment-method {
         margin: 1px 0;
         display: flex;
@@ -234,6 +245,7 @@ function generateHTML(arg, type) {
     <body>
       <div class="header">
         <div class="company-name">${currentTitle}</div>
+        ${arg.serviceBanner ? `<div class="service-banner">${arg.serviceBanner}</div>` : ''}
         <div class="info-line">
           <span>Table: ${arg.tableInfo?.name || 'N/A'}</span>
           <span>${new Date().toLocaleTimeString('fr-FR')}</span>
@@ -320,9 +332,16 @@ async function handlePrint(arg, type) {
     finalPrinterName = target.name;
     console.log(`[PRINT] Envoi vers : "${finalPrinterName}" (Cible originale : "${requestedPrinter}")`);
 
-    let htmlContent = type === 'facture'
-      ? (await loadReceiptTemplate()).buildReceiptHTML(arg)
-      : generateHTML(arg, type);
+    let htmlContent;
+    if (type === 'facture') {
+      htmlContent = (await loadReceiptTemplate()).buildReceiptHTML(arg);
+    } else if (type === 'bon_cuisine') {
+      // « SUR PLACE » / « À EMPORTER » : libellé partagé avec le ticket client
+      const { serviceTypeBanner } = await loadReceiptTemplate();
+      htmlContent = generateHTML({ ...arg, serviceBanner: serviceTypeBanner(arg.tableInfo?.serviceType) }, type);
+    } else {
+      htmlContent = generateHTML(arg, type);
+    }
 
     printWindow = new BrowserWindow({
       show: false,

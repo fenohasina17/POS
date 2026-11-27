@@ -160,7 +160,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { printingService } from '@/services/printing/PrintingService'
-import { buildReceiptHTML } from '@/services/printing/receiptTemplate'
+import { buildReceiptHTML, formatServiceLabel } from '@/services/printing/receiptTemplate'
 import { storage } from '@/utils/storage'
 import logoUrl from '@/assets/logo-ticket-nb.png' // Logo noir et blanc pour l'imprimante thermique
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -280,7 +280,10 @@ const receiptData = computed(() => {
 
   let serviceLabel = ''
   if (props.saleInfo?.sale) {
-    serviceLabel = sale.table_id ? `Table ${sale.table_number}` : 'A emporter'
+    serviceLabel = formatServiceLabel({
+      serviceType: sale.service_type,
+      tableNumber: sale.table_id ? sale.table_number : null
+    })
   } else if (props.clientName && props.clientName.startsWith('Table')) {
     serviceLabel = props.clientName
   }
@@ -359,7 +362,11 @@ const printInvoiceDirect = async () => {
     const invoiceData = prepareInvoiceData()
     await printingService.printInvoice(invoiceData)
 
-    const tableInfo = { name: props.tableName || 'Vente Directe', ticketNumber: invoiceData.number }
+    const tableInfo = {
+      name: props.tableName || 'Vente Directe',
+      ticketNumber: invoiceData.number,
+      serviceType: props.saleInfo?.sale?.service_type || null
+    }
     const orderItems = props.items.map(item => ({
       ...item,
       name: item.name || item.product?.name || 'Article',
@@ -410,7 +417,8 @@ const printInvoicePDF = async () => {
 
       const tableInfo = {
         name: props.tableName || 'Vente Directe',
-        ticketNumber: invoiceData.number
+        ticketNumber: invoiceData.number,
+        serviceType: props.saleInfo?.sale?.service_type || null // « SUR PLACE » / « À EMPORTER » en tête du bon
       };
 
       // Regroupement dynamique basé STRICTEMENT sur item.printer (ex: 'bar', 'kitchen')

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildReceiptHTML, formatTicketAmount, formatTicketDate } from '../receiptTemplate'
+import { buildReceiptHTML, formatTicketAmount, formatTicketDate, formatServiceLabel, serviceTypeBanner, SERVICE_TYPES } from '../receiptTemplate'
 
 const base = {
   ticketNumber: 1146,
@@ -64,5 +64,32 @@ describe('receiptTemplate', () => {
   it('échappe le HTML des libellés', () => {
     const html = buildReceiptHTML({ ...base, items: [{ name: '<b>x</b>', price: 1, quantity: 1 }] })
     expect(html).toContain('&lt;b&gt;x&lt;/b&gt;')
+  })
+})
+
+describe('sur place / à emporter', () => {
+  it('affiche le choix du client, suivi de la table s\'il y en a une', () => {
+    expect(formatServiceLabel({ serviceType: 'a_emporter' })).toBe('A emporter')
+    expect(formatServiceLabel({ serviceType: 'sur_place' })).toBe('Sur place')
+    expect(formatServiceLabel({ serviceType: 'sur_place', tableNumber: 4 })).toBe('Sur place – Table 4')
+    expect(formatServiceLabel({ serviceType: 'a_emporter', tableNumber: '12' })).toBe('A emporter – Table 12')
+  })
+
+  it('ventes antérieures sans choix : déduit de la table comme avant', () => {
+    expect(formatServiceLabel({ serviceType: null, tableNumber: 4 })).toBe('Table 4')
+    expect(formatServiceLabel({ serviceType: null })).toBe('A emporter')
+    // l'API renvoie table_number « Emporter » quand il n'y a pas de table
+    expect(formatServiceLabel({ serviceType: 'sur_place', tableNumber: 'Emporter' })).toBe('Sur place')
+  })
+
+  it('donne la mention en gros des bons de préparation', () => {
+    expect(serviceTypeBanner(SERVICE_TYPES.SUR_PLACE)).toBe('SUR PLACE')
+    expect(serviceTypeBanner(SERVICE_TYPES.A_EMPORTER)).toBe('À EMPORTER')
+    expect(serviceTypeBanner(null)).toBe('')
+  })
+
+  it('imprime le libellé sur le ticket client', () => {
+    const html = buildReceiptHTML({ ...base, serviceLabel: formatServiceLabel({ serviceType: 'sur_place', tableNumber: 4 }) })
+    expect(html).toContain('Sur place – Table 4')
   })
 })
