@@ -300,6 +300,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import {
   faArrowRotateLeft,
+  faPrint,
   faBars,
   faBell,
   faBoxesStacked,
@@ -624,6 +625,8 @@ const menuItems = filterAdminItems([
       icon: faChartPie,
       adminOnly: true,
     },
+    // Poste (cuisine, bar…) -> imprimante de cette caisse : admin et gérant
+    { label: 'Imprimantes', name: 'dashboard-printer-routing', icon: faPrint, gerantOrAdmin: true },
     { label: 'Utilisateurs', name: 'dashboard-users', icon: faUserGroup, adminOnly: true },
     ...(isAdmin.value
       ? [

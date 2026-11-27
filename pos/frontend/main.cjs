@@ -306,6 +306,36 @@ function generateHTML(arg, type) {
   }
 }
 
+// ── Routage des imprimantes (réglé par caisse, stocké avec les données de l'appli) ──
+let printerRoutingPromise = null;
+function loadPrinterRouting() {
+  if (!printerRoutingPromise) {
+    const { pathToFileURL } = require('url');
+    const file = path.join(__dirname, 'src', 'services', 'printing', 'printerRouting.js');
+    printerRoutingPromise = import(pathToFileURL(file).href);
+  }
+  return printerRoutingPromise;
+}
+
+const printerRoutingFile = () => path.join(app.getPath('userData'), 'printer-routing.json');
+
+function readPrinterRouting() {
+  try {
+    return JSON.parse(require('fs').readFileSync(printerRoutingFile(), 'utf8')) || {};
+  } catch {
+    return {}; // pas encore réglé : comportement par défaut
+  }
+}
+
+ipcMain.handle('get-printer-routing', () => readPrinterRouting());
+
+ipcMain.handle('set-printer-routing', async (e, routing) => {
+  const { normalizeRouting } = await loadPrinterRouting();
+  const clean = normalizeRouting(routing);
+  require('fs').writeFileSync(printerRoutingFile(), JSON.stringify(clean, null, 2));
+  return clean;
+});
+
 // Fonction principale handlePrint avec gestion de fallback et XP-80C
 async function handlePrint(arg, type) {
   const requestedPrinter = arg.printerName || 'receipt';
@@ -316,45 +346,12 @@ async function handlePrint(arg, type) {
     const printers = await mainWindow.webContents.getPrintersAsync();
     console.log('[PRINT] Imprimantes système détectées:', printers.map(p => p.name));
 
-    // Logique pour identifier l'imprimante de la CAISSE (receipt)
-    const findReceiptPrinter = () => {
-      // 1. Chercher le nom exact "receipt"
-      let p = printers.find(pr => pr.name === 'receipt');
-      // 2. Sinon chercher par mots-clés (dont votre XP-80C)
-      if (!p) {
-        p = printers.find(pr =>
-          pr.name.toLowerCase().includes('xp-80c') ||
-          pr.name.toLowerCase().includes('thermal') ||
-          pr.name.toLowerCase().includes('receipt') ||
-          pr.name.toLowerCase().includes('pos')
-        );
-      }
-      // 3. Sinon prendre l'imprimante par défaut Windows
-      return p || printers.find(pr => pr.isDefault) || printers[0];
-    };
-
-    // Tentative de trouver l'imprimante demandée par son nom exact
-    let target = printers.find(p => p.name === requestedPrinter);
-
-    // GESTION DU REPLI (FALLBACK)
-    if (!target) {
-      console.warn(`[PRINT] Imprimante "${requestedPrinter}" introuvable.`);
-
-      const isPrepPrinter = ['kitchen', 'fastfood', 'pizza', 'bar', 'cook'].includes(requestedPrinter);
-
-      // Fast food : sans imprimante dédiée, le bon part sur l'imprimante cuisine
-      if (requestedPrinter === 'fastfood') {
-        target = printers.find(p => p.name === 'kitchen');
-        if (target) console.log('[PRINT] Redirection du bon (fastfood) vers "kitchen"');
-      }
-
-      if (!target && isPrepPrinter) {
-        console.log(`[PRINT] Redirection automatique du bon (${requestedPrinter}) vers "receipt"`);
-        target = findReceiptPrinter();
-      } else if (requestedPrinter === 'receipt') {
-        target = findReceiptPrinter();
-      }
-    }
+    // Poste -> imprimante : réglage de cette caisse (écran « Routage des imprimantes »),
+    // sinon imprimante portant le nom du poste, sinon replis cuisine / caisse
+    const { resolvePrinter } = await loadPrinterRouting();
+    const resolved = resolvePrinter(requestedPrinter, readPrinterRouting(), printers);
+    const target = resolved.name ? printers.find(p => p.name === resolved.name) : null;
+    console.log(`[PRINT] Poste "${requestedPrinter}" -> "${resolved.name}" (${resolved.reason})`);
 
     if (!target) {
       return { success: false, message: 'Aucune imprimante disponible pour l\'impression.' };

@@ -163,6 +163,13 @@ const router = createRouter({
           meta: { requiresManagerOrAdmin: true },
         },
         { path: 'printers', name: 'dashboard-printers', component: Printer },
+        // Poste (cuisine, bar…) -> imprimante de cette caisse
+        {
+          path: 'printers/routing',
+          name: 'dashboard-printer-routing',
+          component: () => import('../views/PrinterRouting.vue'),
+          meta: { requiresManagerOrAdmin: true },
+        },
 
         // --- GESTION DES ROLES ---
         {
