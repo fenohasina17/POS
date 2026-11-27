@@ -41,6 +41,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return ipcRenderer.invoke('print-order', data);
   },
 
+  // Routage poste -> imprimante de cette caisse ({ kitchen: 'XP-80C', … })
+  getPrinterRouting: () => ipcRenderer.invoke('get-printer-routing'),
+  setPrinterRouting: (routing) => ipcRenderer.invoke('set-printer-routing', routing),
+
   getPrinters: () => {
     console.log('[Preload] getPrinters called');
     return ipcRenderer.invoke('get-printers');

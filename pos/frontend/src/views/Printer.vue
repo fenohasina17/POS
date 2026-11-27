@@ -42,14 +42,25 @@
           <h1 class="text-base font-semibold text-slate-800">Gestion des imprimantes</h1>
           <p class="text-xs text-slate-400">Surveillez et configurez vos imprimantes connectées.</p>
         </div>
-        <button
-          type="button"
-          class="ui-btn ui-btn-primary rounded-full"
-          @click="openAddModal"
-        >
-          <FontAwesomeIcon icon="fa-solid fa-plus" />
-          Ajouter une imprimante
-        </button>
+        <div class="flex flex-wrap gap-2">
+          <!-- Choisir l'imprimante de chaque poste (cuisine, bar…) sur cette caisse -->
+          <button
+            type="button"
+            class="ui-btn rounded-full"
+            @click="router.push({ name: 'dashboard-printer-routing' })"
+          >
+            <FontAwesomeIcon icon="fa-solid fa-route" />
+            Routage des bons
+          </button>
+          <button
+            type="button"
+            class="ui-btn ui-btn-primary rounded-full"
+            @click="openAddModal"
+          >
+            <FontAwesomeIcon icon="fa-solid fa-plus" />
+            Ajouter une imprimante
+          </button>
+        </div>
       </div>
 
       <div class="mt-3 flex-1 overflow-hidden">
@@ -220,9 +231,15 @@ import { ref, onMounted, computed } from 'vue'
 import PrinterEditModal from './PrinterEditModal.vue'
 import PrinterCreateModal from './PrinterCreateModal.vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faRoute } from '@fortawesome/free-solid-svg-icons'
+import { useRouter } from 'vue-router'
 import printerService from '../services/printerService.js'
 import { usePosStore } from '../stores/posStore.js'
 import { useAuth } from '../composables/useAuth.js'
+
+library.add(faRoute)
+const router = useRouter()
 
 const posStore = usePosStore()
 
