@@ -6,17 +6,24 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    // « sur_place » / « a_emporter », reçu des caisses avec chaque vente.
+    // « Sur place / à emporter », reçu des caisses : par article
+    // (sur_place | a_emporter) et résumé par vente (… | mixte).
     // Nullable : ventes antérieures et caisses pas encore mises à jour.
     public function up(): void
     {
         Schema::table('remote_sales', function (Blueprint $table) {
             $table->string('service_type', 20)->nullable();
         });
+        Schema::table('remote_order_lines', function (Blueprint $table) {
+            $table->string('service_type', 20)->nullable();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('remote_order_lines', function (Blueprint $table) {
+            $table->dropColumn('service_type');
+        });
         Schema::table('remote_sales', function (Blueprint $table) {
             $table->dropColumn('service_type');
         });

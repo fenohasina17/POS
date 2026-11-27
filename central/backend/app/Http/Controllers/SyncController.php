@@ -80,6 +80,7 @@ class SyncController extends Controller
                 'quantity'      => 'quantity',
                 'price'         => 'unit_price',
                 'total'         => 'total',
+                'service_type'  => 'service_type',
                 'created_at'    => 'remote_created_at',
             ],
         ],
